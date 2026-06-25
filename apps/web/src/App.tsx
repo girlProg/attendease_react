@@ -1,19 +1,24 @@
-import { Button } from "@workspace/ui/components/button"
+import { Route, Routes } from "react-router-dom"
+
+import { Layout } from "@/components/layout"
+import { AttendancePage } from "@/pages/attendance"
+import { NewAttendancePage } from "@/pages/new-attendance"
 
 export function App() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="text-muted-foreground font-mono text-xs">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={null} />
+        <Route path="beneficiaries" element={null} />
+        <Route path="attendance" element={<AttendancePage />} />
+        <Route path="attendance/new" element={<NewAttendancePage />} />
+        <Route path="students" element={null} />
+        <Route path="payments" element={null} />
+        <Route path="analytics" element={null} />
+        <Route path="profile" element={null} />
+        <Route path="manage-users" element={null} />
+        <Route path="logs" element={null} />
+      </Route>
+    </Routes>
   )
 }
