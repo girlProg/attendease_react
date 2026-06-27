@@ -1,5 +1,3 @@
-import { useState } from "react"
-
 import {
   Select,
   SelectContent,
@@ -10,20 +8,24 @@ import {
 
 export function PaginationBar({
   totalPages,
+  currentPage = 1,
+  onPageChange,
   rowOptions = ["10", "20", "30", "50", "100"],
   defaultRows = "100",
+  onRowsChange,
 }: {
   totalPages: number
+  currentPage?: number
+  onPageChange?: (page: number) => void
   rowOptions?: string[]
   defaultRows?: string
+  onRowsChange?: (rows: string) => void
 }) {
-  const [currentPage, setCurrentPage] = useState(1)
-
   return (
     <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
       <div className="inline-flex items-center gap-2 rounded-full bg-sidebar/10 px-4 py-1.5 text-sm font-medium text-sidebar">
         Show
-        <Select defaultValue={defaultRows}>
+        <Select defaultValue={defaultRows} onValueChange={onRowsChange}>
           <SelectTrigger className="h-7 w-auto rounded-full border-0 bg-white px-3 text-sm font-semibold text-sidebar shadow-sm">
             <SelectValue />
           </SelectTrigger>
@@ -44,7 +46,7 @@ export function PaginationBar({
             <button
               key={page}
               type="button"
-              onClick={() => setCurrentPage(page)}
+              onClick={() => onPageChange?.(page)}
               className={
                 currentPage === page
                   ? "flex h-10 min-w-10 items-center justify-center bg-white text-sm font-semibold text-sidebar"

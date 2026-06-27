@@ -1,47 +1,60 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 import { Search, Plus } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { FilterSelect } from "@/components/filter-select"
+import { getCohorts, getLGAs, getSchools } from "@/api/attendance"
 
 import { RealTime } from "./real-time"
 import { Statistics } from "./statistics"
 
-const cohorts = ["2nd Cohort", "3rd Cohort"]
-const terms = ["1st Term", "2nd Term", "3rd Term"]
-const years = ["2025/2026", "2024/2025"]
-const lgas = ["LGA", "Agaie", "Bida", "Bosso", "Chanchaga", "Edati"]
-const schools = ["School", "Govt. Sec. School Minna", "FGC Bida"]
+const terms = ["1", "2", "3"]
 const weeks = [
   "All Weeks",
-  ...Array.from({ length: 12 }, (_, i) => `Week ${i + 1}`),
+  ...Array.from({ length: 15 }, (_, i) => `${i + 1}`),
 ]
 
 const tabs = ["Historical", "Real-Time", "Statistics"] as const
 
 export function AttendancePage() {
   const [activeTab, setActiveTab] = useState<string>("Real-Time")
+  const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
+  const [filters, setFilters] = useState<Record<string, string>>({})
   const navigate = useNavigate()
+
+  const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  const { data: lgaList } = useQuery({ queryKey: ["lga"], queryFn: getLGAs })
+  const { data: schoolList } = useQuery({ queryKey: ["school"], queryFn: getSchools })
+
+  const cohortNames = cohorts?.map((c) => c.name) ?? []
+  const cohortYears = [...new Set(cohorts?.map((c) => c.year) ?? [])]
+  const lgaNames = lgaList?.map((l) => l.name) ?? []
+  const schoolNames = schoolList?.map((s) => s.name) ?? []
+
+  const setFilter = (key: string, value: string) =>
+    setFilters((prev) => ({ ...prev, [key]: value }))
 
   return (
     <div className="space-y-6">
       {/* Filters */}
       {activeTab === "Statistics" ? (
         <div className="grid grid-cols-2 gap-3">
-          <FilterSelect placeholder="1st Cohort" items={cohorts} />
-          <FilterSelect placeholder="LGA" items={lgas} />
+          <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(v) => setFilter("cohort", v)} />
+          <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(v) => setFilter("lga", v)} />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-            <FilterSelect placeholder="2nd Cohort" items={cohorts} />
-            <FilterSelect placeholder="1st Term" items={terms} />
-            <FilterSelect placeholder="2025/2026" items={years} />
-            <FilterSelect placeholder="LGA" items={lgas} />
-            <FilterSelect placeholder="School" items={schools} />
-            <FilterSelect placeholder="All Weeks" items={weeks} />
+            <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(v) => setFilter("cohort", v)} />
+            <FilterSelect placeholder="Term" items={terms} value={filters.term} onValueChange={(v) => setFilter("term", v)} />
+            <FilterSelect placeholder="Year" items={cohortYears} value={filters.year} onValueChange={(v) => setFilter("year", v)} />
+            <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(v) => setFilter("lga", v)} />
+            <FilterSelect placeholder="School" items={schoolNames} value={filters.school} onValueChange={(v) => setFilter("school", v)} />
+            <FilterSelect placeholder="All Weeks" items={weeks} value={filters.week} onValueChange={(v) => setFilter("week", v)} />
           </div>
 
           {/* Search + New Attendance */}
@@ -50,9 +63,15 @@ export function AttendancePage() {
               <Search className="absolute left-3 size-4 text-muted-foreground" />
               <Input
                 placeholder="Find Student by Name"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && setAppliedSearch(search)}
                 className="h-11 rounded-full border-sidebar/30 bg-white pl-9 pr-24 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
               />
-              <Button className="absolute right-1.5 h-8 rounded-full bg-sidebar px-5 text-white hover:bg-sidebar/90">
+              <Button
+                className="absolute right-1.5 h-8 rounded-full bg-sidebar px-5 text-white hover:bg-sidebar/90"
+                onClick={() => setAppliedSearch(search)}
+              >
                 Search
               </Button>
             </div>
@@ -89,7 +108,7 @@ export function AttendancePage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "Real-Time" && <RealTime />}
+      {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={filters} />}
       {activeTab === "Historical" && <div className="py-12 text-center text-muted-foreground">Historical view coming soon</div>}
       {activeTab === "Statistics" && <Statistics />}
     </div>

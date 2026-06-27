@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -8,32 +9,38 @@ import {
 } from "@workspace/ui/components/table"
 import { PaginationBar } from "@/components/pagination-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { getAttendance, type AttendanceRecord } from "@/api/attendance"
 
-type AttendanceRecord = {
-  sn: number
-  name: string
-  id: string
-  class: string
-  term: string
-  year: string
-  week: string
-  percentage: number
-  reason: string
-  remark: string
-}
+export function RealTime({ search = "", filters = {} }: { search?: string; filters?: Record<string, string> }) {
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
 
-const mockData: AttendanceRecord[] = [
-  { sn: 1, name: "Abah Treasure", id: "1042", class: "JSS 1", term: "1st Term", year: "2025/2026", week: "Week 2", percentage: 75, reason: "-", remark: "-" },
-  { sn: 2, name: "Abah Treasure", id: "1042", class: "JSS 1", term: "1st Term", year: "2025/2026", week: "Week 5", percentage: 100, reason: "-", remark: "-" },
-  { sn: 3, name: "Abah Treasure", id: "1042", class: "JSS 1", term: "1st Term", year: "2025/2026", week: "Week 12", percentage: 75, reason: "-", remark: "-" },
-  { sn: 4, name: "Abah Treasure", id: "1042", class: "JSS 1", term: "1st Term", year: "2025/2026", week: "Week 4", percentage: 75, reason: "-", remark: "-" },
-  { sn: 5, name: "Abah Treasure", id: "1042", class: "JSS 1", term: "1st Term", year: "2025/2026", week: "Week 6", percentage: 75, reason: "-", remark: "-" },
-]
+  useEffect(() => { setPage(1) }, [search, filters])
 
-export function RealTime() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["attendance", page, pageSize, search, filters],
+    queryFn: () => getAttendance(page, pageSize, search, filters),
+    placeholderData: keepPreviousData,
+  })
+
+  const totalPages = data ? Math.ceil(data.count / pageSize) : 0
+
+  if (isLoading && !data) return <p>Loading…</p>
+  if (isError) return <p>{String(error)}</p>
+
   return (
     <div className="space-y-6">
-      <PaginationBar totalPages={32} />
+      <PaginationBar
+        totalPages={totalPages}
+        currentPage={page}
+        onPageChange={setPage}
+        defaultRows={String(pageSize)}
+        onRowsChange={(v) => {
+          setPageSize(Number(v))
+          setPage(1)
+        }}
+      />
 
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
         <Table>
@@ -52,25 +59,27 @@ export function RealTime() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockData.map((row) => (
-              <TableRow key={row.sn} className="border-border/40">
-                <TableCell className="text-center text-sm text-muted-foreground">{row.sn}</TableCell>
+            {data?.results.map((attendance: AttendanceRecord, index: number) => (
+              <TableRow key={attendance.id} className="border-border/40">
+                <TableCell className="text-center text-xs text-muted-foreground">
+                  {(page - 1) * pageSize + index + 1}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="size-6 shrink-0 rounded-md bg-muted py-6" />
-                    <span className="text-sm font-semibold text-foreground">{row.name}</span>
+                    <div className="size-6 shrink-0 rounded-md bg-muted py-5" />
+                    <span className="text-xs font-semibold text-foreground">{attendance.student.name}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.id}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.class}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.term}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.year}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.week}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{attendance.id}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{attendance.student.current_class}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{attendance.term}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{attendance.student.cohort.year}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{attendance.week}</TableCell>
                 <TableCell className="text-center">
-                  <PercentageBadge value={row.percentage} />
+                  <PercentageBadge value={attendance.attendance_average} />
                 </TableCell>
-                <TableCell className="text-center text-sm text-muted-foreground">{row.reason}</TableCell>
-                <TableCell className="text-center text-sm text-muted-foreground">{row.remark}</TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground">{attendance.reason}</TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground">{attendance.remark}</TableCell>
               </TableRow>
             ))}
           </TableBody>

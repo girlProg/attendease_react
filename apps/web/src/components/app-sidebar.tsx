@@ -14,11 +14,11 @@ import { NavLink } from "react-router-dom"
 import {
   Sidebar,
   SidebarHeader,
-  SidebarLogo,
   SidebarNav,
   SidebarNavItem,
   useSidebar,
 } from "@workspace/ui/components/sidebar"
+import { AppLogo } from "@/components/app-logo"
 
 const navItems = [
   { label: "Home", path: "/", icon: Home },
@@ -38,7 +38,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <SidebarLogo />
+        <AppLogo />
       </SidebarHeader>
       <SidebarNav>
         {navItems.map(({ label, path, icon: Icon }) => (
