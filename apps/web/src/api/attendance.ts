@@ -1,12 +1,11 @@
 import { api } from "../lib/api";
 
-export type DayStatus = "present" | "absent" | "late" | "excused" | "public holiday";
-
 export interface CohortRecord {
   year: string;
 }
 
 export interface StudentRecord {
+  id: number;
   name: string;
   current_class: string;
   cohort: CohortRecord;
@@ -17,10 +16,10 @@ export interface AttendanceRecord {
   student: StudentRecord;
   term: string;
   week: string;
-  monday: DayStatus;
-  tuesday: DayStatus;
-  wednesday: DayStatus;
-  thursday: DayStatus;
+  monday: boolean;
+  tuesday: boolean;
+  wednesday: boolean;
+  thursday: boolean;
   reason: string | null;
   remark: string | null;
   attendance_average: number;
@@ -55,12 +54,86 @@ export const getAttendance = (
     .then((r) => r.data);
 };
 
-export const searchStudents = (name: string, page = 1, pageSize = 100) =>
-  api
-    .get<PaginatedResponse<AttendanceRecord>>("/student/", {
-      params: { name, page, page_size: pageSize },
+export interface Student {
+  id: number;
+  name: string;
+  current_class: string;
+  cohort: CohortRecord;
+}
+
+export const getStudents = (
+  page = 1,
+  pageSize = 100,
+  filters: Record<string, string> = {},
+) => {
+  const filterParams: Record<string, string> = {};
+  if (filters.cohort) filterParams.cohort__name = filters.cohort;
+  if (filters.year) filterParams.cohort__year = filters.year;
+  if (filters.lga) filterParams.school__lga__name = filters.lga;
+  if (filters.school) filterParams.school__name = filters.school;
+  if (filters.name) filterParams.name = filters.name;
+
+  return api
+    .get<PaginatedResponse<Student>>("/student/", {
+      params: { page, page_size: pageSize, ...filterParams },
     })
     .then((r) => r.data);
+};
+
+export const getAttendanceByStudentIds = async (
+  studentIds: number[],
+  filters: Record<string, string> = {},
+) => {
+  if (studentIds.length === 0) return new Map<number, AttendanceRecord>();
+
+  const filterParams: Record<string, string> = {};
+  if (filters.term) filterParams.term = filters.term;
+  if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
+
+  const { data } = await api.get<PaginatedResponse<AttendanceRecord>>("/attendance/", {
+    params: {
+      student__id__in: studentIds.join(","),
+      page_size: studentIds.length,
+      ...filterParams,
+    },
+  });
+
+  const map = new Map<number, AttendanceRecord>();
+  for (const record of data.results) {
+    map.set(record.student.id, record);
+  }
+  return map;
+};
+
+export const downloadExcelTemplate = (params: {
+  school: number;
+  cohort: number;
+  term: string;
+  week: string;
+  year: string;
+}) => {
+  return api
+    .get("/attendance/download-template/", {
+      params,
+      responseType: "blob",
+    })
+    .then((response) => {
+      const contentDisposition = response.headers["content-disposition"] ?? "";
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=["']?([^"';\n]+)/);
+      const filename = filenameMatch?.[1] ?? "attendance_template.xlsx";
+
+      const contentType = response.headers["content-type"];
+      const blob = new Blob([response.data], { ...(contentType && { type: contentType }) });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    });
+};
 
 export const submitAttendance = (payload: Omit<AttendanceRecord, "id">) =>
   api.post<AttendanceRecord>("/attendance/", payload).then((r) => r.data);
@@ -87,5 +160,7 @@ export const getCohorts = () =>
 export const getLGAs = () =>
   api.get<PaginatedResponse<LGA>>("/lga/").then((r) => r.data.results);
 
-export const getSchools = () =>
-  api.get<PaginatedResponse<School>>("/school/").then((r) => r.data.results);
+export const getSchools = (lga?: string) =>
+  api.get<PaginatedResponse<School>>("/school/", {
+    params: lga ? { lga__name: lga } : {},
+  }).then((r) => r.data.results);

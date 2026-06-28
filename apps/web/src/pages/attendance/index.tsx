@@ -1,21 +1,15 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
 import { Search, Plus } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { FilterSelect } from "@/components/filter-select"
-import { getCohorts, getLGAs, getSchools } from "@/api/attendance"
+import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
+import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 
 import { RealTime } from "./real-time"
 import { Statistics } from "./statistics"
-
-const terms = ["1", "2", "3"]
-const weeks = [
-  "All Weeks",
-  ...Array.from({ length: 15 }, (_, i) => `${i + 1}`),
-]
 
 const tabs = ["Historical", "Real-Time", "Statistics"] as const
 
@@ -23,39 +17,21 @@ export function AttendancePage() {
   const [activeTab, setActiveTab] = useState<string>("Real-Time")
   const [search, setSearch] = useState("")
   const [appliedSearch, setAppliedSearch] = useState("")
-  const [filters, setFilters] = useState<Record<string, string>>({})
   const navigate = useNavigate()
 
-  const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
-  const { data: lgaList } = useQuery({ queryKey: ["lga"], queryFn: getLGAs })
-  const { data: schoolList } = useQuery({ queryKey: ["school"], queryFn: getSchools })
-
-  const cohortNames = cohorts?.map((c) => c.name) ?? []
-  const cohortYears = [...new Set(cohorts?.map((c) => c.year) ?? [])]
-  const lgaNames = lgaList?.map((l) => l.name) ?? []
-  const schoolNames = schoolList?.map((s) => s.name) ?? []
-
-  const setFilter = (key: string, value: string) =>
-    setFilters((prev) => ({ ...prev, [key]: value }))
+  const { filters, setFilter, options } = useAttendanceFilters()
 
   return (
     <div className="space-y-6">
       {/* Filters */}
       {activeTab === "Statistics" ? (
         <div className="grid grid-cols-2 gap-3">
-          <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(value) => setFilter("cohort", value)} />
-          <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
+          <FilterSelect placeholder="Cohort" items={options.cohorts} value={filters.cohort} onValueChange={(value) => setFilter("cohort", value)} />
+          <FilterSelect placeholder="LGA" items={options.lgas} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-            <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(value) => setFilter("cohort", value)} />
-            <FilterSelect placeholder="Term" items={terms} value={filters.term} onValueChange={(value) => setFilter("term", value)} />
-            <FilterSelect placeholder="Year" items={cohortYears} value={filters.year} onValueChange={(value) => setFilter("year", value)} />
-            <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
-            <FilterSelect placeholder="School" items={schoolNames} value={filters.school} onValueChange={(value) => setFilter("school", value)} />
-            <FilterSelect placeholder="All Weeks" items={weeks} value={filters.week} onValueChange={(value) => setFilter("week", value)} />
-          </div>
+          <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
 
           {/* Search + New Attendance */}
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -64,8 +40,8 @@ export function AttendancePage() {
               <Input
                 placeholder="Find Student by Name"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && setAppliedSearch(search)}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && setAppliedSearch(search)}
                 className="h-11 rounded-full border-sidebar/30 bg-white pl-9 pr-24 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
               />
               <Button
