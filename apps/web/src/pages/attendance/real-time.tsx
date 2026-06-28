@@ -36,8 +36,8 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
         currentPage={page}
         onPageChange={setPage}
         defaultRows={String(pageSize)}
-        onRowsChange={(v) => {
-          setPageSize(Number(v))
+        onRowsChange={(value) => {
+          setPageSize(Number(value))
           setPage(1)
         }}
       />

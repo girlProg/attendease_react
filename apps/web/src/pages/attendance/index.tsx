@@ -43,18 +43,18 @@ export function AttendancePage() {
       {/* Filters */}
       {activeTab === "Statistics" ? (
         <div className="grid grid-cols-2 gap-3">
-          <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(v) => setFilter("cohort", v)} />
-          <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(v) => setFilter("lga", v)} />
+          <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(value) => setFilter("cohort", value)} />
+          <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-            <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(v) => setFilter("cohort", v)} />
-            <FilterSelect placeholder="Term" items={terms} value={filters.term} onValueChange={(v) => setFilter("term", v)} />
-            <FilterSelect placeholder="Year" items={cohortYears} value={filters.year} onValueChange={(v) => setFilter("year", v)} />
-            <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(v) => setFilter("lga", v)} />
-            <FilterSelect placeholder="School" items={schoolNames} value={filters.school} onValueChange={(v) => setFilter("school", v)} />
-            <FilterSelect placeholder="All Weeks" items={weeks} value={filters.week} onValueChange={(v) => setFilter("week", v)} />
+            <FilterSelect placeholder="Cohort" items={cohortNames} value={filters.cohort} onValueChange={(value) => setFilter("cohort", value)} />
+            <FilterSelect placeholder="Term" items={terms} value={filters.term} onValueChange={(value) => setFilter("term", value)} />
+            <FilterSelect placeholder="Year" items={cohortYears} value={filters.year} onValueChange={(value) => setFilter("year", value)} />
+            <FilterSelect placeholder="LGA" items={lgaNames} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
+            <FilterSelect placeholder="School" items={schoolNames} value={filters.school} onValueChange={(value) => setFilter("school", value)} />
+            <FilterSelect placeholder="All Weeks" items={weeks} value={filters.week} onValueChange={(value) => setFilter("week", value)} />
           </div>
 
           {/* Search + New Attendance */}
