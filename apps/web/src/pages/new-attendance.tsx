@@ -17,13 +17,8 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
-import {
-  getStudents,
-  getAttendanceByStudentIds,
-  downloadExcelTemplate,
-  type Student,
-  type AttendanceRecord,
-} from "@/api/attendance"
+import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate } from "@/api/attendance"
+import type { Student, AttendanceRecord } from "@/types"
 
 const dayColumns = ["Mon", "Tue", "Wed", "Thu"] as const
 const dayFields = ["monday", "tuesday", "wednesday", "thursday"] as const

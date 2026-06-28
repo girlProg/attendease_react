@@ -1,36 +1,14 @@
 import { api } from "../lib/api";
+import type {
+  PaginatedResponse,
+  Cohort,
+  LGA,
+  School,
+  Student,
+  AttendanceRecord,
+  AttendanceSummary,
+} from "@/types";
 
-export interface CohortRecord {
-  year: string;
-}
-
-export interface StudentRecord {
-  id: number;
-  name: string;
-  current_class: string;
-  cohort: CohortRecord;
-}
-
-export interface AttendanceRecord {
-  id: number;
-  student: StudentRecord;
-  term: string;
-  week: string;
-  monday: boolean;
-  tuesday: boolean;
-  wednesday: boolean;
-  thursday: boolean;
-  reason: string | null;
-  remark: string | null;
-  attendance_average: number;
-}
-
-export interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
 
 export const getAttendance = (
   page = 1,
@@ -53,13 +31,6 @@ export const getAttendance = (
     })
     .then((r) => r.data);
 };
-
-export interface Student {
-  id: number;
-  name: string;
-  current_class: string;
-  cohort: CohortRecord;
-}
 
 export const getStudents = (
   page = 1,
@@ -122,7 +93,7 @@ export const downloadExcelTemplate = (params: {
       const filenameMatch = contentDisposition.match(/filename[^;=\n]*=["']?([^"';\n]+)/);
       const filename = filenameMatch?.[1] ?? "attendance_template.xlsx";
 
-      const contentType = response.headers["content-type"];
+      const contentType = response.headers["content-type"] as string | undefined;
       const blob = new Blob([response.data], { ...(contentType && { type: contentType }) });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -135,24 +106,18 @@ export const downloadExcelTemplate = (params: {
     });
 };
 
+export const uploadAttendanceCsv = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api
+    .post("/attendance/upload-csv/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((response) => response.data);
+};
+
 export const submitAttendance = (payload: Omit<AttendanceRecord, "id">) =>
   api.post<AttendanceRecord>("/attendance/", payload).then((r) => r.data);
-
-export interface Cohort {
-  id: number;
-  name: string;
-  year: string;
-}
-
-export interface LGA {
-  id: number;
-  name: string;
-}
-
-export interface School {
-  id: number;
-  name: string;
-}
 
 export const getCohorts = () =>
   api.get<PaginatedResponse<Cohort>>("/cohort/").then((r) => r.data.results);
@@ -164,3 +129,6 @@ export const getSchools = (lga?: string) =>
   api.get<PaginatedResponse<School>>("/school/", {
     params: lga ? { lga__name: lga } : {},
   }).then((r) => r.data.results);
+
+export const getAttendanceSummary = (schoolId: number) =>
+  api.get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`).then((r) => r.data);

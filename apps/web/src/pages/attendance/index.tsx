@@ -86,7 +86,7 @@ export function AttendancePage() {
       {/* Tab content */}
       {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={filters} />}
       {activeTab === "Historical" && <div className="py-12 text-center text-muted-foreground">Historical view coming soon</div>}
-      {activeTab === "Statistics" && <Statistics />}
+      {activeTab === "Statistics" && <Statistics filters={filters} />}
     </div>
   )
 }

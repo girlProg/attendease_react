@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import {
   Table,
   TableBody,
@@ -6,44 +7,178 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { getSchools, getAttendanceSummary } from "@/api/attendance"
+import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
 
-type StatRecord = {
-  sn: number
-  school: string
-  count: number
+function getCellColor(coverage: number): string {
+  if (coverage >= 90) return "bg-emerald-600"
+  if (coverage >= 80) return "bg-emerald-500"
+  if (coverage >= 70) return "bg-emerald-400/80"
+  if (coverage >= 60) return "bg-yellow-500"
+  if (coverage >= 50) return "bg-orange-400"
+  if (coverage >= 40) return "bg-orange-500"
+  return "bg-red-500"
 }
 
-const mockData: StatRecord[] = []
+function getTermLabel(term: number): string {
+  if (term === 1) return "1st Term"
+  if (term === 2) return "2nd Term"
+  return "3rd Term"
+}
 
-export function Statistics() {
+function getAverageColor(average: number): string {
+  if (average >= 90) return "text-emerald-600"
+  if (average >= 80) return "text-emerald-500"
+  if (average >= 70) return "text-yellow-600"
+  return "text-red-500"
+}
+
+function WeekCell({ week, coverage }: { week: number; coverage: number }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
-            <TableHead className="w-20 text-xs font-semibold text-sidebar">S/N</TableHead>
-            <TableHead className="text-xs font-semibold text-sidebar">School</TableHead>
-            <TableHead className="text-right text-xs font-semibold text-sidebar">Count</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {mockData.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={3} className="py-6 text-sm text-muted-foreground">
-                Loading data...
-              </TableCell>
-            </TableRow>
-          ) : (
-            mockData.map((row) => (
-              <TableRow key={row.sn} className="border-border/40">
-                <TableCell className="text-sm text-muted-foreground">{row.sn}</TableCell>
-                <TableCell className="text-sm font-medium text-foreground">{row.school}</TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">{row.count}</TableCell>
+    <div
+      className={`flex size-5 items-center justify-center rounded-sm ${getCellColor(coverage)} cursor-default text-[7px] font-medium text-white/80 transition-opacity hover:opacity-80`}
+      title={`Week ${week}: ${Math.round(coverage)}%`}
+    >
+      {week}
+    </div>
+  )
+}
+
+function TermRow({ term }: { term: AttendanceSummaryTerm }) {
+  const termAverage = term.weeks.length > 0
+    ? Math.round(term.weeks.reduce((sum, week) => sum + week.coverage, 0) / term.weeks.length)
+    : 0
+
+  return (
+    <div className="flex items-center gap-2 pl-12">
+      <span className="w-14 shrink-0 text-[11px] text-muted-foreground">{getTermLabel(term.term)}:</span>
+      <div className="flex gap-0.5">
+        {term.weeks.map((week) => (
+          <WeekCell key={week.week} week={week.week} coverage={week.coverage} />
+        ))}
+      </div>
+      <span className="text-[11px] font-semibold text-sidebar">{termAverage}%</span>
+    </div>
+  )
+}
+
+function SchoolHeatmap({ summary }: { summary: AttendanceSummary }) {
+  return (
+    <div className="space-y-3">
+      {summary.years.map((year) => (
+        <div key={year.year} className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-sidebar">{year.year}</span>
+          </div>
+          {year.terms.map((term) => (
+            <TermRow key={term.term} term={term} />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Legend() {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-muted-foreground">0%</span>
+      <div className="flex h-2.5 w-36 overflow-hidden rounded-full">
+        <div className="flex-1 bg-red-500" />
+        <div className="flex-1 bg-orange-500" />
+        <div className="flex-1 bg-orange-400" />
+        <div className="flex-1 bg-yellow-500" />
+        <div className="flex-1 bg-emerald-400/80" />
+        <div className="flex-1 bg-emerald-500" />
+        <div className="flex-1 bg-emerald-600" />
+      </div>
+      <span className="text-[10px] text-muted-foreground">100% marked</span>
+    </div>
+  )
+}
+
+function SchoolSummaryRow({ schoolId, index }: { schoolId: number; index: number }) {
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ["attendance-summary", schoolId],
+    queryFn: () => getAttendanceSummary(schoolId),
+  })
+
+  if (isLoading || !summary) {
+    return (
+      <TableRow className="border-border/40 align-top">
+        <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
+        <TableCell colSpan={2} className="text-sm text-muted-foreground">Loading...</TableCell>
+      </TableRow>
+    )
+  }
+
+  return (
+    <TableRow className="border-border/40 align-top">
+      <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
+      <TableCell>
+        <div className="space-y-0.5">
+          <span className="text-sm font-bold text-foreground">{summary.school.name}</span>
+          <p className="text-[11px] text-muted-foreground">{summary.total_enrolled} enrolled</p>
+          <p className="flex items-baseline gap-1">
+            <span className={`text-sm font-bold ${getAverageColor(summary.overall_average)}`}>
+              {Math.round(summary.overall_average)}%
+            </span>
+            <span className="text-[10px] text-muted-foreground">avg</span>
+          </p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <SchoolHeatmap summary={summary} />
+      </TableCell>
+    </TableRow>
+  )
+}
+
+export function Statistics({ filters }: { filters: Record<string, string> }) {
+  const { data: schools, isLoading } = useQuery({
+    queryKey: ["schools-for-stats", filters.lga],
+    queryFn: () => getSchools(filters.lga),
+    enabled: !!filters.lga,
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border/40 bg-white px-6 py-5">
+        <h2 className="text-base font-bold text-foreground">Weekly capture rate</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Every cell is one week. Shade shows the share of enrolled students whose attendance was taken that week.
+        </p>
+        <div className="mt-3">
+          <Legend />
+        </div>
+      </div>
+
+      {!filters.lga ? (
+        <p className="py-12 text-center text-muted-foreground">
+          Select an LGA to view attendance statistics.
+        </p>
+      ) : isLoading ? (
+        <p className="py-12 text-center text-muted-foreground">Loading schools...</p>
+      ) : !schools?.length ? (
+        <p className="py-12 text-center text-muted-foreground">No schools found for the selected LGA.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
+                <TableHead className="w-16 text-center text-xs font-semibold text-sidebar">S/N</TableHead>
+                <TableHead className="w-40 text-xs font-semibold text-sidebar">School</TableHead>
+                <TableHead className="text-xs font-semibold text-sidebar">Weekly Capture</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {schools.map((school, index) => (
+                <SchoolSummaryRow key={school.id} schoolId={school.id} index={index} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }

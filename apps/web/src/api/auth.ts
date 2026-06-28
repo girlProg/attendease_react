@@ -1,15 +1,5 @@
-// src/api/auth.ts
 import { api } from "../lib/api";
-
-export interface LoginCredentials {
-  email: string;   // see note below — might be "email" for your user model
-  password: string;
-}
-
-export interface TokenPair {
-  access: string;
-  refresh: string;
-}
+import type { LoginCredentials, TokenPair } from "@/types";
 
 export const login = (credentials: LoginCredentials) =>
   api.post<TokenPair>("/auth/token/", credentials).then((r) => {
