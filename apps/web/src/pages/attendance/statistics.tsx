@@ -136,9 +136,8 @@ function SchoolSummaryRow({ schoolId, index }: { schoolId: number; index: number
 
 export function Statistics({ filters }: { filters: Record<string, string> }) {
   const { data: schools, isLoading } = useQuery({
-    queryKey: ["schools-for-stats", filters.lga],
-    queryFn: () => getSchools(filters.lga),
-    enabled: !!filters.lga,
+    queryKey: ["schools-for-stats", filters.lga, filters.cohort],
+    queryFn: () => getSchools(filters.lga, filters.cohort),
   })
 
   return (
@@ -153,11 +152,7 @@ export function Statistics({ filters }: { filters: Record<string, string> }) {
         </div>
       </div>
 
-      {!filters.lga ? (
-        <p className="py-12 text-center text-muted-foreground">
-          Select an LGA to view attendance statistics.
-        </p>
-      ) : isLoading ? (
+      {isLoading ? (
         <p className="py-12 text-center text-muted-foreground">Loading schools...</p>
       ) : !schools?.length ? (
         <p className="py-12 text-center text-muted-foreground">No schools found for the selected LGA.</p>

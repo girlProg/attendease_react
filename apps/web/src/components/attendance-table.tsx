@@ -7,16 +7,15 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { PercentageBadge } from "@/components/percentage-badge"
-import type { Student, AttendanceRecord } from "@/types"
+import type { AttendanceRecord } from "@/types"
 
 interface AttendanceTableProps {
-  students: Student[]
-  attendanceMap?: Map<number, AttendanceRecord>
+  records: AttendanceRecord[]
   page: number
   pageSize: number
 }
 
-export function AttendanceTable({ students, attendanceMap, page, pageSize }: AttendanceTableProps) {
+export function AttendanceTable({ records, page, pageSize }: AttendanceTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
       <Table>
@@ -35,32 +34,29 @@ export function AttendanceTable({ students, attendanceMap, page, pageSize }: Att
           </TableRow>
         </TableHeader>
         <TableBody>
-          {students.map((student, index) => {
-            const attendance = attendanceMap?.get(student.id)
-            return (
-              <TableRow key={student.id} className="border-border/40">
-                <TableCell className="text-center text-xs text-muted-foreground">
-                  {(page - 1) * pageSize + index + 1}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="size-6 shrink-0 rounded-md bg-muted py-5" />
-                    <span className="text-xs font-semibold text-foreground">{student.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{student.id}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{student.current_class}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{attendance?.term ?? "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{student.cohort.year}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{attendance?.week ?? "—"}</TableCell>
-                <TableCell className="text-center">
-                  <PercentageBadge value={attendance?.attendance_average ?? 0} />
-                </TableCell>
-                <TableCell className="text-center text-xs text-muted-foreground">{attendance?.reason ?? "—"}</TableCell>
-                <TableCell className="text-center text-xs text-muted-foreground">{attendance?.remark ?? "—"}</TableCell>
-              </TableRow>
-            )
-          })}
+          {records.map((record, index) => (
+            <TableRow key={record.id} className="border-border/40">
+              <TableCell className="text-center text-xs text-muted-foreground">
+                {(page - 1) * pageSize + index + 1}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <div className="size-6 shrink-0 rounded-md bg-muted py-5" />
+                  <span className="text-xs font-semibold text-foreground">{record.student.name}</span>
+                </div>
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">{record.student.id}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">{record.student.current_class}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">{record.term} Term </TableCell>
+              <TableCell className="text-xs text-muted-foreground">{record.student.cohort.year}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">Week {record.week}</TableCell>
+              <TableCell className="text-center">
+                <PercentageBadge value={record.attendance_average} />
+              </TableCell>
+              <TableCell className="text-center text-xs text-muted-foreground">{record.reason ?? "—"}</TableCell>
+              <TableCell className="text-center text-xs text-muted-foreground">{record.remark ?? "—"}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>

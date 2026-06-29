@@ -1,21 +1,53 @@
 import { FilterSelect } from "@/components/filter-select"
 import type { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 
-type AttendanceFilters = ReturnType<typeof useAttendanceFilters>
+type FilterBarProps = Pick<ReturnType<typeof useAttendanceFilters>, "filters" | "setFilter" | "options"> & {
+  exclude?: string[]
+}
 
-export function AttendanceFilterBar({
-  filters,
-  setFilter,
-  options,
-}: Pick<AttendanceFilters, "filters" | "setFilter" | "options">) {
+function ordinal(value: string) {
+  const num = parseInt(value, 10)
+  if (num === 1) return "1st"
+  if (num === 2) return "2nd"
+  if (num === 3) return "3rd"
+  return `${num}th`
+}
+
+const allFilters = [
+  { key: "cohort", placeholder: "Cohort", format: (value: string) => `${ordinal(value)} Cohort` },
+  { key: "term", placeholder: "Term", format: (value: string) => `${ordinal(value)} Term` },
+  { key: "year", placeholder: "Year" },
+  { key: "lga", placeholder: "LGA" },
+  { key: "school", placeholder: "School", disabledKey: "lga" },
+  { key: "week", placeholder: "Week" },
+] as const
+
+const optionsMap: Record<string, keyof FilterBarProps["options"]> = {
+  cohort: "cohorts",
+  term: "terms",
+  year: "years",
+  lga: "lgas",
+  school: "schools",
+  week: "weeks",
+}
+
+export function AttendanceFilterBar({ filters, setFilter, options, exclude = [] }: FilterBarProps) {
+  const visible = allFilters.filter((filter) => !exclude.includes(filter.key))
+  const cols = visible.length <= 2 ? "grid-cols-2" : visible.length <= 4 ? "grid-cols-2 md:grid-cols-4" : visible.length <= 5 ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-6"
+
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-      <FilterSelect placeholder="Cohort" items={options.cohorts} value={`${filters.cohort} Cohort`} onValueChange={(value) => setFilter("cohort", value)} />
-      <FilterSelect placeholder="Term" items={options.terms} value={`${filters.term} Term`} onValueChange={(value) => setFilter("term", value)} />
-      <FilterSelect placeholder="Year" items={options.years} value={filters.year} onValueChange={(value) => setFilter("year", value)} />
-      <FilterSelect placeholder="LGA" items={options.lgas} value={filters.lga} onValueChange={(value) => setFilter("lga", value)} />
-      <FilterSelect placeholder="School" items={options.schools} value={filters.school} onValueChange={(value) => setFilter("school", value)} />
-      <FilterSelect placeholder="Week" items={options.weeks} value={filters.week} onValueChange={(value) => setFilter("week", value)} />
+    <div className={`grid gap-3 ${cols}`}>
+      {visible.map((filter) => (
+        <FilterSelect
+          key={filter.key}
+          placeholder={filter.placeholder}
+          items={options[optionsMap[filter.key]] ?? []}
+          value={filters[filter.key] ?? undefined}
+          onValueChange={(value) => setFilter(filter.key, value)}
+          disabled={"disabledKey" in filter ? !filters[filter.disabledKey] : false}
+          formatItem={"format" in filter && filter.format ? filter.format : undefined}
+        />
+      ))}
     </div>
   )
 }

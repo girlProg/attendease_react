@@ -120,15 +120,84 @@ export const submitAttendance = (payload: Omit<AttendanceRecord, "id">) =>
   api.post<AttendanceRecord>("/attendance/", payload).then((r) => r.data);
 
 export const getCohorts = () =>
-  api.get<PaginatedResponse<Cohort>>("/cohort/").then((r) => r.data.results);
+  api.get<PaginatedResponse<Cohort>>("/cohort/", { params: { page_size: 100 } }).then((r) => r.data.results);
 
 export const getLGAs = () =>
-  api.get<PaginatedResponse<LGA>>("/lga/").then((r) => r.data.results);
+  api.get<PaginatedResponse<LGA>>("/lga/", { params: { page_size: 100 } }).then((r) => r.data.results);
 
-export const getSchools = (lga?: string) =>
-  api.get<PaginatedResponse<School>>("/school/", {
-    params: lga ? { lga__name: lga } : {},
-  }).then((r) => r.data.results);
+export const getSchools = (lga?: string, cohort?: string) => {
+  const params: Record<string, string | number> = { page_size: 500 };
+  if (lga) params.lga__name = lga;
+  if (cohort) params.cohort__name = cohort;
+  return api.get<PaginatedResponse<School>>("/school/", { params }).then((r) => r.data.results);
+};
+
+export const getAttendanceYears = () =>
+  api.get<string[]>("/attendance/years/").then((response) => response.data);
+
+export const exportStudents = (cohortId: number) => {
+  return api
+    .get("/students/export/", {
+      params: { cohort: cohortId },
+      responseType: "blob",
+    })
+    .then((response) => {
+      const contentDisposition = response.headers["content-disposition"] ?? "";
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=["']?([^"';\n]+)/);
+      const filename = filenameMatch?.[1] ?? "students_export.xlsx";
+
+      const contentType = response.headers["content-type"] as string | undefined;
+      const blob = new Blob([response.data], { ...(contentType && { type: contentType }) });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    });
+};
+
+export const getTermAverages = (params: {
+  year?: string;
+  school?: number;
+  cohort?: number;
+  term?: string;
+  name?: string;
+  page?: number;
+  page_size?: number;
+}) =>
+  api.get<PaginatedResponse<{
+    id: number;
+    name: string;
+    current_class: string;
+    school: string;
+    cohort: string;
+    photo_url: string;
+    term_1: number;
+    term_2: number;
+    term_3: number;
+    average: number;
+    account_no?: string;
+    bank_name?: string;
+    bank_code?: string;
+    caregiver_name?: string;
+    caregiver_phone?: string;
+    bank_account_name?: string;
+    payments?: {
+      id: number;
+      term: number;
+      disbursed: boolean;
+      amount_received: string;
+      batch_reference: string;
+      bvn: string;
+      nin: string;
+      bank_name: string;
+      bank_account_number: string;
+    }[];
+  }>>("/student/term-averages/", { params }).then((response) => response.data);
 
 export const getAttendanceSummary = (schoolId: number) =>
   api.get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`).then((r) => r.data);
+

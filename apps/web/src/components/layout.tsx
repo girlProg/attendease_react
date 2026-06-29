@@ -1,8 +1,10 @@
-import { Outlet } from "react-router-dom"
+import { Outlet, useNavigate } from "react-router-dom"
 import { User, LogOut, Menu } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { usePageTitle } from "@/hooks/use-page-title"
+import { api } from "@/lib/api"
 import { SidebarProvider, useSidebar } from "@workspace/ui/components/sidebar"
 import {
   Avatar,
@@ -15,6 +17,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
+
+interface UserProfile {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  phone_number: string
+  photo: string | null
+}
 
 export function Layout() {
   return (
@@ -31,7 +42,7 @@ function LayoutInner() {
   return (
     <div className="flex min-h-svh">
       <AppSidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border/40 bg-background px-4 py-8 md:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -45,7 +56,7 @@ function LayoutInner() {
           </div>
           <AccountMenu />
         </header>
-        <main className="flex-1 p-4 md:p-8">
+        <main className="min-w-0 flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>
@@ -54,24 +65,44 @@ function LayoutInner() {
 }
 
 function AccountMenu() {
+  const navigate = useNavigate()
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => api.get<UserProfile>("/auth/profile/").then((response) => response.data),
+  })
+
+  const displayName = profile
+    ? `${profile.first_name} ${profile.last_name.charAt(0)}.`
+    : ""
+  const initials = profile
+    ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`
+    : ""
+
+  function handleLogout() {
+    localStorage.removeItem("access")
+    localStorage.removeItem("refresh")
+    window.location.href = "/login"
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-lg p-1 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
         <div className="text-right">
-          <p className="text-sm font-semibold text-foreground">Admin K.</p>
+          <p className="text-sm font-semibold text-foreground">{displayName}</p>
           <p className="text-xs text-muted-foreground">Admin</p>
         </div>
         <Avatar size="lg">
-          <AvatarImage src="" alt="Admin K." />
-          <AvatarFallback>AK</AvatarFallback>
+          <AvatarImage src={profile?.photo ?? ""} alt={displayName} />
+          <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-48">
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/profile")}>
           <User />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLogout}>
           <LogOut />
           Logout
         </DropdownMenuItem>

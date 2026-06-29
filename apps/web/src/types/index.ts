@@ -25,7 +25,13 @@ export interface Student {
   id: number;
   name: string;
   current_class: string;
+  class_name: string;
   cohort: Cohort;
+  school: { id: number; name: string };
+  lga: string;
+  photo_url: string;
+  caregiver_name: string;
+  caregiver_phone: string;
 }
 
 export interface AttendanceRecord {

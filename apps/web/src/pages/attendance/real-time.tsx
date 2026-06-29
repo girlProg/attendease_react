@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { PaginationBar } from "@/components/pagination-bar"
 import { AttendanceTable } from "@/components/attendance-table"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
-import { getStudents, getAttendanceByStudentIds } from "@/api/attendance"
+import { getAttendance } from "@/api/attendance"
 
 export function RealTime({ search = "", filters = {} }: { search?: string; filters?: Record<string, string> }) {
   const [page, setPage] = useState(1)
@@ -10,31 +10,15 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
 
   useEffect(() => { setPage(1) }, [search, filters])
 
-  const studentFilters = useMemo(() => ({
-    ...filters,
-    ...(search && { name: search }),
-  }), [filters, search])
-
-  const { data: studentData, isLoading, isError, error } = useQuery({
-    queryKey: ["students", page, pageSize, studentFilters],
-    queryFn: () => getStudents(page, pageSize, studentFilters),
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["attendance", page, pageSize, search, filters],
+    queryFn: () => getAttendance(page, pageSize, search, filters),
     placeholderData: keepPreviousData,
   })
 
-  const studentIds = useMemo(
-    () => studentData?.results.map((student) => student.id) ?? [],
-    [studentData],
-  )
+  const totalPages = data ? Math.ceil(data.count / pageSize) : 0
 
-  const { data: attendanceMap } = useQuery({
-    queryKey: ["attendance-map", studentIds, filters.term, filters.week],
-    queryFn: () => getAttendanceByStudentIds(studentIds, filters),
-    enabled: studentIds.length > 0,
-  })
-
-  const totalPages = studentData ? Math.ceil(studentData.count / pageSize) : 0
-
-  if (isLoading && !studentData) return <p>Loading…</p>
+  if (isLoading && !data) return <p>Loading…</p>
   if (isError) return <p>{String(error)}</p>
 
   return (
@@ -51,8 +35,7 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
       />
 
       <AttendanceTable
-        students={studentData?.results ?? []}
-        attendanceMap={attendanceMap}
+        records={data?.results ?? []}
         page={page}
         pageSize={pageSize}
       />

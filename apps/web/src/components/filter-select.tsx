@@ -12,12 +12,14 @@ export function FilterSelect({
   value,
   onValueChange,
   disabled,
+  formatItem,
 }: {
   placeholder: string
   items: string[]
   value?: string
   onValueChange?: (value: string) => void
   disabled?: boolean
+  formatItem?: (value: string) => string
 }) {
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || items.length === 0}>
@@ -25,9 +27,12 @@ export function FilterSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="min-w-[var(--radix-select-trigger-width)]">
+        <SelectItem value="__clear__" className="text-muted-foreground">
+          Select {placeholder}
+        </SelectItem>
         {items.map((item) => (
           <SelectItem key={item} value={item}>
-            {item}
+            {formatItem ? formatItem(item) : item}
           </SelectItem>
         ))}
       </SelectContent>

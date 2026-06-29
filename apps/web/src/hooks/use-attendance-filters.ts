@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { getCohorts, getLGAs, getSchools } from "@/api/attendance"
+import { getCohorts, getLGAs, getSchools, getAttendanceYears } from "@/api/attendance"
 
 const TERMS = ["1", "2", "3"]
 const WEEKS = [
@@ -12,21 +12,26 @@ export function useAttendanceFilters() {
   const [filters, setFilters] = useState<Record<string, string>>({})
 
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  const { data: attendanceYears } = useQuery({ queryKey: ["attendance-years"], queryFn: getAttendanceYears })
   const { data: lgaList } = useQuery({ queryKey: ["lga"], queryFn: getLGAs })
   const { data: schoolList } = useQuery({
-    queryKey: ["school", filters.lga],
-    queryFn: () => getSchools(filters.lga),
-    enabled: !!filters.lga,
+    queryKey: ["school", filters.lga, filters.cohort],
+    queryFn: () => getSchools(filters.lga, filters.cohort),
   })
 
   const cohortNames = cohorts?.map((cohort) => cohort.name) ?? []
-  const cohortYears = [...new Set(cohorts?.map((cohort) => cohort.year) ?? [])]
+  const years = attendanceYears ?? []
   const lgaNames = lgaList?.map((lga) => lga.name) ?? []
   const schoolNames = schoolList?.map((school) => school.name) ?? []
 
   const setFilter = (key: string, value: string) =>
     setFilters((previous) => {
-      const next = { ...previous, [key]: value }
+      const next = { ...previous }
+      if (value === "choose") {
+        delete next[key]
+      } else {
+        next[key] = value
+      }
       if (key === "lga") delete next.school
       return next
     })
@@ -53,7 +58,7 @@ export function useAttendanceFilters() {
     },
     options: {
       cohorts: cohortNames,
-      years: cohortYears,
+      years,
       lgas: lgaNames,
       schools: schoolNames,
       terms: TERMS,
