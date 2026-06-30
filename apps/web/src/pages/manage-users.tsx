@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { PaginationBar } from "@/components/pagination-bar"
+import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/types"
@@ -52,6 +53,7 @@ function formatLastActive(dateString: string | null) {
 
 export function ManageUsersPage() {
   useLogVisit("Manage Users", "Visited Manage Users")
+  const { canWrite } = useAuth()
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -70,16 +72,18 @@ export function ManageUsersPage() {
   return (
     <div className="space-y-6">
       {/* Add New User */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          onClick={() => navigate("/manage-users/new")}
-        >
-          <Plus className="size-4" />
-          Add New User
-        </Button>
-      </div>
+      {canWrite && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            onClick={() => navigate("/manage-users/new")}
+          >
+            <Plus className="size-4" />
+            Add New User
+          </Button>
+        </div>
+      )}
 
       {/* Pagination */}
       <PaginationBar

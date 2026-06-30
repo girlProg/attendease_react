@@ -35,9 +35,9 @@ const navItems = [
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isViewer } = useAuth()
 
-  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin)
+  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin || isViewer)
 
   return (
     <Sidebar>

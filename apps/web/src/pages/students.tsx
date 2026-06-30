@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
+import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -25,6 +26,7 @@ function formatNaira(amount: number) {
 
 export function StudentsPage() {
   useLogVisit("Students", "Visited Students")
+  const { canWrite } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -58,20 +60,24 @@ export function StudentsPage() {
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-        >
-          <Plus className="size-4" />
-          Upload Records
-        </Button>
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-        >
-          <Plus className="size-4" />
-          New Student
-        </Button>
+        {canWrite && (
+          <>
+            <Button
+              variant="outline"
+              className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            >
+              <Plus className="size-4" />
+              Upload Records
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            >
+              <Plus className="size-4" />
+              New Student
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Pagination */}

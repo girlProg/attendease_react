@@ -15,9 +15,9 @@ export function ProtectedRoute() {
 }
 
 export function AdminRoute() {
-  const { isAdmin, isLoading } = useAuth()
+  const { isAdmin, isViewer, isLoading } = useAuth()
 
   if (isLoading) return null
-  if (!isAdmin) return <Navigate to="/" replace />
+  if (!isAdmin && !isViewer) return <Navigate to="/" replace />
   return <Outlet />
 }

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { SearchBar } from "@/components/search-bar"
+import { useAuth } from "@/contexts/auth-context"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 
@@ -19,6 +20,7 @@ export function AttendancePage() {
   const navigate = useNavigate()
 
   useLogVisit("Attendance", "Visited Attendance")
+  const { canWrite } = useAuth()
   const { filters, setFilter, options } = useAttendanceFilters()
 
   return (
@@ -33,14 +35,16 @@ export function AttendancePage() {
           {/* Search + New Attendance */}
           <div className="flex flex-col gap-3 sm:flex-row">
             <SearchBar onSearch={setAppliedSearch} />
-            <Button
-              variant="outline"
-              className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-              onClick={() => navigate("/attendance/new")}
-            >
-              <Plus className="size-4" />
-              New Attendance
-            </Button>
+            {canWrite && (
+              <Button
+                variant="outline"
+                className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+                onClick={() => navigate("/attendance/new")}
+              >
+                <Plus className="size-4" />
+                New Attendance
+              </Button>
+            )}
           </div>
         </>
       )}
