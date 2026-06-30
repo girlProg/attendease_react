@@ -1,10 +1,9 @@
 import { Outlet, useNavigate } from "react-router-dom"
 import { User, LogOut, Menu } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { useAuth } from "@/contexts/auth-context"
 import { usePageTitle } from "@/hooks/use-page-title"
-import { api } from "@/lib/api"
 import { SidebarProvider, useSidebar } from "@workspace/ui/components/sidebar"
 import {
   Avatar,
@@ -18,14 +17,6 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 
-interface UserProfile {
-  id: number
-  email: string
-  first_name: string
-  last_name: string
-  phone_number: string
-  photo: string | null
-}
 
 export function Layout() {
   return (
@@ -66,11 +57,7 @@ function LayoutInner() {
 
 function AccountMenu() {
   const navigate = useNavigate()
-
-  const { data: profile } = useQuery({
-    queryKey: ["profile"],
-    queryFn: () => api.get<UserProfile>("/auth/profile/").then((response) => response.data),
-  })
+  const { profile } = useAuth()
 
   const displayName = profile
     ? `${profile.first_name} ${profile.last_name.charAt(0)}.`

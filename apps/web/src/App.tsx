@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom"
 
 import { Layout } from "@/components/layout"
-import { ProtectedRoute } from "@/components/protected-route"
+import { ProtectedRoute, AdminRoute } from "@/components/protected-route"
 import { AttendancePage } from "@/pages/attendance"
 import { NewAttendancePage } from "@/pages/new-attendance"
 import { LoginPage } from "@/pages/login"
@@ -25,12 +25,14 @@ export function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="payments" element={<PaymentsPage />} />
         <Route path="analytics" element={null} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="manage-users" element={<ManageUsersPage />} />
-        <Route path="manage-users/new" element={<NewUserPage />} />
-        <Route path="logs" element={<LogsPage />} />
+        <Route element={<AdminRoute />}>
+          <Route path="payments" element={<PaymentsPage />} />
+          <Route path="manage-users" element={<ManageUsersPage />} />
+          <Route path="manage-users/new" element={<NewUserPage />} />
+          <Route path="logs" element={<LogsPage />} />
+        </Route>
       </Route>
       </Route>
     </Routes>
