@@ -43,7 +43,7 @@ export function AttendanceFilterBar({ filters, setFilter, options, exclude = [] 
           placeholder={filter.placeholder}
           items={options[optionsMap[filter.key]] ?? []}
           value={filters[filter.key] ?? undefined}
-          onValueChange={(value) => setFilter(filter.key, value)}
+          onValueChange={(value) => { if (value !== null) setFilter(filter.key, value) }}
           disabled={"disabledKey" in filter ? !filters[filter.disabledKey] : false}
           formatItem={"format" in filter && filter.format ? filter.format : undefined}
         />

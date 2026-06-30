@@ -50,7 +50,7 @@ export function BeneficiariesPage() {
           placeholder="Cohort"
           items={options.cohorts}
           value={filters.cohort ?? undefined}
-          onValueChange={(value) => setFilter("cohort", value)}
+          onValueChange={(value) => { if (value !== null) setFilter("cohort", value) }}
           formatItem={(value) => {
             const num = parseInt(value, 10)
             const suffix = num === 1 ? "st" : num === 2 ? "nd" : num === 3 ? "rd" : "th"
@@ -80,13 +80,13 @@ export function BeneficiariesPage() {
             placeholder="Select a target class"
             items={CLASS_OPTIONS}
             value={targetClass}
-            onValueChange={setTargetClass}
+            onValueChange={(value) => setTargetClass(value ?? undefined)}
           />
           <FilterSelect
             placeholder="Select a destination class"
             items={CLASS_OPTIONS}
             value={destinationClass}
-            onValueChange={setDestinationClass}
+            onValueChange={(value) => setDestinationClass(value ?? undefined)}
           />
           <Button className="h-11 rounded-full bg-brand px-6 text-white hover:bg-brand/90">
             Update All
@@ -142,7 +142,7 @@ export function BeneficiariesPage() {
                     <span className="text-xs font-semibold text-sidebar">{record.name}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{record.school.lga.name}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.lga}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.school?.name ?? "—"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -150,11 +150,11 @@ export function BeneficiariesPage() {
                       <Phone className="size-3.5 text-sidebar" />
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      ({record.caregiver.phone_number}) {record.caregiver.name}
+                      ({record.caregiver_phone}) {record.caregiver_name}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs font-semibold text-brand">{record.enrolment.enrolment_class}</TableCell>
+                <TableCell className="text-xs font-semibold text-brand">{record.class_name}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.current_class}</TableCell>
               </TableRow>
             ))}

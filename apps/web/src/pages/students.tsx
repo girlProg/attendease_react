@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Plus, Upload } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"

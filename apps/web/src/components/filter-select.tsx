@@ -17,7 +17,7 @@ export function FilterSelect({
   placeholder: string
   items: string[]
   value?: string
-  onValueChange?: (value: string) => void
+  onValueChange?: (value: string | null) => void
   disabled?: boolean
   formatItem?: (value: string) => string
 }) {

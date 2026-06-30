@@ -63,7 +63,7 @@ function LabeledSelect({
 }: {
   label: string
   value: string
-  onValueChange: (value: string) => void
+  onValueChange: (value: string | null) => void
   items: string[]
   placeholder: string
 }) {
@@ -140,21 +140,21 @@ export function NewUserPage() {
           <LabeledSelect
             label="User Type"
             value={userType}
-            onValueChange={setUserType}
+            onValueChange={(value) => { if (value) setUserType(value) }}
             items={userTypes ?? ["User", "Admin", "View Only"]}
             placeholder="Select a user type"
           />
           <LabeledSelect
             label="LGA"
             value={lga}
-            onValueChange={setLga}
+            onValueChange={(value) => { if (value) setLga(value) }}
             items={lgaOptions}
             placeholder="Select LGA"
           />
           <LabeledSelect
             label="Activated"
             value={activated}
-            onValueChange={setActivated}
+            onValueChange={(value) => { if (value) setActivated(value) }}
             items={["True", "False"]}
             placeholder="Select status"
           />

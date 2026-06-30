@@ -19,7 +19,7 @@ export function PaginationBar({
   onPageChange?: (page: number) => void
   rowOptions?: string[]
   defaultRows?: string
-  onRowsChange?: (rows: string) => void
+  onRowsChange?: (rows: string | null) => void
 }) {
   return (
     <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
