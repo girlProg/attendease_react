@@ -17,12 +17,12 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 403) {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
-      window.location.href = "/login";
-      return Promise.reject(error);
-    }
+    // if (error.response?.status === 403) {
+    //   localStorage.removeItem("access");
+    //   localStorage.removeItem("refresh");
+    //   window.location.href = "/login";
+    //   return Promise.reject(error);
+    // }
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
