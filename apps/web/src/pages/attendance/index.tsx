@@ -21,7 +21,7 @@ export function AttendancePage() {
 
   useLogVisit("Attendance", "Visited Attendance")
   const { canWrite } = useAuth()
-  const { filters, setFilter, allFiltersSelected, options } = useAttendanceFilters()
+  const { filters, setFilter, options } = useAttendanceFilters()
 
   return (
     <div className="space-y-6">
