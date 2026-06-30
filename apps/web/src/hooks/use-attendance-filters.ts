@@ -9,7 +9,14 @@ const WEEKS = [
 ]
 
 export function useAttendanceFilters() {
-  const [filters, setFilters] = useState<Record<string, string>>({})
+  const [filters, setFilters] = useState<Record<string, string>>(() => {
+    try {
+      const saved = sessionStorage.getItem("attendance-filters")
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
 
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
   const { data: attendanceYears } = useQuery({ queryKey: ["attendance-years"], queryFn: getAttendanceYears })
@@ -33,6 +40,7 @@ export function useAttendanceFilters() {
         next[key] = value
       }
       if (key === "lga") delete next.school
+      sessionStorage.setItem("attendance-filters", JSON.stringify(next))
       return next
     })
 
