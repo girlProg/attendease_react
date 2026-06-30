@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryFn: () => api.get<UserProfile>("/auth/profile/").then((response) => response.data),
   })
 
-  const isAdmin = profile?.role === "Admin"
+  const isAdmin = profile?.role === "admin"
 
   return (
     <AuthContext.Provider value={{ profile, isAdmin, isLoading }}>
