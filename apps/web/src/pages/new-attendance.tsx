@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { FileSpreadsheet } from "lucide-react"
-import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
@@ -17,13 +17,14 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
-import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate } from "@/api/attendance"
+import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, submitAttendanceSubmission } from "@/api/attendance"
 import type { Student, AttendanceRecord } from "@/types"
 
 const dayColumns = ["Mon", "Tue", "Wed", "Thu"] as const
 const dayFields = ["monday", "tuesday", "wednesday", "thursday"] as const
 
 export function NewAttendancePage() {
+  const queryClient = useQueryClient()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [page, setPage] = useState(1)
@@ -32,6 +33,7 @@ export function NewAttendancePage() {
   const [dayOverrides, setDayOverrides] = useState<Record<number, Record<string, boolean>>>({})
   const [reasonOverrides, setReasonOverrides] = useState<Record<number, string>>({})
   const [remarkOverrides, setRemarkOverrides] = useState<Record<number, string>>({})
+  const [successMessage, setSuccessMessage] = useState("")
 
   useEffect(() => {
     setPage(1)
@@ -85,6 +87,50 @@ export function NewAttendancePage() {
     const attendance = attendanceMap?.get(student.id)
     if (!attendance) return false
     return Boolean(attendance[dayField as keyof AttendanceRecord])
+  }
+
+  const { mutate: saveAttendance, isPending: isSaving } = useMutation({
+    mutationFn: submitAttendanceSubmission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
+      setDayOverrides({})
+      setReasonOverrides({})
+      setRemarkOverrides({})
+      setSuccessMessage("Attendance saved successfully!")
+      setTimeout(() => setSuccessMessage(""), 5000)
+    },
+  })
+
+  function handleSave() {
+    if (!selectedIds.school || !selectedIds.cohort || !filters.year || !filters.term || !filters.week) return
+    const students = studentData?.results ?? []
+
+    const records = students.map((student) => {
+      const attendance = attendanceMap?.get(student.id)
+      return {
+        student_id: student.id,
+        monday: isDayActive(student, "monday"),
+        tuesday: isDayActive(student, "tuesday"),
+        wednesday: isDayActive(student, "wednesday"),
+        thursday: isDayActive(student, "thursday"),
+        ...(reasonOverrides[student.id] || attendance?.reason
+          ? { reason: reasonOverrides[student.id] ?? attendance?.reason ?? "" }
+          : {}),
+        ...(remarkOverrides[student.id] || attendance?.remark
+          ? { remark: remarkOverrides[student.id] ?? attendance?.remark ?? "" }
+          : {}),
+      }
+    })
+
+    saveAttendance({
+      school_id: selectedIds.school,
+      cohort_id: selectedIds.cohort,
+      year: Number(filters.year),
+      term: Number(filters.term),
+      week: Number(filters.week),
+      records,
+    })
   }
 
   return (
@@ -211,6 +257,12 @@ export function NewAttendancePage() {
             </Table>
           </div>
 
+      {successMessage && (
+        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
+          {successMessage}
+        </p>
+      )}
+
       <div className="flex justify-center gap-3 pt-4">
         <PrimaryButton
           className="w-auto bg-destructive px-8 hover:bg-destructive/90"
@@ -218,8 +270,12 @@ export function NewAttendancePage() {
         >
           Cancel
         </PrimaryButton>
-        <PrimaryButton className="w-auto px-8">
-          Save Attendance
+        <PrimaryButton
+          className="w-auto px-8"
+          disabled={isSaving || !selectedIds.school || !selectedIds.cohort || !filters.year || !filters.term || !filters.week}
+          onClick={handleSave}
+        >
+          {isSaving ? "Saving…" : "Save Attendance"}
         </PrimaryButton>
       </div>
     </div>

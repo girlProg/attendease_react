@@ -116,8 +116,22 @@ export const uploadAttendanceCsv = (file: File) => {
     .then((response) => response.data);
 };
 
-export const submitAttendance = (payload: Omit<AttendanceRecord, "id">) =>
-  api.post<AttendanceRecord>("/attendance/", payload).then((r) => r.data);
+export const submitAttendanceSubmission = (payload: {
+  school_id: number;
+  cohort_id: number;
+  year: number;
+  term: number;
+  week: number;
+  records: {
+    student_id: number;
+    monday: boolean;
+    tuesday: boolean;
+    wednesday: boolean;
+    thursday: boolean;
+    reason?: string;
+    remark?: string;
+  }[];
+}) => api.post("/attendance-submission/", payload).then((response) => response.data);
 
 export const getCohorts = () =>
   api.get<PaginatedResponse<Cohort>>("/cohort/", { params: { page_size: 100 } }).then((r) => r.data.results);
