@@ -11,6 +11,7 @@ import { StudentsPage } from "@/pages/students"
 import { ProfilePage } from "@/pages/profile"
 import { ManageUsersPage } from "@/pages/manage-users"
 import { NewUserPage } from "@/pages/new-user"
+import { EditUserPage } from "@/pages/edit-user"
 import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
 
@@ -31,6 +32,7 @@ export function App() {
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />
+          <Route path="manage-users/:id" element={<EditUserPage />} />
           <Route path="logs" element={<LogsPage />} />
         </Route>
       </Route>

@@ -117,7 +117,7 @@ export function ManageUsersPage() {
                 </TableCell>
               </TableRow>
             ) : records.map((record, index) => (
-              <TableRow key={record.id} className="border-border/40">
+              <TableRow key={record.id} className="cursor-pointer border-border/40 hover:bg-muted/20" onClick={() => navigate(`/manage-users/${record.id}`)}>
                 <TableCell className="text-center text-xs text-muted-foreground">
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
