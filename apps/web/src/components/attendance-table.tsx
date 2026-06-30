@@ -34,29 +34,41 @@ export function AttendanceTable({ records, page, pageSize }: AttendanceTableProp
           </TableRow>
         </TableHeader>
         <TableBody>
-          {records.map((record, index) => (
-            <TableRow key={record.id} className="border-border/40">
-              <TableCell className="text-center text-xs text-muted-foreground">
-                {(page - 1) * pageSize + index + 1}
+          {records.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={10} className="py-8 text-center text-sm text-muted-foreground">
+                No data to display :/
               </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="size-6 shrink-0 rounded-md bg-muted py-5" />
-                  <span className="text-xs font-semibold text-foreground">{record.student.name}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{record.student.id}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{record.student.current_class}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{record.term} Term </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{record.student.cohort.year}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">Week {record.week}</TableCell>
-              <TableCell className="text-center">
-                <PercentageBadge value={record.attendance_average} />
-              </TableCell>
-              <TableCell className="text-center text-xs text-muted-foreground">{record.reason ?? "—"}</TableCell>
-              <TableCell className="text-center text-xs text-muted-foreground">{record.remark ?? "—"}</TableCell>
             </TableRow>
-          ))}
+          ) : (
+            records.map((record, index) => (
+              <TableRow key={record.id} className="border-border/40">
+                <TableCell className="text-center text-xs text-muted-foreground">
+                  {(page - 1) * pageSize + index + 1}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {record.student?.photo_url ? (
+                      <img src={record.student.photo_url} alt="" className="size-8 shrink-0 rounded-md object-cover" />
+                    ) : (
+                      <div className="size-8 shrink-0 rounded-md bg-muted" />
+                    )}
+                    <span className="text-xs font-semibold text-foreground">{record.student?.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.student?.id}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.student?.current_class}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.term} Term</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.year}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">Week {record.week}</TableCell>
+                <TableCell className="text-center">
+                  <PercentageBadge value={record.attendance_average} />
+                </TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground">{record.reason ?? "—"}</TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground">{record.remark ?? "—"}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

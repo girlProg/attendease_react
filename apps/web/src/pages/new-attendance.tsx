@@ -24,7 +24,7 @@ const dayColumns = ["Mon", "Tue", "Wed", "Thu"] as const
 const dayFields = ["monday", "tuesday", "wednesday", "thursday"] as const
 
 export function NewAttendancePage() {
-  const { filters, setFilter, allFiltersSelected, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
@@ -44,7 +44,6 @@ export function NewAttendancePage() {
     queryKey: ["students", "new", page, pageSize, filters],
     queryFn: () => getStudents(page, pageSize, filters),
     placeholderData: keepPreviousData,
-    enabled: allFiltersSelected,
   })
 
   const studentIds = useMemo(
@@ -53,9 +52,9 @@ export function NewAttendancePage() {
   )
 
   const { data: attendanceMap } = useQuery({
-    queryKey: ["attendance-map", "new", studentIds, filters.term, filters.week],
+    queryKey: ["attendance-map", "new", studentIds, filters.year, filters.term, filters.week],
     queryFn: () => getAttendanceByStudentIds(studentIds, filters),
-    enabled: studentIds.length > 0 && allFiltersSelected,
+    enabled: studentIds.length > 0,
   })
 
   const totalPages = studentData ? Math.ceil(studentData.count / pageSize) : 0
@@ -64,7 +63,7 @@ export function NewAttendancePage() {
     setDayOverrides((previous) => {
       const currentAttendance = attendanceMap?.get(studentId)
       const existingValue = currentAttendance
-        ? currentAttendance[dayField as keyof AttendanceRecord] === true
+        ? Boolean(currentAttendance[dayField as keyof AttendanceRecord])
         : false
       const currentOverride = previous[studentId]?.[dayField]
       const currentState = currentOverride !== undefined ? currentOverride : existingValue
@@ -85,7 +84,7 @@ export function NewAttendancePage() {
 
     const attendance = attendanceMap?.get(student.id)
     if (!attendance) return false
-    return attendance[dayField as keyof AttendanceRecord] === true
+    return Boolean(attendance[dayField as keyof AttendanceRecord])
   }
 
   return (
@@ -97,7 +96,7 @@ export function NewAttendancePage() {
         <CsvUploadDialog />
         <Button
           className="h-11 gap-2 rounded-full bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:opacity-50"
-          disabled={!allFiltersSelected}
+          disabled={!selectedIds.school || !selectedIds.cohort}
           onClick={() => {
             if (selectedIds.school && selectedIds.cohort) {
               downloadExcelTemplate({
@@ -115,9 +114,7 @@ export function NewAttendancePage() {
         </Button>
       </div>
 
-      {allFiltersSelected && (
-        <>
-          <PaginationBar
+      <PaginationBar
             totalPages={totalPages}
             currentPage={page}
             onPageChange={setPage}
@@ -146,7 +143,13 @@ export function NewAttendancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {studentData?.results.map((student: Student, index: number) => {
+                {(!studentData?.results || studentData.results.length === 0) ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                      No data to display :/
+                    </TableCell>
+                  </TableRow>
+                ) : studentData.results.map((student: Student, index: number) => {
                   const attendance = attendanceMap?.get(student.id)
                   return (
                     <TableRow key={student.id} className="border-border/40">
@@ -208,25 +211,17 @@ export function NewAttendancePage() {
             </Table>
           </div>
 
-          <div className="flex justify-center gap-3 pt-4">
-            <PrimaryButton
-              className="w-auto bg-destructive px-8 hover:bg-destructive/90"
-              onClick={() => window.history.back()}
-            >
-              Cancel
-            </PrimaryButton>
-            <PrimaryButton className="w-auto px-8">
-              Save Attendance
-            </PrimaryButton>
-          </div>
-        </>
-      )}
-
-      {!allFiltersSelected && (
-        <p className="py-12 text-center text-muted-foreground">
-          Select all filters to view and edit attendance records.
-        </p>
-      )}
+      <div className="flex justify-center gap-3 pt-4">
+        <PrimaryButton
+          className="w-auto bg-destructive px-8 hover:bg-destructive/90"
+          onClick={() => window.history.back()}
+        >
+          Cancel
+        </PrimaryButton>
+        <PrimaryButton className="w-auto px-8">
+          Save Attendance
+        </PrimaryButton>
+      </div>
     </div>
   )
 }

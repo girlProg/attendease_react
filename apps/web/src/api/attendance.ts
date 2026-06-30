@@ -39,7 +39,6 @@ export const getStudents = (
 ) => {
   const filterParams: Record<string, string> = {};
   if (filters.cohort) filterParams.cohort__name = filters.cohort;
-  if (filters.year) filterParams.cohort__year = filters.year;
   if (filters.lga) filterParams.school__lga__name = filters.lga;
   if (filters.school) filterParams.school__name = filters.school;
   if (filters.name) filterParams.name = filters.name;
@@ -58,6 +57,7 @@ export const getAttendanceByStudentIds = async (
   if (studentIds.length === 0) return new Map<number, AttendanceRecord>();
 
   const filterParams: Record<string, string> = {};
+  if (filters.year) filterParams.year = filters.year;
   if (filters.term) filterParams.term = filters.term;
   if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
 

@@ -27,7 +27,7 @@ export function useAttendanceFilters() {
   const setFilter = (key: string, value: string) =>
     setFilters((previous) => {
       const next = { ...previous }
-      if (value === "choose") {
+      if (value === "__clear__") {
         delete next[key]
       } else {
         next[key] = value

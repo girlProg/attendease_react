@@ -37,6 +37,7 @@ export interface Student {
 export interface AttendanceRecord {
   id: number;
   student: Student;
+  year: string;
   term: string;
   week: string;
   monday: boolean;
