@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 
 import { login } from "@/api/auth"
@@ -13,10 +13,12 @@ export function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: () => {
+      queryClient.clear()
       navigate("/")
     },
   })
