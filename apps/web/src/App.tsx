@@ -14,6 +14,7 @@ import { NewUserPage } from "@/pages/new-user"
 import { EditUserPage } from "@/pages/edit-user"
 import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
+import { TransitionRatePage } from "@/pages/transition-rate"
 
 export function App() {
   return (
@@ -26,7 +27,7 @@ export function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="analytics" element={null} />
+        <Route path="analytics" element={<TransitionRatePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route element={<AdminRoute />}>
           <Route path="payments" element={<PaymentsPage />} />

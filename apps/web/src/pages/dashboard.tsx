@@ -2,6 +2,7 @@ import { Users, Building2, UserCheck, Banknote } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
+import { BarChart } from "@/components/bar-chart"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
@@ -13,8 +14,21 @@ interface DashboardSummary {
   cash_transfers: number
 }
 
+interface LgaSummary {
+  lga_id: number
+  lga: string
+  total_students: number
+  qualified_students: number
+  qualified_students_percentage: number
+  total_stipends_paid: number
+  cash_transfers: number
+}
+
 const getDashboardSummary = (params: Record<string, string>) =>
   api.get<DashboardSummary>("/dashboard/summary/", { params }).then((response) => response.data)
+
+const getLgaSummary = (params: Record<string, string>) =>
+  api.get<LgaSummary[]>("/dashboard/lga-summary/", { params }).then((response) => response.data)
 
 function formatNaira(amount: number) {
   return `₦${amount.toLocaleString()}`
@@ -32,6 +46,13 @@ export function DashboardPage() {
     queryKey: ["dashboard-summary", queryParams],
     queryFn: () => getDashboardSummary(queryParams),
   })
+
+  const { data: lgaData, isLoading: isLgaLoading } = useQuery({
+    queryKey: ["dashboard-lga-summary", queryParams],
+    queryFn: () => getLgaSummary(queryParams),
+  })
+
+  const lgaList = lgaData ?? []
 
   const stats = [
     {
@@ -84,6 +105,41 @@ export function DashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <BarChart
+          title="Total Students per LGA"
+          data={lgaList.map((item) => ({ label: item.lga, value: item.total_students }))}
+          color="bg-sidebar"
+          isLoading={isLgaLoading}
+        />
+        <BarChart
+          title="Qualified Students per LGA"
+          data={lgaList.map((item) => ({ label: item.lga, value: item.qualified_students }))}
+          color="bg-[#48BB78]"
+          isLoading={isLgaLoading}
+        />
+        <BarChart
+          title="Qualified Students Percentage per LGA"
+          data={lgaList.map((item) => ({ label: item.lga, value: item.qualified_students_percentage }))}
+          color="bg-[#48BB78]"
+          formatValue={(value) => `${value.toFixed(1)}%`}
+          isLoading={isLgaLoading}
+        />
+        {/* <BarChart
+          title="Total Stipends Paid per LGA"
+          data={lgaList.map((item) => ({ label: item.lga, value: item.total_stipends_paid }))}
+          color="bg-[#F4845F]"
+          formatValue={formatNaira}
+          isLoading={isLgaLoading}
+        />
+        <BarChart
+          title="Cash Transfers per LGA"
+          data={lgaList.map((item) => ({ label: item.lga, value: item.cash_transfers }))}
+          color="bg-[#F4845F]"
+          isLoading={isLgaLoading}
+        /> */}
       </div>
     </div>
   )

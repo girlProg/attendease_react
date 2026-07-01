@@ -20,7 +20,7 @@ export const getAttendance = (
   if (search) filterParams.student__name = search;
   if (filters.cohort) filterParams.student__cohort__name = filters.cohort;
   if (filters.term) filterParams.term = filters.term;
-  if (filters.year) filterParams.student__cohort__year = filters.year;
+  if (filters.year) filterParams.year = filters.year;
   if (filters.lga) filterParams.student__school__lga__name = filters.lga;
   if (filters.school) filterParams.student__school__name = filters.school;
   if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;

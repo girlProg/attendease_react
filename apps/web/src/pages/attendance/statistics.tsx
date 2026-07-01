@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   Table,
@@ -8,15 +9,22 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
+import { AttendanceDialog } from "@/components/attendance-dialog"
+import type { AttendanceDialogCell } from "@/components/attendance-dialog"
 import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
 
-function getCellColor(coverage: number): string {
+function normalizeCoverage(coverage: number): number {
+  return coverage <= 1 ? coverage * 100 : coverage
+}
+
+function getCellColor(rawCoverage: number): string {
+  const coverage = normalizeCoverage(rawCoverage)
   if (coverage >= 90) return "bg-emerald-600"
   if (coverage >= 80) return "bg-emerald-500"
-  if (coverage >= 70) return "bg-emerald-400/80"
-  if (coverage >= 60) return "bg-yellow-500"
-  if (coverage >= 50) return "bg-orange-400"
-  if (coverage >= 40) return "bg-orange-500"
+  if (coverage >= 60) return "bg-emerald-400/80"
+  if (coverage >= 50) return "bg-yellow-500"
+  if (coverage >= 40) return "bg-orange-400"
+  if (coverage >= 20) return "bg-orange-500"
   return "bg-red-500"
 }
 
@@ -33,20 +41,44 @@ function getAverageColor(average: number): string {
   return "text-red-500"
 }
 
-function WeekCell({ week, coverage }: { week: number; coverage: number }) {
+function WeekCell({
+  week,
+  coverage,
+  onClick,
+}: {
+  week: number
+  coverage: number
+  onClick: () => void
+}) {
   return (
-    <div
-      className={`flex size-5 items-center justify-center rounded-sm ${getCellColor(coverage)} cursor-default text-[7px] font-medium text-white/80 transition-opacity hover:opacity-80`}
-      title={`Week ${week}: ${Math.round(coverage)}%`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex size-5 items-center justify-center rounded-sm ${getCellColor(coverage)} cursor-pointer text-[7px] font-medium text-white/80 transition-opacity hover:opacity-80 hover:ring-2 hover:ring-sidebar/50`}
+      title={`Week ${week}: ${Math.round(normalizeCoverage(coverage))}%`}
     >
       {week}
-    </div>
+    </button>
   )
 }
 
-function TermRow({ term }: { term: AttendanceSummaryTerm }) {
+function TermRow({
+  term,
+  schoolId,
+  schoolName,
+  year,
+  totalEnrolled,
+  onCellClick,
+}: {
+  term: AttendanceSummaryTerm
+  schoolId: number
+  schoolName: string
+  year: string
+  totalEnrolled: number
+  onCellClick: (cell: AttendanceDialogCell) => void
+}) {
   const termAverage = term.weeks.length > 0
-    ? Math.round(term.weeks.reduce((sum, week) => sum + week.coverage, 0) / term.weeks.length)
+    ? Math.round(term.weeks.reduce((sum, week) => sum + normalizeCoverage(week.coverage), 0) / term.weeks.length)
     : 0
 
   return (
@@ -54,7 +86,12 @@ function TermRow({ term }: { term: AttendanceSummaryTerm }) {
       <span className="w-14 shrink-0 text-[11px] text-muted-foreground">{getTermLabel(term.term)}:</span>
       <div className="flex gap-0.5">
         {term.weeks.map((week) => (
-          <WeekCell key={week.week} week={week.week} coverage={week.coverage} />
+          <WeekCell
+            key={week.week}
+            week={week.week}
+            coverage={week.coverage}
+            onClick={() => onCellClick({ schoolId, schoolName, year, term: term.term, week: week.week, totalEnrolled })}
+          />
         ))}
       </div>
       <span className="text-[11px] font-semibold text-sidebar">{termAverage}%</span>
@@ -62,7 +99,13 @@ function TermRow({ term }: { term: AttendanceSummaryTerm }) {
   )
 }
 
-function SchoolHeatmap({ summary }: { summary: AttendanceSummary }) {
+function SchoolHeatmap({
+  summary,
+  onCellClick,
+}: {
+  summary: AttendanceSummary
+  onCellClick: (cell: AttendanceDialogCell) => void
+}) {
   return (
     <div className="space-y-3">
       {summary.years.map((year) => (
@@ -71,7 +114,15 @@ function SchoolHeatmap({ summary }: { summary: AttendanceSummary }) {
             <span className="text-xs font-bold text-sidebar">{year.year}</span>
           </div>
           {year.terms.map((term) => (
-            <TermRow key={term.term} term={term} />
+            <TermRow
+              key={term.term}
+              term={term}
+              schoolId={summary.school.id}
+              schoolName={summary.school.name}
+              year={year.year}
+              totalEnrolled={summary.total_enrolled}
+              onCellClick={onCellClick}
+            />
           ))}
         </div>
       ))}
@@ -97,7 +148,15 @@ function Legend() {
   )
 }
 
-function SchoolSummaryRow({ schoolId, index }: { schoolId: number; index: number }) {
+function SchoolSummaryRow({
+  schoolId,
+  index,
+  onCellClick,
+}: {
+  schoolId: number
+  index: number
+  onCellClick: (cell: AttendanceDialogCell) => void
+}) {
   const { data: summary, isLoading } = useQuery({
     queryKey: ["attendance-summary", schoolId],
     queryFn: () => getAttendanceSummary(schoolId),
@@ -128,13 +187,15 @@ function SchoolSummaryRow({ schoolId, index }: { schoolId: number; index: number
         </div>
       </TableCell>
       <TableCell>
-        <SchoolHeatmap summary={summary} />
+        <SchoolHeatmap summary={summary} onCellClick={onCellClick} />
       </TableCell>
     </TableRow>
   )
 }
 
 export function Statistics({ filters }: { filters: Record<string, string> }) {
+  const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
+
   const { data: schools, isLoading } = useQuery({
     queryKey: ["schools-for-stats", filters.lga, filters.cohort],
     queryFn: () => getSchools(filters.lga, filters.cohort),
@@ -168,11 +229,20 @@ export function Statistics({ filters }: { filters: Record<string, string> }) {
             </TableHeader>
             <TableBody>
               {schools.map((school, index) => (
-                <SchoolSummaryRow key={school.id} schoolId={school.id} index={index} />
+                <SchoolSummaryRow
+                  key={school.id}
+                  schoolId={school.id}
+                  index={index}
+                  onCellClick={setSelectedCell}
+                />
               ))}
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {selectedCell && (
+        <AttendanceDialog cell={selectedCell} onClose={() => setSelectedCell(null)} />
       )}
     </div>
   )

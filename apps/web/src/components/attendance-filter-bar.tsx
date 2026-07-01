@@ -5,6 +5,11 @@ type FilterBarProps = Pick<ReturnType<typeof useAttendanceFilters>, "filters" | 
   exclude?: string[]
 }
 
+export function formatAcademicYear(value: string) {
+  const year = parseInt(value, 10)
+  return `${year}/${year + 1}`
+}
+
 function ordinal(value: string) {
   const num = parseInt(value, 10)
   if (num === 1) return "1st"
@@ -16,7 +21,7 @@ function ordinal(value: string) {
 const allFilters = [
   { key: "cohort", placeholder: "Cohort", format: (value: string) => `${ordinal(value)} Cohort` },
   { key: "term", placeholder: "Term", format: (value: string) => `${ordinal(value)} Term` },
-  { key: "year", placeholder: "Year" },
+  { key: "year", placeholder: "Year", format: formatAcademicYear },
   { key: "lga", placeholder: "LGA" },
   { key: "school", placeholder: "School", disabledKey: "lga" },
   { key: "week", placeholder: "Week" },
