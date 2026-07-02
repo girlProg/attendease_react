@@ -11,7 +11,8 @@ export function usePagination(resetDeps: unknown[] = [], initialPageSize = 100) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey])
 
-  const handleRowsChange = (value: string) => {
+  const handleRowsChange = (value: string | null) => {
+    if (value === null) return
     setPageSize(Number(value))
     setPage(1)
   }
