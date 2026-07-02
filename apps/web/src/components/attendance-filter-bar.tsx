@@ -1,21 +1,9 @@
 import { FilterSelect } from "@/components/filter-select"
+import { ordinal, formatAcademicYear } from "@/lib/formatters"
 import type { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 
 type FilterBarProps = Pick<ReturnType<typeof useAttendanceFilters>, "filters" | "setFilter" | "options"> & {
   exclude?: string[]
-}
-
-export function formatAcademicYear(value: string) {
-  const year = parseInt(value, 10)
-  return `${year}/${year + 1}`
-}
-
-function ordinal(value: string) {
-  const num = parseInt(value, 10)
-  if (num === 1) return "1st"
-  if (num === 2) return "2nd"
-  if (num === 3) return "3rd"
-  return `${num}th`
 }
 
 const allFilters = [

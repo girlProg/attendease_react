@@ -11,6 +11,7 @@ import {
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
 import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
+import { getTermLabel, formatAcademicYear } from "@/lib/formatters"
 import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
 
 function normalizeCoverage(coverage: number): number {
@@ -26,12 +27,6 @@ function getCellColor(rawCoverage: number): string {
   if (coverage >= 40) return "bg-orange-400"
   if (coverage >= 20) return "bg-orange-500"
   return "bg-red-500"
-}
-
-function getTermLabel(term: number): string {
-  if (term === 1) return "1st Term"
-  if (term === 2) return "2nd Term"
-  return "3rd Term"
 }
 
 function getAverageColor(average: number): string {
@@ -111,7 +106,7 @@ function SchoolHeatmap({
       {summary.years.map((year) => (
         <div key={year.year} className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-sidebar">{year.year}</span>
+            <span className="text-xs font-bold text-sidebar">{formatAcademicYear(year.year)}</span>
           </div>
           {year.terms.map((term) => (
             <TermRow

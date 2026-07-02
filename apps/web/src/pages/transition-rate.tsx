@@ -11,9 +11,13 @@ import {
 } from "@workspace/ui/components/table"
 import { FilterSelect } from "@/components/filter-select"
 import { PaginationBar } from "@/components/pagination-bar"
+import { QueryError } from "@/components/query-error"
+import { StatusBadge } from "@/components/status-badge"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
+import { getInitials } from "@/lib/formatters"
 import { useState } from "react"
 
 interface TransitionStudent {
@@ -53,7 +57,7 @@ export function TransitionRatePage() {
 
   const hasRequiredFilters = !!(selectedIds.cohort && filters.year)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["transition-rate", queryParams],
     queryFn: () => getTransitionRate(queryParams),
     enabled: hasRequiredFilters,
@@ -109,6 +113,8 @@ export function TransitionRatePage() {
       {hasRequiredFilters && isLoading && (
         <p className="py-12 text-center text-sm text-muted-foreground">Loading…</p>
       )}
+
+      {isError && <QueryError />}
 
       {data && summary && (
         <>
@@ -241,11 +247,7 @@ export function TransitionRatePage() {
               </TableHeader>
               <TableBody>
                 {pagedStudents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                      No data to display :/
-                    </TableCell>
-                  </TableRow>
+                  <TableEmptyState colSpan={5} />
                 ) : (
                   pagedStudents.map((student, index) => {
                     const isTransitioned = student.status === "transitioned"
@@ -263,15 +265,10 @@ export function TransitionRatePage() {
                         <TableCell className="text-sm text-muted-foreground">{student.school}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{student.cohort}</TableCell>
                         <TableCell className="text-right">
-                          <span
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                              isTransitioned
-                                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border border-red-200 bg-red-50 text-red-600"
-                            }`}
-                          >
-                            {isTransitioned ? "Transitioned" : "Dropped out"}
-                          </span>
+                          <StatusBadge
+                            variant={isTransitioned ? "success" : "error"}
+                            label={isTransitioned ? "Transitioned" : "Dropped out"}
+                          />
                         </TableCell>
                       </TableRow>
                     )
@@ -368,12 +365,7 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 }
 
 function StudentAvatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
+  const initials = getInitials(name)
 
   return (
     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">

@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
@@ -13,23 +12,13 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { PaginationBar } from "@/components/pagination-bar"
+import { QueryError } from "@/components/query-error"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { usePagination } from "@/hooks/use-pagination"
 import { api } from "@/lib/api"
-import type { PaginatedResponse } from "@/types"
-
-interface AppUser {
-  id: number
-  first_name: string
-  last_name: string
-  email: string
-  phone_number: string
-  photo: string | null
-  role: string
-  lgas: string[]
-  last_active: string | null
-  is_active: boolean
-}
+import type { PaginatedResponse, AppUser } from "@/types"
 
 const getUsers = (page: number, pageSize: number) =>
   api.get<PaginatedResponse<AppUser>>("/user/", {
@@ -55,12 +44,9 @@ export function ManageUsersPage() {
   useLogVisit("Manage Users", "Visited Manage Users")
   const { canWrite } = useAuth()
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([], 10)
 
-  useEffect(() => { setPage(1) }, [pageSize])
-
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["users", page, pageSize],
     queryFn: () => getUsers(page, pageSize),
     placeholderData: keepPreviousData,
@@ -92,11 +78,10 @@ export function ManageUsersPage() {
         onPageChange={setPage}
         rowOptions={["10", "25", "50"]}
         defaultRows={String(pageSize)}
-        onRowsChange={(value) => {
-          setPageSize(Number(value))
-          setPage(1)
-        }}
+        onRowsChange={handleRowsChange}
       />
+
+      {isError && <QueryError />}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
@@ -115,11 +100,7 @@ export function ManageUsersPage() {
           </TableHeader>
           <TableBody>
             {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                  No data to display :/
-                </TableCell>
-              </TableRow>
+              <TableEmptyState colSpan={8} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="cursor-pointer border-border/40 hover:bg-muted/20" onClick={() => navigate(`/manage-users/${record.id}`)}>
                 <TableCell className="text-center text-xs text-muted-foreground">

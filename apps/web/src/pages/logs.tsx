@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 import {
@@ -10,7 +9,10 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { PaginationBar } from "@/components/pagination-bar"
+import { QueryError } from "@/components/query-error"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { usePagination } from "@/hooks/use-pagination"
 import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/types"
 
@@ -50,12 +52,9 @@ function formatTime(dateString: string) {
 
 export function LogsPage() {
   useLogVisit("Logs", "Visited Logs")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([], 10)
 
-  useEffect(() => { setPage(1) }, [pageSize])
-
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["logs", page, pageSize],
     queryFn: () => getLogs(page, pageSize),
     placeholderData: keepPreviousData,
@@ -73,11 +72,10 @@ export function LogsPage() {
         onPageChange={setPage}
         rowOptions={["10", "25", "50"]}
         defaultRows={String(pageSize)}
-        onRowsChange={(value) => {
-          setPageSize(Number(value))
-          setPage(1)
-        }}
+        onRowsChange={handleRowsChange}
       />
+
+      {isError && <QueryError />}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
@@ -94,11 +92,7 @@ export function LogsPage() {
           </TableHeader>
           <TableBody>
             {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                  No data to display :/
-                </TableCell>
-              </TableRow>
+              <TableEmptyState colSpan={6} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="border-border/40">
                 <TableCell className="text-center text-xs text-muted-foreground">

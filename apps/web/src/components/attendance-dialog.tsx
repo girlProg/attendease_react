@@ -9,12 +9,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { getAttendance } from "@/api/attendance"
-
-function getTermLabel(term: number): string {
-  if (term === 1) return "1st Term"
-  if (term === 2) return "2nd Term"
-  return "3rd Term"
-}
+import { getTermLabel, formatAcademicYear } from "@/lib/formatters"
 
 export interface AttendanceDialogCell {
   schoolId: number
@@ -53,7 +48,7 @@ export function AttendanceDialog({
           <div>
             <h2 className="text-lg font-bold text-foreground">{cell.schoolName}</h2>
             <p className="text-xs text-muted-foreground">
-              {cell.year} · {getTermLabel(cell.term)} · Week {cell.week}
+              {formatAcademicYear(cell.year)} · {getTermLabel(cell.term)} · Week {cell.week}
               {!isLoading && cell.totalEnrolled != null && (
                 <span className="ml-2 font-semibold">
                   · {records.length} of {cell.totalEnrolled} students recorded

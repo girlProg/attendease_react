@@ -2,17 +2,7 @@ import { createContext, useContext } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
-
-interface UserProfile {
-  id: number
-  email: string
-  first_name: string
-  last_name: string
-  phone_number: string
-  photo: string | null
-  role?: string
-  lgas?: string[]
-}
+import type { UserProfile } from "@/types"
 
 interface AuthContextValue {
   profile: UserProfile | undefined

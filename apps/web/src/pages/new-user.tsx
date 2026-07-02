@@ -4,14 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
+import { LabeledInput, LabeledSelect } from "@/components/form-fields"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { getLGAs } from "@/api/attendance"
@@ -29,62 +22,6 @@ const createUser = (data: {
   is_active: boolean
   password: string
 }) => api.post("/user/", data).then((response) => response.data)
-
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <Input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-lg border-border/60 !bg-white"
-      />
-    </div>
-  )
-}
-
-function LabeledSelect({
-  label,
-  value,
-  onValueChange,
-  items,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onValueChange: (value: string | null) => void
-  items: string[]
-  placeholder: string
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <Select value={value || undefined} onValueChange={onValueChange}>
-        <SelectTrigger className="h-11 w-full rounded-lg border-border/60 !bg-white px-3">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item} value={item}>
-              {item}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
 
 export function NewUserPage() {
   useLogVisit("Manage Users", "Visited New User")

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Plus, Download } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
@@ -16,19 +16,15 @@ import {
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { SearchBar } from "@/components/search-bar"
+import { QueryError } from "@/components/query-error"
+import { StatusBadge } from "@/components/status-badge"
+import { StudentPhoto } from "@/components/student-photo"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages } from "@/api/attendance"
-
-function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString()}`
-}
-
-function getTermLabel(term: string) {
-  if (term === "1") return "1st Term"
-  if (term === "2") return "2nd Term"
-  return "3rd Term"
-}
+import { formatNaira, getTermLabel } from "@/lib/formatters"
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
@@ -36,12 +32,9 @@ export function PaymentsPage() {
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const [amountPerStudent, setAmountPerStudent] = useState("")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(300)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters], 300)
 
-  useEffect(() => { setPage(1) }, [appliedSearch, filters])
-
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["term-averages", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
       ...(filters.year && { year: filters.year }),
@@ -118,11 +111,10 @@ export function PaymentsPage() {
             onPageChange={setPage}
             rowOptions={["100", "300", "500", "1000"]}
             defaultRows={String(pageSize)}
-            onRowsChange={(value) => {
-              setPageSize(Number(value))
-              setPage(1)
-            }}
+            onRowsChange={handleRowsChange}
           />
+
+          {isError && <QueryError />}
 
           {/* Table */}
           <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
@@ -157,11 +149,7 @@ export function PaymentsPage() {
               </TableHeader>
               <TableBody>
                 {records.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                      No data to display :/
-                    </TableCell>
-                  </TableRow>
+                  <TableEmptyState colSpan={9} />
                 ) : records.map((record, index) => (
                   <TableRow key={record.id} className="border-border/40">
                     <TableCell className="text-center text-xs text-muted-foreground">
@@ -169,7 +157,7 @@ export function PaymentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="size-6 shrink-0 rounded-md bg-muted py-5" />
+                        <StudentPhoto url={record.photo_url} name={record.name} size="sm" />
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
                       </div>
                     </TableCell>
@@ -198,11 +186,10 @@ export function PaymentsPage() {
                                 {payment ? formatNaira(parseFloat(payment.amount_received)) : "—"}
                               </TableCell>
                               <TableCell className="text-center">
-                                <span className={`inline-flex rounded px-2 py-1 text-[10px] font-semibold ${
-                                  payment?.disbursed ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-500"
-                                }`}>
-                                  {payment?.disbursed ? "DISBURSED" : "NOT DISBURSED"}
-                                </span>
+                                <StatusBadge
+                                  variant={payment?.disbursed ? "success" : "error"}
+                                  label={payment?.disbursed ? "DISBURSED" : "NOT DISBURSED"}
+                                />
                               </TableCell>
                             </>
                           )

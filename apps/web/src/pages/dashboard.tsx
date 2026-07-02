@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query"
 
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
+import { QueryError } from "@/components/query-error"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
+import { formatNaira } from "@/lib/formatters"
 
 interface DashboardSummary {
   total_students: number
@@ -30,10 +32,6 @@ const getDashboardSummary = (params: Record<string, string>) =>
 const getLgaSummary = (params: Record<string, string>) =>
   api.get<LgaSummary[]>("/dashboard/lga-summary/", { params }).then((response) => response.data)
 
-function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString()}`
-}
-
 export function DashboardPage() {
   useLogVisit("Dashboard", "Visited Dashboard")
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
@@ -42,12 +40,12 @@ export function DashboardPage() {
   if (selectedIds.cohort) queryParams.cohort = String(selectedIds.cohort)
   if (filters.year) queryParams.year = filters.year
 
-  const { data: summary } = useQuery({
+  const { data: summary, isError: isSummaryError } = useQuery({
     queryKey: ["dashboard-summary", queryParams],
     queryFn: () => getDashboardSummary(queryParams),
   })
 
-  const { data: lgaData, isLoading: isLgaLoading } = useQuery({
+  const { data: lgaData, isLoading: isLgaLoading, isError: isLgaError } = useQuery({
     queryKey: ["dashboard-lga-summary", queryParams],
     queryFn: () => getLgaSummary(queryParams),
   })
@@ -89,6 +87,8 @@ export function DashboardPage() {
         options={options}
         exclude={["term", "lga", "school", "week"]}
       />
+
+      {(isSummaryError || isLgaError) && <QueryError />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (

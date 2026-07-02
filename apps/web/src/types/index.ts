@@ -74,6 +74,30 @@ export interface AttendanceSummary {
   years: AttendanceSummaryYear[];
 }
 
+export interface UserProfile {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  photo: string | null;
+  role?: string;
+  lgas?: string[];
+}
+
+export interface AppUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  photo: string | null;
+  role: string;
+  lgas: string[];
+  last_active: string | null;
+  is_active: boolean;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

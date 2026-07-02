@@ -6,15 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
-
-interface UserProfile {
-  id: number
-  email: string
-  first_name: string
-  last_name: string
-  phone_number: string
-  photo: string | null
-}
+import type { UserProfile } from "@/types"
 
 const getProfile = () =>
   api.get<UserProfile>("/auth/profile/").then((response) => response.data)

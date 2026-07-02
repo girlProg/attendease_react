@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Download, Phone } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
@@ -14,8 +14,12 @@ import {
 } from "@workspace/ui/components/table"
 import { FilterSelect } from "@/components/filter-select"
 import { SearchBar } from "@/components/search-bar"
+import { QueryError } from "@/components/query-error"
+import { StudentPhoto } from "@/components/student-photo"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { usePagination } from "@/hooks/use-pagination"
 import { getStudents, exportStudents } from "@/api/attendance"
 
 export function BeneficiariesPage() {
@@ -23,14 +27,11 @@ export function BeneficiariesPage() {
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
   const [targetClass, setTargetClass] = useState<string | undefined>()
   const [destinationClass, setDestinationClass] = useState<string | undefined>()
 
-  useEffect(() => { setPage(1) }, [appliedSearch, filters])
-
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["students", page, pageSize, appliedSearch, filters],
     queryFn: () => getStudents(page, pageSize, {
       ...filters,
@@ -100,11 +101,10 @@ export function BeneficiariesPage() {
         currentPage={page}
         onPageChange={setPage}
         defaultRows={String(pageSize)}
-        onRowsChange={(value) => {
-          setPageSize(Number(value))
-          setPage(1)
-        }}
+        onRowsChange={handleRowsChange}
       />
+
+      {isError && <QueryError />}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
@@ -122,11 +122,7 @@ export function BeneficiariesPage() {
           </TableHeader>
           <TableBody>
             {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                  No data to display :/
-                </TableCell>
-              </TableRow>
+              <TableEmptyState colSpan={7} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="border-border/40">
                 <TableCell className="text-center text-xs text-muted-foreground">
@@ -134,11 +130,7 @@ export function BeneficiariesPage() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {record.photo_url ? (
-                      <img src={record.photo_url} alt="" className="size-8 shrink-0 rounded-md object-cover" />
-                    ) : (
-                      <div className="size-8 shrink-0 rounded-md bg-muted" />
-                    )}
+                    <StudentPhoto url={record.photo_url} name={record.name} />
                     <span className="text-xs font-semibold text-sidebar">{record.name}</span>
                   </div>
                 </TableCell>

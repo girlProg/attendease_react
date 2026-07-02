@@ -4,6 +4,7 @@ import { User, LogOut, Menu } from "lucide-react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { usePageTitle } from "@/hooks/use-page-title"
+import { getInitials } from "@/lib/formatters"
 import { SidebarProvider, useSidebar } from "@workspace/ui/components/sidebar"
 import {
   Avatar,
@@ -63,7 +64,7 @@ function AccountMenu() {
     ? `${profile.first_name} ${profile.last_name.charAt(0)}.`
     : ""
   const initials = profile
-    ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`
+    ? getInitials(`${profile.first_name} ${profile.last_name}`)
     : ""
 
   function handleLogout() {

@@ -7,6 +7,8 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { PercentageBadge } from "@/components/percentage-badge"
+import { StudentPhoto } from "@/components/student-photo"
+import { TableEmptyState } from "@/components/table-empty-state"
 import type { AttendanceRecord } from "@/types"
 
 interface AttendanceTableProps {
@@ -35,11 +37,7 @@ export function AttendanceTable({ records, page, pageSize }: AttendanceTableProp
         </TableHeader>
         <TableBody>
           {records.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={10} className="py-8 text-center text-sm text-muted-foreground">
-                No data to display :/
-              </TableCell>
-            </TableRow>
+            <TableEmptyState colSpan={10} />
           ) : (
             records.map((record, index) => (
               <TableRow key={record.id} className="border-border/40">
@@ -48,11 +46,7 @@ export function AttendanceTable({ records, page, pageSize }: AttendanceTableProp
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {record.student?.photo_url ? (
-                      <img src={record.student.photo_url} alt="" className="size-8 shrink-0 rounded-md object-cover" />
-                    ) : (
-                      <div className="size-8 shrink-0 rounded-md bg-muted" />
-                    )}
+                    <StudentPhoto url={record.student?.photo_url} name={record.student?.name} />
                     <span className="text-xs font-semibold text-foreground">{record.student?.name}</span>
                   </div>
                 </TableCell>

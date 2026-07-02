@@ -4,30 +4,11 @@ import { ArrowLeft } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
+import { LabeledInput, LabeledSelect } from "@/components/form-fields"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { getLGAs } from "@/api/attendance"
-
-interface AppUser {
-  id: number
-  first_name: string
-  last_name: string
-  email: string
-  phone_number: string
-  photo: string | null
-  role: string
-  lgas: string[]
-  last_active: string | null
-  is_active: boolean
-}
+import type { AppUser } from "@/types"
 
 const getUser = (id: string) =>
   api.get<AppUser>(`/user/${id}/`).then((response) => response.data)
@@ -53,65 +34,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="rounded-2xl border border-border/40 bg-white p-6">
         {children}
       </div>
-    </div>
-  )
-}
-
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = "text",
-  disabled = false,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-  disabled?: boolean
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <Input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        className="h-10 rounded-lg border-border/60 !bg-white"
-      />
-    </div>
-  )
-}
-
-function LabeledSelect({
-  label,
-  value,
-  onValueChange,
-  items,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onValueChange: (value: string | null) => void
-  items: string[]
-  placeholder: string
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <Select value={value || undefined} onValueChange={onValueChange}>
-        <SelectTrigger className="h-11 w-full rounded-lg border-border/60 !bg-white px-3">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item} value={item}>
-              {item}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   )
 }

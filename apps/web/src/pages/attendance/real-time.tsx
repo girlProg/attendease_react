@@ -1,14 +1,11 @@
-import { useState, useEffect } from "react"
 import { PaginationBar } from "@/components/pagination-bar"
 import { AttendanceTable } from "@/components/attendance-table"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { getAttendance } from "@/api/attendance"
+import { usePagination } from "@/hooks/use-pagination"
 
 export function RealTime({ search = "", filters = {} }: { search?: string; filters?: Record<string, string> }) {
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
-
-  useEffect(() => { setPage(1) }, [search, filters])
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([search, filters])
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["attendance", page, pageSize, search, filters],
@@ -28,10 +25,7 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
         currentPage={page}
         onPageChange={setPage}
         defaultRows={String(pageSize)}
-        onRowsChange={(value) => {
-          setPageSize(Number(value))
-          setPage(1)
-        }}
+        onRowsChange={handleRowsChange}
       />
 
       <AttendanceTable

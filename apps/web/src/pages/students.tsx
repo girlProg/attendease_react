@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
@@ -15,14 +15,15 @@ import {
 } from "@workspace/ui/components/table"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
+import { QueryError } from "@/components/query-error"
+import { StudentPhoto } from "@/components/student-photo"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { SearchBar } from "@/components/search-bar"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages } from "@/api/attendance"
-
-function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString()}`
-}
+import { formatNaira } from "@/lib/formatters"
 
 export function StudentsPage() {
   useLogVisit("Students", "Visited Students")
@@ -30,12 +31,9 @@ export function StudentsPage() {
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
 
-  useEffect(() => { setPage(1) }, [appliedSearch, filters])
-
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["students-summary", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
       ...(filters.year && { year: filters.year }),
@@ -86,11 +84,10 @@ export function StudentsPage() {
         currentPage={page}
         onPageChange={setPage}
         defaultRows={String(pageSize)}
-        onRowsChange={(value) => {
-          setPageSize(Number(value))
-          setPage(1)
-        }}
+        onRowsChange={handleRowsChange}
       />
+
+      {isError && <QueryError />}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
@@ -112,11 +109,7 @@ export function StudentsPage() {
           </TableHeader>
           <TableBody>
             {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-sm text-muted-foreground">
-                  No data to display :/
-                </TableCell>
-              </TableRow>
+              <TableEmptyState colSpan={11} />
             ) : (
               records.map((record, index) => {
                 const term1Payment = record.payments?.find((payment) => payment.term === 1)
@@ -130,11 +123,7 @@ export function StudentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {record.photo_url ? (
-                          <img src={record.photo_url} alt="" className="size-8 shrink-0 rounded-md object-cover" />
-                        ) : (
-                          <div className="size-8 shrink-0 rounded-md bg-muted" />
-                        )}
+                        <StudentPhoto url={record.photo_url} name={record.name} />
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
                       </div>
                     </TableCell>

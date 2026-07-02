@@ -16,7 +16,10 @@ import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PaginationBar } from "@/components/pagination-bar"
 import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
+import { StudentPhoto } from "@/components/student-photo"
+import { TableEmptyState } from "@/components/table-empty-state"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { usePagination } from "@/hooks/use-pagination"
 import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, submitAttendanceSubmission } from "@/api/attendance"
 import type { Student, AttendanceRecord } from "@/types"
 
@@ -27,16 +30,15 @@ export function NewAttendancePage() {
   const queryClient = useQueryClient()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(100)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([filters])
 
   const [dayOverrides, setDayOverrides] = useState<Record<number, Record<string, boolean>>>({})
   const [reasonOverrides, setReasonOverrides] = useState<Record<number, string>>({})
   const [remarkOverrides, setRemarkOverrides] = useState<Record<number, string>>({})
   const [successMessage, setSuccessMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
-    setPage(1)
     setDayOverrides({})
     setReasonOverrides({})
     setRemarkOverrides({})
@@ -97,8 +99,13 @@ export function NewAttendancePage() {
       setDayOverrides({})
       setReasonOverrides({})
       setRemarkOverrides({})
+      setErrorMessage("")
       setSuccessMessage("Attendance saved successfully!")
       setTimeout(() => setSuccessMessage(""), 5000)
+    },
+    onError: () => {
+      setSuccessMessage("")
+      setErrorMessage("Failed to save attendance. Please try again.")
     },
   })
 
@@ -166,10 +173,7 @@ export function NewAttendancePage() {
             onPageChange={setPage}
             rowOptions={["100", "500", "1000", "2000"]}
             defaultRows={String(pageSize)}
-            onRowsChange={(value) => {
-              setPageSize(Number(value))
-              setPage(1)
-            }}
+            onRowsChange={handleRowsChange}
           />
 
           {/* Table */}
@@ -190,11 +194,7 @@ export function NewAttendancePage() {
               </TableHeader>
               <TableBody>
                 {(!studentData?.results || studentData.results.length === 0) ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                      No data to display :/
-                    </TableCell>
-                  </TableRow>
+                  <TableEmptyState colSpan={9} />
                 ) : studentData.results.map((student: Student, index: number) => {
                   const attendance = attendanceMap?.get(student.id)
                   return (
@@ -204,7 +204,7 @@ export function NewAttendancePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="size-8 shrink-0 rounded-md bg-muted" />
+                          <StudentPhoto url={student.photo_url} name={student.name} />
                           <span className="text-sm font-semibold text-foreground">{student.name}</span>
                         </div>
                       </TableCell>
@@ -260,6 +260,12 @@ export function NewAttendancePage() {
       {successMessage && (
         <p className="rounded-lg bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
           {successMessage}
+        </p>
+      )}
+
+      {errorMessage && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-600">
+          {errorMessage}
         </p>
       )}
 
