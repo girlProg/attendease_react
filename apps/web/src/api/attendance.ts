@@ -137,7 +137,7 @@ export const getAttendanceYears = () =>
 
 export const exportStudents = (cohortId: number) => {
   return api
-    .get("/students/export/", {
+    .get("/student/export/", {
       params: { cohort: cohortId },
       responseType: "blob",
     })
