@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from "@workspace/ui/components/sidebar"
 import { AppLogo } from "@/components/app-logo"
+import { appConfig } from "@/config/app-config"
 import { useAuth } from "@/contexts/auth-context"
 
 const navItems = [
@@ -38,9 +39,10 @@ export function AppSidebar() {
   const { isAdmin, isViewer } = useAuth()
 
   const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin || isViewer)
+  const isFloating = appConfig.sidebar.style === "floating"
 
   return (
-    <Sidebar>
+    <Sidebar floating={isFloating}>
       <SidebarHeader>
         <AppLogo />
       </SidebarHeader>
@@ -53,7 +55,12 @@ export function AppSidebar() {
             onClick={() => setOpen(false)}
           >
             {({ isActive }) => (
-              <SidebarNavItem render={<span />} active={isActive} icon={<Icon />}>
+              <SidebarNavItem
+                render={<span />}
+                active={isActive}
+                icon={<Icon />}
+                className={isActive && isFloating ? "mr-0 pr-4 rounded-2xl" : undefined}
+              >
                 {label}
               </SidebarNavItem>
             )}

@@ -6,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "@workspace/ui/globals.css"
 import { App } from "./App.tsx"
+import { applyAppConfig } from "./config/apply-config"
+
+applyAppConfig()
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

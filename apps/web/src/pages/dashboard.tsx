@@ -63,19 +63,19 @@ export function DashboardPage() {
       label: "Total Stipends Paid",
       value: formatNaira(summary?.total_stipends_paid ?? 0),
       icon: Building2,
-      color: "bg-[#F4845F]",
+      color: "bg-[var(--stat-accent-1)]",
     },
     {
       label: "Qualified Students",
       value: (summary?.qualified_students ?? 0).toLocaleString(),
       icon: UserCheck,
-      color: "bg-[#48BB78]",
+      color: "bg-[var(--stat-accent-2)]",
     },
     {
       label: "No. Of Cash Transfers",
       value: (summary?.cash_transfers ?? 0).toLocaleString(),
       icon: Banknote,
-      color: "bg-[#F4845F]",
+      color: "bg-[var(--stat-accent-1)]",
     },
   ]
 
@@ -117,27 +117,27 @@ export function DashboardPage() {
         <BarChart
           title="Qualified Students per LGA"
           data={lgaList.map((item) => ({ label: item.lga, value: item.qualified_students }))}
-          color="bg-[#48BB78]"
+          color="bg-[var(--stat-accent-2)]"
           isLoading={isLgaLoading}
         />
         <BarChart
           title="Qualified Students Percentage per LGA"
           data={lgaList.map((item) => ({ label: item.lga, value: item.qualified_students_percentage }))}
-          color="bg-[#48BB78]"
+          color="bg-[var(--stat-accent-2)]"
           formatValue={(value) => `${value.toFixed(1)}%`}
           isLoading={isLgaLoading}
         />
         {/* <BarChart
           title="Total Stipends Paid per LGA"
           data={lgaList.map((item) => ({ label: item.lga, value: item.total_stipends_paid }))}
-          color="bg-[#F4845F]"
+          color="bg-[var(--stat-accent-1)]"
           formatValue={formatNaira}
           isLoading={isLgaLoading}
         />
         <BarChart
           title="Cash Transfers per LGA"
           data={lgaList.map((item) => ({ label: item.lga, value: item.cash_transfers }))}
-          color="bg-[#F4845F]"
+          color="bg-[var(--stat-accent-1)]"
           isLoading={isLgaLoading}
         /> */}
       </div>

@@ -31,7 +31,12 @@ function SidebarProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Sidebar({ className, children, ...props }: React.ComponentProps<"aside">) {
+function Sidebar({
+  floating = false,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"aside"> & { floating?: boolean }) {
   const { open, setOpen } = useSidebar()
 
   return (
@@ -47,7 +52,10 @@ function Sidebar({ className, children, ...props }: React.ComponentProps<"aside"
       <aside
         data-slot="sidebar"
         className={cn(
-          "bg-sidebar text-sidebar-foreground sticky top-0 hidden h-svh w-56 shrink-0 flex-col gap-6 overflow-visible rounded-r-none px-4 py-6 md:flex",
+          "bg-sidebar text-sidebar-foreground hidden w-56 shrink-0 flex-col gap-6 overflow-visible px-4 py-6 md:flex",
+          floating
+            ? "sticky top-3 m-3 h-[calc(100svh-1.5rem)] rounded-2xl"
+            : "sticky top-0 h-svh rounded-r-none",
           className
         )}
         {...props}
@@ -58,7 +66,8 @@ function Sidebar({ className, children, ...props }: React.ComponentProps<"aside"
       <aside
         data-slot="sidebar-mobile"
         className={cn(
-          "bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex w-52 flex-col gap-6 rounded-r-none px-4 py-6 transition-transform duration-300 ease-in-out md:hidden",
+          "bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex w-52 flex-col gap-6 px-4 py-6 transition-transform duration-300 ease-in-out md:hidden",
+          floating ? "rounded-r-2xl" : "rounded-r-none",
           open ? "translate-x-0" : "-translate-x-full",
           className
         )}

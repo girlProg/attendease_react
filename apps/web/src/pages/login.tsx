@@ -7,6 +7,7 @@ import { login } from "@/api/auth"
 import { AppLogo } from "@/components/app-logo"
 import { IconInput } from "@/components/icon-input"
 import { PrimaryButton } from "@/components/primary-button"
+import { appConfig } from "@/config/app-config"
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -31,40 +32,57 @@ export function LoginPage() {
   return (
     <div className="flex min-h-svh">
       {/* Left branding panel */}
-      <div className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-sidebar lg:flex">
-        <div className="z-10 px-12 text-center">
-          <AppLogo size="lg" className="mb-4 justify-center" />
-          <p className="text-lg text-white/70">
-            The attendance record system for Kaduna Schools
-          </p>
+      {appConfig.login.style === "photo" ? (
+        <div className="relative hidden w-1/2 overflow-hidden lg:block">
+          <img
+            src={appConfig.login.image}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         </div>
-        {/* Decorative arcs */}
-        <svg
-          className="absolute bottom-0 left-0 h-64 w-64 opacity-30"
-          viewBox="0 0 256 256"
-          fill="none"
-        >
-          <circle cx="0" cy="256" r="200" stroke="oklch(0.7 0.1 277)" strokeWidth="1.5" />
-          <circle cx="0" cy="256" r="240" stroke="oklch(0.7 0.1 277)" strokeWidth="1" />
-          <circle cx="0" cy="256" r="160" stroke="oklch(0.7 0.1 277)" strokeWidth="1" />
-        </svg>
-      </div>
+      ) : (
+        <div className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-sidebar lg:flex">
+          <div className="z-10 px-12 text-center">
+            <AppLogo size="lg" className="mb-4 justify-center" />
+            <p className="text-lg text-white/70">{appConfig.tagline}</p>
+          </div>
+          {/* Decorative arcs */}
+          <svg
+            className="absolute bottom-0 left-0 h-64 w-64 opacity-30"
+            viewBox="0 0 256 256"
+            fill="none"
+          >
+            <circle cx="0" cy="256" r="200" stroke="oklch(0.7 0.1 277)" strokeWidth="1.5" />
+            <circle cx="0" cy="256" r="240" stroke="oklch(0.7 0.1 277)" strokeWidth="1" />
+            <circle cx="0" cy="256" r="160" stroke="oklch(0.7 0.1 277)" strokeWidth="1" />
+          </svg>
+        </div>
+      )}
 
       {/* Right form panel */}
       <div className="flex w-full flex-col items-center justify-center px-6 lg:w-1/2">
         <AppLogo size="md" variant="dark" className="mb-8 lg:hidden" />
 
         <div className="w-full max-w-md space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Hello Again!</h1>
-            <p className="mt-1 text-muted-foreground">Welcome back</p>
-          </div>
+          {appConfig.login.style === "photo" ? (
+            <div className="flex flex-col items-center text-center">
+              <AppLogo size="lg" variant="dark" className="mb-6 hidden justify-center lg:flex" />
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome back to {appConfig.appTitle}
+              </h1>
+            </div>
+          ) : (
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Hello Again!</h1>
+              <p className="mt-1 text-muted-foreground">Welcome back</p>
+            </div>
+          )}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <IconInput
               icon={<Mail />}
               type="email"
-              placeholder="kachia@kadagile.online"
+              placeholder={appConfig.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
