@@ -42,35 +42,5 @@ export const kadunaConfig: AppConfig = {
   theme: {}, // globals.css defaults are the Kaduna palette
 }
 
-export const nigerConfig: AppConfig = {
-  appName: "CCT MIS",
-  appTitle: "Niger State CCT MIS",
-  tagline: "The conditional cash transfer system for Niger State",
-  emailPlaceholder: "admin@nigeragile.org",
-  favicon: "/branding/niger-logo.png",
-  logo: { type: "image", src: "/branding/niger-logo.png" },
-  sidebar: { style: "floating" },
-  login: { style: "photo", image: "/branding/niger-login.jpg" },
-  theme: {
-    "--sidebar": "oklch(0.13 0 0)", // near-black
-    "--sidebar-foreground": "oklch(0.9 0 0)",
-    "--sidebar-accent": "oklch(1 0 0)", // white active pill
-    "--sidebar-accent-foreground": "oklch(0.13 0 0)",
-    "--sidebar-ring": "oklch(0.5 0 0)",
-    "--brand": "oklch(0.13 0 0)", // black primary actions
-    "--brand-foreground": "oklch(1 0 0)",
-    "--primary": "oklch(0.13 0 0)",
-    "--background": "oklch(0.98 0 0)",
-    "--stat-accent-1": "oklch(0.65 0.2 10)", // pink/red accent
-    "--stat-accent-2": "oklch(0.55 0.15 155)",
-  },
-}
-
-/*
-To swap in real Niger assets
-Replace the placeholders in apps/web/public/branding/: niger-logo.png (coat of arms) and niger-login.jpg (the city photo). 
-No code changes needed.
-
-*/
 
 export const appConfig: AppConfig = kadunaConfig
