@@ -18,6 +18,7 @@ export interface AttendanceDialogCell {
   term: number
   week: number
   totalEnrolled?: number
+  cohort?: string
 }
 
 export function AttendanceDialog({
@@ -28,10 +29,11 @@ export function AttendanceDialog({
   onClose: () => void
 }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["attendance-popup", cell.schoolId, cell.year, cell.term, cell.week],
+    queryKey: ["attendance-popup", cell.schoolId, cell.cohort, cell.year, cell.term, cell.week],
     queryFn: () =>
       getAttendance(1, 1000, "", {
-        school: cell.schoolName,
+        schoolId: String(cell.schoolId),
+        ...(cell.cohort ? { cohort: cell.cohort } : {}),
         year: String(cell.year),
         term: String(cell.term),
         week: String(cell.week),
@@ -39,6 +41,7 @@ export function AttendanceDialog({
   })
 
   const records = data?.results ?? []
+  const recordedCount = data?.count ?? records.length
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -51,7 +54,7 @@ export function AttendanceDialog({
               {formatAcademicYear(cell.year)} · {getTermLabel(cell.term)} · Week {cell.week}
               {!isLoading && cell.totalEnrolled != null && (
                 <span className="ml-2 font-semibold">
-                  · {records.length} of {cell.totalEnrolled} students recorded
+                  · {recordedCount} of {cell.totalEnrolled} students recorded
                 </span>
               )}
             </p>

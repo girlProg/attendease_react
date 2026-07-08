@@ -73,4 +73,4 @@ No code changes needed.
 
 */
 
-export const appConfig: AppConfig = nigerConfig
+export const appConfig: AppConfig = kadunaConfig

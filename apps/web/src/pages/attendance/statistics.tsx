@@ -63,6 +63,7 @@ function TermRow({
   schoolName,
   year,
   totalEnrolled,
+  cohort,
   onCellClick,
 }: {
   term: AttendanceSummaryTerm
@@ -70,6 +71,7 @@ function TermRow({
   schoolName: string
   year: string
   totalEnrolled: number
+  cohort?: string
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const termAverage = term.weeks.length > 0
@@ -85,7 +87,7 @@ function TermRow({
             key={week.week}
             week={week.week}
             coverage={week.coverage}
-            onClick={() => onCellClick({ schoolId, schoolName, year, term: term.term, week: week.week, totalEnrolled })}
+            onClick={() => onCellClick({ schoolId, schoolName, year, term: term.term, week: week.week, totalEnrolled, cohort })}
           />
         ))}
       </div>
@@ -96,9 +98,11 @@ function TermRow({
 
 function SchoolHeatmap({
   summary,
+  cohort,
   onCellClick,
 }: {
   summary: AttendanceSummary
+  cohort?: string
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   return (
@@ -116,6 +120,7 @@ function SchoolHeatmap({
               schoolName={summary.school.name}
               year={year.year}
               totalEnrolled={summary.total_enrolled}
+              cohort={cohort}
               onCellClick={onCellClick}
             />
           ))}
@@ -146,15 +151,17 @@ function Legend() {
 function SchoolSummaryRow({
   schoolId,
   index,
+  cohort,
   onCellClick,
 }: {
   schoolId: number
   index: number
+  cohort?: string
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["attendance-summary", schoolId],
-    queryFn: () => getAttendanceSummary(schoolId),
+    queryKey: ["attendance-summary", schoolId, cohort],
+    queryFn: () => getAttendanceSummary(schoolId, cohort),
   })
 
   if (isLoading || !summary) {
@@ -182,7 +189,7 @@ function SchoolSummaryRow({
         </div>
       </TableCell>
       <TableCell>
-        <SchoolHeatmap summary={summary} onCellClick={onCellClick} />
+        <SchoolHeatmap summary={summary} cohort={cohort} onCellClick={onCellClick} />
       </TableCell>
     </TableRow>
   )
@@ -228,6 +235,7 @@ export function Statistics({ filters }: { filters: Record<string, string> }) {
                   key={school.id}
                   schoolId={school.id}
                   index={index}
+                  cohort={filters.cohort}
                   onCellClick={setSelectedCell}
                 />
               ))}

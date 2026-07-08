@@ -24,6 +24,7 @@ export const getAttendance = (
   if (filters.year) filterParams.year = filters.year;
   if (filters.lga) filterParams.student__school__lga__name = filters.lga;
   if (filters.school) filterParams.student__school__name = filters.school;
+  if (filters.schoolId) filterParams.student__school = filters.schoolId;
   if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
 
   return api
@@ -183,6 +184,12 @@ export const getTermAverages = (params: {
     }[];
   }>>("/student/term-averages/", { params }).then((response) => response.data);
 
-export const getAttendanceSummary = (schoolId: number) =>
-  api.get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`).then((r) => r.data);
+export const getAttendanceSummary = (schoolId: number, cohort?: string, year?: string) => {
+  const params: Record<string, string> = {};
+  if (cohort) params.cohort = cohort;
+  if (year) params.year = year;
+  return api
+    .get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`, { params })
+    .then((r) => r.data);
+};
 
