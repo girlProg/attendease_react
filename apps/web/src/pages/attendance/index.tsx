@@ -21,7 +21,13 @@ export function AttendancePage() {
 
   useLogVisit("Attendance", "Visited Attendance")
   const { canWrite } = useAuth()
-  const { filters, setFilter, options } = useAttendanceFilters()
+  const { filters, setFilter, options, selectedIds } = useAttendanceFilters()
+
+  // Filter attendance by the exact school ID, not its (icontains) name.
+  const realTimeFilters = {
+    ...filters,
+    ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+  }
 
   return (
     <div className="space-y-6">
@@ -70,7 +76,7 @@ export function AttendancePage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={filters} />}
+      {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
       {activeTab === "Historical" && <div className="py-12 text-center text-muted-foreground">Historical view coming soon</div>}
       {activeTab === "Statistics" && <Statistics filters={filters} />}
     </div>

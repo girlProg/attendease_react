@@ -35,6 +35,7 @@ export function BeneficiariesPage() {
     queryKey: ["students", page, pageSize, appliedSearch, filters],
     queryFn: () => getStudents(page, pageSize, {
       ...filters,
+      ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
       ...(appliedSearch && { name: appliedSearch }),
     }),
     placeholderData: keepPreviousData,

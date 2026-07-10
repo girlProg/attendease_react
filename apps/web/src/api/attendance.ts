@@ -23,8 +23,9 @@ export const getAttendance = (
   if (filters.term) filterParams.term = filters.term;
   if (filters.year) filterParams.year = filters.year;
   if (filters.lga) filterParams.student__school__lga__name = filters.lga;
-  if (filters.school) filterParams.student__school__name = filters.school;
+  // Prefer the exact school ID; name (icontains) can match same-prefixed schools.
   if (filters.schoolId) filterParams.student__school = filters.schoolId;
+  else if (filters.school) filterParams.student__school__name = filters.school;
   if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
 
   return api
@@ -42,7 +43,10 @@ export const getStudents = (
   const filterParams: Record<string, string> = {};
   if (filters.cohort) filterParams.cohort__name = filters.cohort;
   if (filters.lga) filterParams.school__lga__name = filters.lga;
-  if (filters.school) filterParams.school__name = filters.school;
+  // Prefer the exact school ID so the list matches the CSV template exactly.
+  // Falling back to name (icontains) would leak in same-prefixed schools.
+  if (filters.schoolId) filterParams.school = filters.schoolId;
+  else if (filters.school) filterParams.school__name = filters.school;
   if (filters.name) filterParams.name = filters.name;
 
   return api

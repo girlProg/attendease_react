@@ -44,9 +44,14 @@ export function NewAttendancePage() {
     setRemarkOverrides({})
   }, [filters])
 
+  const studentFilters = {
+    ...filters,
+    ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+  }
+
   const { data: studentData } = useQuery({
-    queryKey: ["students", "new", page, pageSize, filters],
-    queryFn: () => getStudents(page, pageSize, filters),
+    queryKey: ["students", "new", page, pageSize, studentFilters],
+    queryFn: () => getStudents(page, pageSize, studentFilters),
     placeholderData: keepPreviousData,
   })
 
@@ -96,6 +101,8 @@ export function NewAttendancePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] })
       queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance-summary"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance-popup"] })
       setDayOverrides({})
       setReasonOverrides({})
       setRemarkOverrides({})

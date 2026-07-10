@@ -24,6 +24,9 @@ export function CsvUploadDialog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance-summary"] })
+      queryClient.invalidateQueries({ queryKey: ["attendance-popup"] })
       setTimeout(() => {
         setOpen(false)
         setFile(null)
