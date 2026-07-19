@@ -15,6 +15,7 @@ import { EditUserPage } from "@/pages/edit-user"
 import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
 import { TransitionRatePage } from "@/pages/transition-rate"
+import { AskPage } from "@/pages/ask"
 
 export function App() {
   return (
@@ -30,6 +31,7 @@ export function App() {
         <Route path="analytics" element={<TransitionRatePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route element={<AdminRoute />}>
+          <Route path="ask" element={<AskPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />

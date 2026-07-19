@@ -6,6 +6,7 @@ import {
   CreditCard,
   Home,
   Settings,
+  Sparkles,
   User,
   Users,
 } from "lucide-react"
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Students", path: "/students", icon: Users },
   { label: "Payments", path: "/payments", icon: CreditCard, adminOnly: true },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
+  { label: "Ask", path: "/ask", icon: Sparkles, strictAdmin: true },
   { label: "Profile", path: "/profile", icon: User },
   { label: "Manage Users", path: "/manage-users", icon: Settings, adminOnly: true },
   { label: "Logs", path: "/logs", icon: CalendarDays, adminOnly: true },
@@ -38,7 +40,10 @@ export function AppSidebar() {
   const { setOpen } = useSidebar()
   const { isAdmin, isViewer } = useAuth()
 
-  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin || isViewer)
+  const visibleItems = navItems.filter((item) => {
+    if (item.strictAdmin) return isAdmin
+    return !item.adminOnly || isAdmin || isViewer
+  })
   const isFloating = appConfig.sidebar.style === "floating"
 
   return (
