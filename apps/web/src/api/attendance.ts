@@ -97,6 +97,21 @@ export const downloadExcelTemplate = (params: {
     .then((response) => downloadBlobFromResponse(response, "attendance_template.xlsx"));
 };
 
+export const downloadLgaTemplates = (params: {
+  lga: number;
+  cohort: number;
+  term: string;
+  week: string;
+  year: string;
+}) => {
+  return api
+    .get("/attendance/download-lga-templates/", {
+      params,
+      responseType: "blob",
+    })
+    .then((response) => downloadBlobFromResponse(response, "lga_templates.zip"));
+};
+
 export const uploadAttendanceCsv = (file: File) => {
   const formData = new FormData();
   formData.append("file", file);

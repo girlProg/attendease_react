@@ -54,6 +54,7 @@ export function useAttendanceFilters() {
   )
 
   const selectedCohortId = cohorts?.find((cohort) => cohort.name === filters.cohort)?.id
+  const selectedLgaId = lgaList?.find((lga) => lga.name === filters.lga)?.id
   const selectedSchoolId = schoolList?.find((school) => school.name === filters.school)?.id
 
   return {
@@ -62,6 +63,7 @@ export function useAttendanceFilters() {
     allFiltersSelected,
     selectedIds: {
       cohort: selectedCohortId,
+      lga: selectedLgaId,
       school: selectedSchoolId,
     },
     options: {

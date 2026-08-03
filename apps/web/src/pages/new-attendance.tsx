@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { FileSpreadsheet } from "lucide-react"
+import { FileArchive, FileSpreadsheet } from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
@@ -20,7 +20,7 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, submitAttendanceSubmission } from "@/api/attendance"
+import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, downloadLgaTemplates, submitAttendanceSubmission } from "@/api/attendance"
 import type { Student, AttendanceRecord } from "@/types"
 
 const dayColumns = ["Mon", "Tue", "Wed", "Thu"] as const
@@ -171,6 +171,24 @@ export function NewAttendancePage() {
         >
           <FileSpreadsheet className="size-4" />
           Download Excel Template
+        </Button>
+        <Button
+          className="h-11 gap-2 rounded-full bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:opacity-50"
+          disabled={!selectedIds.lga || !selectedIds.cohort}
+          onClick={() => {
+            if (selectedIds.lga && selectedIds.cohort) {
+              downloadLgaTemplates({
+                lga: selectedIds.lga,
+                cohort: selectedIds.cohort,
+                term: filters.term,
+                week: filters.week,
+                year: filters.year,
+              })
+            }
+          }}
+        >
+          <FileArchive className="size-4" />
+          Download All LGA Templates
         </Button>
       </div>
 
