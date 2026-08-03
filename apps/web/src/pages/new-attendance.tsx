@@ -174,9 +174,9 @@ export function NewAttendancePage() {
         </Button>
         <Button
           className="h-11 gap-2 rounded-full bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:opacity-50"
-          disabled={!selectedIds.lga || !selectedIds.cohort}
+          disabled={!selectedIds.lga || !selectedIds.cohort || !filters.term || !filters.week || !filters.year}
           onClick={() => {
-            if (selectedIds.lga && selectedIds.cohort) {
+            if (selectedIds.lga && selectedIds.cohort && filters.term && filters.week && filters.year) {
               downloadLgaTemplates({
                 lga: selectedIds.lga,
                 cohort: selectedIds.cohort,
