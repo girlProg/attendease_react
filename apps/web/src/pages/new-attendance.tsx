@@ -20,15 +20,14 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
+import { useSchoolWeek } from "@/hooks/use-school-week"
 import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, downloadLgaTemplates, submitAttendanceSubmission } from "@/api/attendance"
 import type { Student, AttendanceRecord } from "@/types"
-
-const dayColumns = ["Mon", "Tue", "Wed", "Thu"] as const
-const dayFields = ["monday", "tuesday", "wednesday", "thursday"] as const
 
 export function NewAttendancePage() {
   const queryClient = useQueryClient()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { activeDays, labelFor } = useSchoolWeek()
 
   const { page, setPage, pageSize, handleRowsChange } = usePagination([filters])
 
@@ -122,12 +121,12 @@ export function NewAttendancePage() {
 
     const records = students.map((student) => {
       const attendance = attendanceMap?.get(student.id)
+      const dayValues = Object.fromEntries(
+        activeDays.map((day) => [day, isDayActive(student, day)]),
+      )
       return {
         student_id: student.id,
-        monday: isDayActive(student, "monday"),
-        tuesday: isDayActive(student, "tuesday"),
-        wednesday: isDayActive(student, "wednesday"),
-        thursday: isDayActive(student, "thursday"),
+        ...dayValues,
         ...(reasonOverrides[student.id] || attendance?.reason
           ? { reason: reasonOverrides[student.id] ?? attendance?.reason ?? "" }
           : {}),
@@ -210,8 +209,8 @@ export function NewAttendancePage() {
                   <TableHead className="text-xs font-semibold text-sidebar">Name</TableHead>
                   <TableHead className="text-xs font-semibold text-sidebar">ID</TableHead>
                   <TableHead className="text-xs font-semibold text-sidebar">Class</TableHead>
-                  {dayColumns.map((day) => (
-                    <TableHead key={day} className="text-center text-xs font-semibold text-sidebar">{day}</TableHead>
+                  {activeDays.map((day) => (
+                    <TableHead key={day} className="text-center text-xs font-semibold text-sidebar">{labelFor(day)}</TableHead>
                   ))}
                   <TableHead className="text-center text-xs font-semibold text-sidebar">Reason</TableHead>
                   <TableHead className="text-center text-xs font-semibold text-sidebar">Remark</TableHead>
@@ -219,7 +218,7 @@ export function NewAttendancePage() {
               </TableHeader>
               <TableBody>
                 {(!studentData?.results || studentData.results.length === 0) ? (
-                  <TableEmptyState colSpan={9} />
+                  <TableEmptyState colSpan={6 + activeDays.length} />
                 ) : studentData.results.map((student: Student, index: number) => {
                   const attendance = attendanceMap?.get(student.id)
                   return (
@@ -235,7 +234,7 @@ export function NewAttendancePage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{student.id}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{student.current_class}</TableCell>
-                      {dayFields.map((dayField) => {
+                      {activeDays.map((dayField) => {
                         const active = isDayActive(student, dayField)
                         return (
                           <TableCell key={dayField} className="text-center">

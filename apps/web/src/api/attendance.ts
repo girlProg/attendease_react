@@ -3,6 +3,7 @@ import { downloadBlobFromResponse } from "../lib/blob-download";
 import type {
   PaginatedResponse,
   Cohort,
+  DayName,
   LGA,
   School,
   Student,
@@ -128,15 +129,13 @@ export const submitAttendanceSubmission = (payload: {
   year: number;
   term: number;
   week: number;
-  records: {
+  // Day booleans are per-deployment (Kaduna Mon-Thu, Niger Mon-Fri) so the set
+  // is dynamic; the backend only accepts the active days for its deployment.
+  records: ({
     student_id: number;
-    monday: boolean;
-    tuesday: boolean;
-    wednesday: boolean;
-    thursday: boolean;
     reason?: string;
     remark?: string;
-  }[];
+  } & Partial<Record<DayName, boolean>>)[];
 }) => api.post("/attendance-submission/", payload).then((response) => response.data);
 
 export const getCohorts = () =>

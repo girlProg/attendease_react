@@ -44,9 +44,25 @@ export interface AttendanceRecord {
   tuesday: boolean;
   wednesday: boolean;
   thursday: boolean;
+  friday?: boolean;
   reason: string | null;
   remark: string | null;
   attendance_average: number;
+}
+
+export type DayName =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday";
+
+// Per-deployment config from GET /api/config/. The school week is state-specific
+// (Kaduna Mon-Thu, Niger Mon-Fri) and must come from here, never hardcoded.
+export interface DeploymentConfig {
+  active_days: DayName[];
+  day_labels: Partial<Record<DayName, string>>;
+  qualifying_attendance_average: number;
 }
 
 export interface AttendanceSummaryWeek {
