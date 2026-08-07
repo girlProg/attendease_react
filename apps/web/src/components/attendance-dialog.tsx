@@ -10,6 +10,8 @@ import {
 } from "@workspace/ui/components/table"
 import { getAttendance } from "@/api/attendance"
 import { getTermLabel, formatAcademicYear } from "@/lib/formatters"
+import { useSchoolWeek } from "@/hooks/use-school-week"
+import type { AttendanceRecord } from "@/types"
 
 export interface AttendanceDialogCell {
   schoolId: number
@@ -40,6 +42,7 @@ export function AttendanceDialog({
       }),
   })
 
+  const { activeDays, labelFor } = useSchoolWeek()
   const records = data?.results ?? []
   const recordedCount = data?.count ?? records.length
 
@@ -78,10 +81,11 @@ export function AttendanceDialog({
                 <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
                   <TableHead className="w-12 text-center text-xs font-semibold text-sidebar">S/N</TableHead>
                   <TableHead className="text-xs font-semibold text-sidebar">Student</TableHead>
-                  <TableHead className="text-center text-xs font-semibold text-sidebar">Mon</TableHead>
-                  <TableHead className="text-center text-xs font-semibold text-sidebar">Tue</TableHead>
-                  <TableHead className="text-center text-xs font-semibold text-sidebar">Wed</TableHead>
-                  <TableHead className="text-center text-xs font-semibold text-sidebar">Thu</TableHead>
+                  {activeDays.map((day) => (
+                    <TableHead key={day} className="text-center text-xs font-semibold text-sidebar">
+                      {labelFor(day)}
+                    </TableHead>
+                  ))}
                   <TableHead className="text-center text-xs font-semibold text-sidebar">Avg</TableHead>
                 </TableRow>
               </TableHeader>
@@ -90,10 +94,9 @@ export function AttendanceDialog({
                   <TableRow key={record.id} className="border-border/40">
                     <TableCell className="text-center text-xs text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="text-xs font-semibold text-foreground">{record.student?.name}</TableCell>
-                    <DayCell active={Boolean(record.monday)} />
-                    <DayCell active={Boolean(record.tuesday)} />
-                    <DayCell active={Boolean(record.wednesday)} />
-                    <DayCell active={Boolean(record.thursday)} />
+                    {activeDays.map((day) => (
+                      <DayCell key={day} active={Boolean(record[day as keyof AttendanceRecord])} />
+                    ))}
                     <TableCell className="text-center text-xs font-semibold text-muted-foreground">
                       {record.attendance_average != null ? `${Math.round(record.attendance_average)}%` : "—"}
                     </TableCell>
