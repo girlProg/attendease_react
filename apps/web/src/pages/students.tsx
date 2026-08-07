@@ -20,6 +20,8 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { SearchBar } from "@/components/search-bar"
 import { PaginationBar } from "@/components/pagination-bar"
+import { UploadRecordsDialog } from "@/components/upload-records-dialog"
+import { UploadBatchesDialog } from "@/components/upload-batches-dialog"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages } from "@/api/attendance"
@@ -27,7 +29,7 @@ import { formatNaira } from "@/lib/formatters"
 
 export function StudentsPage() {
   useLogVisit("Students", "Visited Students")
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -58,23 +60,20 @@ export function StudentsPage() {
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        {canWrite && (
+        {isAdmin && (
           <>
-            <Button
-              variant="outline"
-              className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-            >
-              <Plus className="size-4" />
-              Upload Records
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-            >
-              <Plus className="size-4" />
-              New Student
-            </Button>
+            <UploadRecordsDialog />
+            <UploadBatchesDialog />
           </>
+        )}
+        {canWrite && (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+          >
+            <Plus className="size-4" />
+            New Student
+          </Button>
         )}
       </div>
 
