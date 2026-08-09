@@ -21,10 +21,18 @@ import { StatusBadge } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getTermAverages } from "@/api/attendance"
+import { getTermAverages, getCohorts } from "@/api/attendance"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
+import type { Payee } from "@/types"
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
@@ -33,6 +41,18 @@ export function PaymentsPage() {
   const [appliedSearch, setAppliedSearch] = useState("")
   const [amountPerStudent, setAmountPerStudent] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters], 300)
+
+  // Payee defaults to the selected cohort's setting (Niger=student, Kaduna=
+  // caregiver) and can be overridden per disbursement. The override is keyed to
+  // the cohort so switching cohorts falls back to that cohort's default.
+  const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  const cohortPayee: Payee =
+    cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.payee ?? "caregiver"
+  const [payeeChoice, setPayeeChoice] = useState<{ cohortId?: number; value: Payee } | null>(null)
+  const payee: Payee =
+    payeeChoice && payeeChoice.cohortId === selectedIds.cohort
+      ? payeeChoice.value
+      : cohortPayee
 
   const { data, isError } = useQuery({
     queryKey: ["term-averages", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
@@ -88,6 +108,21 @@ export function PaymentsPage() {
           onChange={(event) => setAmountPerStudent(event.target.value)}
           className="h-11 w-52 rounded-full border-sidebar/30 !bg-white shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
         />
+        <Select
+          value={payee}
+          onValueChange={(value) =>
+            value &&
+            setPayeeChoice({ cohortId: selectedIds.cohort, value: value as Payee })
+          }
+        >
+          <SelectTrigger className="h-11 w-44 rounded-full border-sidebar/30 !bg-white px-4 shadow-sm">
+            <SelectValue placeholder="Payee" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="student">Pay Student</SelectItem>
+            <SelectItem value="caregiver">Pay Caregiver</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
