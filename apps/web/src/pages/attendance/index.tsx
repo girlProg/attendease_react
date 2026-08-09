@@ -9,13 +9,14 @@ import { useAuth } from "@/contexts/auth-context"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 
+import { Overview } from "./overview"
 import { RealTime } from "./real-time"
 import { Statistics } from "./statistics"
 
-const tabs = ["Historical", "Real-Time", "Statistics"] as const
+const tabs = ["Overview", "Historical", "Real-Time", "Statistics"] as const
 
 export function AttendancePage() {
-  const [activeTab, setActiveTab] = useState<string>("Real-Time")
+  const [activeTab, setActiveTab] = useState<string>("Overview")
   const [appliedSearch, setAppliedSearch] = useState("")
   const navigate = useNavigate()
 
@@ -34,6 +35,8 @@ export function AttendancePage() {
       {/* Filters */}
       {activeTab === "Statistics" ? (
         <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["term", "year", "school", "week"]} />
+      ) : activeTab === "Overview" ? (
+        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
       ) : (
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
@@ -76,6 +79,7 @@ export function AttendancePage() {
       </div>
 
       {/* Tab content */}
+      {activeTab === "Overview" && <Overview filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
       {activeTab === "Historical" && <div className="py-12 text-center text-muted-foreground">Historical view coming soon</div>}
       {activeTab === "Statistics" && <Statistics filters={filters} />}

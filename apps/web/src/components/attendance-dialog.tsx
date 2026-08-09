@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { getAttendance } from "@/api/attendance"
-import { getTermLabel, formatAcademicYear } from "@/lib/formatters"
+import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
 import { useSchoolWeek } from "@/hooks/use-school-week"
 import type { AttendanceRecord } from "@/types"
 
@@ -98,7 +98,7 @@ export function AttendanceDialog({
                       <DayCell key={day} active={Boolean(record[day as keyof AttendanceRecord])} />
                     ))}
                     <TableCell className="text-center text-xs font-semibold text-muted-foreground">
-                      {record.attendance_average != null ? `${Math.round(record.attendance_average)}%` : "—"}
+                      {record.attendance_average != null ? `${roundUpPercent(record.attendance_average)}%` : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

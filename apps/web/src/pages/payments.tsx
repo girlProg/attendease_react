@@ -62,6 +62,7 @@ export function PaymentsPage() {
       ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
       ...(filters.term && { term: filters.term }),
       ...(appliedSearch && { name: appliedSearch }),
+      graduated: "false",  // graduated students are not paid
       page,
       page_size: pageSize,
     }),

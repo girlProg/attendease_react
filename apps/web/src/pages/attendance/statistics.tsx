@@ -11,7 +11,7 @@ import {
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
 import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
-import { getTermLabel, formatAcademicYear } from "@/lib/formatters"
+import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
 import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
 
 function normalizeCoverage(coverage: number): number {
@@ -50,7 +50,7 @@ function WeekCell({
       type="button"
       onClick={onClick}
       className={`flex size-5 items-center justify-center rounded-sm ${getCellColor(coverage)} cursor-pointer text-[7px] font-medium text-white/80 transition-opacity hover:opacity-80 hover:ring-2 hover:ring-sidebar/50`}
-      title={`Week ${week}: ${Math.round(normalizeCoverage(coverage))}%`}
+      title={`Week ${week}: ${roundUpPercent(normalizeCoverage(coverage))}%`}
     >
       {week}
     </button>
@@ -75,7 +75,7 @@ function TermRow({
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const termAverage = term.weeks.length > 0
-    ? Math.round(term.weeks.reduce((sum, week) => sum + normalizeCoverage(week.coverage), 0) / term.weeks.length)
+    ? roundUpPercent(term.weeks.reduce((sum, week) => sum + normalizeCoverage(week.coverage), 0) / term.weeks.length)
     : 0
 
   return (
@@ -182,7 +182,7 @@ function SchoolSummaryRow({
           <p className="text-[11px] text-muted-foreground">{summary.total_enrolled} enrolled</p>
           <p className="flex items-baseline gap-1">
             <span className={`text-sm font-bold ${getAverageColor(summary.overall_average)}`}>
-              {Math.round(summary.overall_average)}%
+              {roundUpPercent(summary.overall_average)}%
             </span>
             <span className="text-[10px] text-muted-foreground">avg</span>
           </p>
