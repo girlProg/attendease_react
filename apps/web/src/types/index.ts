@@ -48,6 +48,11 @@ export interface AttendanceOverviewClass {
 }
 
 export interface AttendanceOverview {
+  total_beneficiaries: number;
+  graduated_students: number;
+  total_schools: number;
+  payments_made: number;
+  total_disbursed_amount: number;
   active_students: number;
   students_with_attendance: number;
   average_attendance: number;
