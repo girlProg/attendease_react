@@ -5,10 +5,15 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
+export type Payee = "student" | "caregiver";
+
 export interface Cohort {
   id: number;
   name: string;
   year: string;
+  // Whose identity/name the disbursement uses for this cohort (Niger=student,
+  // Kaduna=caregiver). Present once the backend cohort serializer exposes it.
+  payee?: Payee;
 }
 
 export interface LGA {
