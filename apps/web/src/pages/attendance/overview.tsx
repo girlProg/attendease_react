@@ -1,4 +1,12 @@
-import { Users, ClipboardCheck, Percent, UserCheck } from "lucide-react"
+import {
+  Users,
+  UserCheck,
+  ClipboardCheck,
+  Percent,
+  GraduationCap,
+  School,
+  Banknote,
+} from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import {
@@ -13,6 +21,11 @@ import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { getAttendanceOverview } from "@/api/attendance"
+import { formatNaira, roundUpPercent } from "@/lib/formatters"
+
+function percentOf(part: number, whole: number): number {
+  return whole > 0 ? roundUpPercent((part / whole) * 100) : 0
+}
 
 export function Overview({
   filters,
@@ -34,29 +47,60 @@ export function Overview({
     queryFn: () => getAttendanceOverview(params),
   })
 
+  const beneficiaries = data?.total_beneficiaries ?? 0
+  const active = data?.active_students ?? 0
+  const recorded = data?.students_with_attendance ?? 0
+  const graduated = data?.graduated_students ?? 0
+  const schools = data?.total_schools ?? 0
+
   const stats = [
     {
-      label: "Active Students",
-      value: (data?.active_students ?? 0).toLocaleString(),
+      label: "Beneficiaries",
+      value: beneficiaries.toLocaleString(),
+      sub: `${active.toLocaleString()} active · ${graduated.toLocaleString()} graduated`,
       icon: Users,
       color: "bg-sidebar",
     },
     {
+      label: "Schools",
+      value: schools.toLocaleString(),
+      sub: schools ? `${Math.round(beneficiaries / schools)} avg / school` : undefined,
+      icon: School,
+      color: "bg-[var(--stat-accent-2)]",
+    },
+    {
       label: "Attendance Recorded",
-      value: (data?.students_with_attendance ?? 0).toLocaleString(),
+      value: recorded.toLocaleString(),
+      sub: `${percentOf(recorded, active)}% of active`,
       icon: ClipboardCheck,
       color: "bg-[var(--stat-accent-1)]",
     },
     {
       label: "Average Attendance",
       value: `${data?.average_attendance ?? 0}%`,
+      sub: `across ${recorded.toLocaleString()} students`,
       icon: Percent,
       color: "bg-[var(--stat-accent-2)]",
     },
     {
       label: "Qualifying Students",
-      value: `${(data?.qualifying_students ?? 0).toLocaleString()} (${data?.qualifying_percentage ?? 0}%)`,
+      value: (data?.qualifying_students ?? 0).toLocaleString(),
+      sub: `${data?.qualifying_percentage ?? 0}% of recorded`,
       icon: UserCheck,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+    {
+      label: "Graduated",
+      value: graduated.toLocaleString(),
+      sub: `${percentOf(graduated, beneficiaries)}% of beneficiaries`,
+      icon: GraduationCap,
+      color: "bg-sidebar",
+    },
+    {
+      label: "Payments Made",
+      value: (data?.payments_made ?? 0).toLocaleString(),
+      sub: `${formatNaira(data?.total_disbursed_amount ?? 0)} disbursed`,
+      icon: Banknote,
       color: "bg-[var(--stat-accent-1)]",
     },
   ]
@@ -76,9 +120,12 @@ export function Overview({
             >
               <stat.icon className="size-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              <p className="truncate text-xl font-bold text-foreground">{stat.value}</p>
+              {stat.sub && (
+                <p className="truncate text-[11px] text-muted-foreground">{stat.sub}</p>
+              )}
             </div>
           </div>
         ))}
