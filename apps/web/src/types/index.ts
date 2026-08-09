@@ -37,6 +37,23 @@ export interface Student {
   photo_url: string;
   caregiver_name: string;
   caregiver_phone: string;
+  graduated?: boolean;
+}
+
+export interface AttendanceOverviewClass {
+  class: string;
+  recorded: number;
+  average_attendance: number;
+  qualifying_students: number;
+}
+
+export interface AttendanceOverview {
+  active_students: number;
+  students_with_attendance: number;
+  average_attendance: number;
+  qualifying_students: number;
+  qualifying_percentage: number;
+  by_class: AttendanceOverviewClass[];
 }
 
 export interface AttendanceRecord {

@@ -124,6 +124,11 @@ export function StudentsPage() {
                       <div className="flex items-center gap-2">
                         <StudentPhoto url={record.photo_url} name={record.name} />
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
+                        {record.graduated && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            Graduated
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.id}</TableCell>

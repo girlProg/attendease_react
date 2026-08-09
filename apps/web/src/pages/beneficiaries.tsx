@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Download, Phone } from "lucide-react"
-import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { Button } from "@workspace/ui/components/button"
@@ -20,16 +20,42 @@ import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getStudents, exportStudents } from "@/api/attendance"
+import { getStudents, exportStudents, bulkChangeClass } from "@/api/attendance"
+
+function classChangeError(error: unknown): string {
+  const data = (error as { response?: { data?: { error?: string; detail?: string } } })
+    ?.response?.data
+  return data?.error ?? data?.detail ?? "Could not update the class. Please try again."
+}
 
 export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
+  const queryClient = useQueryClient()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
   const [targetClass, setTargetClass] = useState<string | undefined>()
   const [destinationClass, setDestinationClass] = useState<string | undefined>()
+
+  const updateClass = useMutation({
+    mutationFn: bulkChangeClass,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] })
+      queryClient.invalidateQueries({ queryKey: ["students-summary"] })
+      setTargetClass(undefined)
+      setDestinationClass(undefined)
+    },
+  })
+
+  function handleUpdateAll() {
+    if (!selectedIds.cohort || !targetClass || !destinationClass) return
+    updateClass.mutate({
+      cohort: selectedIds.cohort,
+      target_class: targetClass,
+      destination_class: destinationClass,
+    })
+  }
 
   const { data, isError } = useQuery({
     queryKey: ["students", page, pageSize, appliedSearch, filters],
@@ -76,7 +102,7 @@ export function BeneficiariesPage() {
       </div>
 
       {/* Class Transfer */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-3 rounded-full border-2 border-dashed border-brand/60 bg-brand/10 px-6 py-3">
           <FilterSelect
             placeholder="Select a target class"
@@ -86,14 +112,36 @@ export function BeneficiariesPage() {
           />
           <FilterSelect
             placeholder="Select a destination class"
-            items={CLASS_OPTIONS}
+            items={DESTINATION_OPTIONS}
             value={destinationClass}
             onValueChange={(value) => setDestinationClass(value ?? undefined)}
           />
-          <Button className="h-11 rounded-full bg-brand px-6 text-white hover:bg-brand/90">
-            Update All
+          <Button
+            className="h-11 rounded-full bg-brand px-6 text-white hover:bg-brand/90 disabled:opacity-50"
+            disabled={
+              !selectedIds.cohort ||
+              !targetClass ||
+              !destinationClass ||
+              updateClass.isPending
+            }
+            onClick={handleUpdateAll}
+          >
+            {updateClass.isPending ? "Updating…" : "Update All"}
           </Button>
         </div>
+        {!selectedIds.cohort && (
+          <p className="text-xs text-muted-foreground">Select a cohort first.</p>
+        )}
+        {updateClass.isSuccess && (
+          <p className="text-xs font-medium text-emerald-600">
+            Updated {updateClass.data.updated} student(s).
+          </p>
+        )}
+        {updateClass.isError && (
+          <p className="text-xs font-medium text-red-600">
+            {classChangeError(updateClass.error)}
+          </p>
+        )}
       </div>
 
       {/* Pagination */}
@@ -133,6 +181,11 @@ export function BeneficiariesPage() {
                   <div className="flex items-center gap-2">
                     <StudentPhoto url={record.photo_url} name={record.name} />
                     <span className="text-xs font-semibold text-sidebar">{record.name}</span>
+                    {record.graduated && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Graduated
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.lga}</TableCell>
@@ -162,3 +215,6 @@ const CLASS_OPTIONS = [
   "JSS 1", "JSS 2", "JSS 3",
   "SSS 1", "SSS 2", "SSS 3",
 ]
+
+// Destination can also mark students Graduated (backend sets graduated=True).
+const DESTINATION_OPTIONS = [...CLASS_OPTIONS, "Graduated"]

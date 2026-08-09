@@ -46,6 +46,8 @@ export function NewAttendancePage() {
   const studentFilters = {
     ...filters,
     ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+    // Graduated students no longer have attendance recorded.
+    graduated: "false",
   }
 
   const { data: studentData } = useQuery({

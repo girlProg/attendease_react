@@ -2,6 +2,12 @@ export function formatNaira(amount: number) {
   return `₦${amount.toLocaleString()}`
 }
 
+// Percentages are shown as whole numbers, rounded up (the backend judges
+// eligibility on this same ceiled value).
+export function roundUpPercent(value: number) {
+  return Math.ceil(value || 0)
+}
+
 export function ordinal(value: string | number) {
   const num = typeof value === "number" ? value : parseInt(value, 10)
   if (num === 1) return "1st"

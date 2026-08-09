@@ -9,6 +9,7 @@ import type {
   Student,
   AttendanceRecord,
   AttendanceSummary,
+  AttendanceOverview,
 } from "@/types";
 
 
@@ -49,6 +50,8 @@ export const getStudents = (
   if (filters.schoolId) filterParams.school = filters.schoolId;
   else if (filters.school) filterParams.school__name = filters.school;
   if (filters.name) filterParams.name = filters.name;
+  // "true"/"false" are both truthy strings — pass either through.
+  if (filters.graduated) filterParams.graduated = filters.graduated;
 
   return api
     .get<PaginatedResponse<Student>>("/student/", {
@@ -169,6 +172,7 @@ export const getTermAverages = (params: {
   cohort?: number;
   term?: string;
   name?: string;
+  graduated?: string;
   page?: number;
   page_size?: number;
 }) =>
@@ -176,6 +180,7 @@ export const getTermAverages = (params: {
     id: number;
     name: string;
     current_class: string;
+    graduated: boolean;
     school: string;
     cohort: string;
     photo_url: string;
@@ -210,4 +215,24 @@ export const getAttendanceSummary = (schoolId: number, cohort?: string, year?: s
     .get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`, { params })
     .then((r) => r.data);
 };
+
+export const getAttendanceOverview = (params: {
+  cohort?: string | number;
+  year?: string;
+  term?: string;
+  lga?: string | number;
+  school?: string | number;
+}) =>
+  api
+    .get<AttendanceOverview>("/attendance/overview/", { params })
+    .then((response) => response.data);
+
+export const bulkChangeClass = (payload: {
+  cohort: number;
+  target_class: string;
+  destination_class: string;
+}) =>
+  api
+    .post<{ updated: number }>("/student/bulk-change-class/", payload)
+    .then((response) => response.data);
 
