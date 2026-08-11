@@ -52,6 +52,7 @@ export interface AttendanceOverview {
   graduated_students: number;
   total_schools: number;
   payments_made: number;
+  failed_payments: number;
   total_disbursed_amount: number;
   active_students: number;
   students_with_attendance: number;

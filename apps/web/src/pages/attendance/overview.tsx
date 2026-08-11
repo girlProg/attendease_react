@@ -6,6 +6,7 @@ import {
   GraduationCap,
   School,
   Banknote,
+  XCircle,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
@@ -102,6 +103,13 @@ export function Overview({
       sub: `${formatNaira(data?.total_disbursed_amount ?? 0)} disbursed`,
       icon: Banknote,
       color: "bg-[var(--stat-accent-1)]",
+    },
+    {
+      label: "Failed Payments",
+      value: (data?.failed_payments ?? 0).toLocaleString(),
+      sub: `${percentOf(data?.failed_payments ?? 0, (data?.payments_made ?? 0) + (data?.failed_payments ?? 0))}% of attempts`,
+      icon: XCircle,
+      color: "bg-[var(--stat-accent-2)]",
     },
   ]
 
