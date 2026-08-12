@@ -78,31 +78,48 @@ export function PaymentsPage() {
   const totalPages = data ? Math.ceil(totalCount / pageSize) : 0
   const termSelected = !!filters.term
   const selectedTerm = filters.term ? parseInt(filters.term, 10) : null
-  const awaitingCount = records.filter((record) => {
+
+  const isAwaiting = (record: (typeof records)[number]) => {
     if (!selectedTerm) return !record.payments?.length
     return !record.payments?.find((payment) => payment.term === selectedTerm)
-  }).length
+  }
+  const awaitingCount = records.filter(isAwaiting).length
+
+  // Clicking a card filters the (loaded) student list to just those rows.
+  const [activeCard, setActiveCard] = useState<string | null>(null)
+  const displayedRecords =
+    activeCard === "successful"
+      ? records.filter((record) => !isAwaiting(record))
+      : activeCard === "awaiting"
+        ? records.filter(isAwaiting)
+        : activeCard === "failed"
+          ? []
+          : records
 
   const stats = [
     {
+      key: "all",
       label: "Number of Students",
       value: totalCount.toLocaleString(),
       icon: Users,
       color: "bg-sidebar",
     },
     {
+      key: "successful",
       label: "Successful Disbursements",
       value: (records.length - awaitingCount).toLocaleString(),
       icon: CheckCircle2,
       color: "bg-[var(--stat-accent-2)]",
     },
     {
+      key: "failed",
       label: "Failed Disbursements",
       value: "0",
       icon: XCircle,
       color: "bg-[var(--stat-accent-1)]",
     },
     {
+      key: "awaiting",
       label: "Awaiting / Ineligible",
       value: awaitingCount.toLocaleString(),
       icon: Clock,
@@ -130,23 +147,60 @@ export function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
+      {/* Summary Stats — clickable cards filter the list below */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-4 rounded-2xl border border-border/40 bg-white p-5"
-          >
-            <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}>
-              <stat.icon className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
-            </div>
-          </div>
-        ))}
+        {stats.map((stat) => {
+          const clickable = Boolean(stat.key)
+          const active = clickable && activeCard === stat.key
+          return (
+            <button
+              key={stat.label}
+              type="button"
+              disabled={!clickable}
+              onClick={() =>
+                clickable &&
+                setActiveCard((current) => (current === stat.key ? null : (stat.key as string)))
+              }
+              className={`flex items-center gap-4 rounded-2xl border bg-white p-5 text-left transition ${
+                active
+                  ? "border-sidebar ring-2 ring-sidebar/40"
+                  : "border-border/40"
+              } ${clickable ? "cursor-pointer hover:border-sidebar/60" : "cursor-default"}`}
+            >
+              <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}>
+                <stat.icon className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              </div>
+            </button>
+          )
+        })}
       </div>
+
+      {activeCard && (
+        <div className="flex items-center justify-between rounded-xl border border-sidebar/30 bg-sidebar/5 px-4 py-2 text-sm text-sidebar">
+          <span>
+            Showing <span className="font-semibold">{displayedRecords.length.toLocaleString()}</span>{" "}
+            {activeCard === "successful"
+              ? "successful"
+              : activeCard === "awaiting"
+                ? "awaiting / ineligible"
+                : activeCard === "failed"
+                  ? "failed"
+                  : "student"}{" "}
+            record(s) on this page.
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveCard(null)}
+            className="font-medium underline underline-offset-2 hover:no-underline"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
@@ -258,12 +312,12 @@ export function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.length === 0 ? (
+                {displayedRecords.length === 0 ? (
                   <TableEmptyState colSpan={9} />
-                ) : records.map((record, index) => (
+                ) : displayedRecords.map((record, index) => (
                   <TableRow key={record.id} className="border-border/40">
                     <TableCell className="text-center text-xs text-muted-foreground">
-                      {(page - 1) * pageSize + index + 1}
+                      {activeCard ? index + 1 : (page - 1) * pageSize + index + 1}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
