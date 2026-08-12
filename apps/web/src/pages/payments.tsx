@@ -3,6 +3,8 @@ import { Plus, Download } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { useAuth } from "@/contexts/auth-context"
+import { NoObjectionDialog } from "@/components/no-objection-dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import {
@@ -36,6 +38,7 @@ import type { Payee } from "@/types"
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
+  const { isAdmin } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -150,6 +153,13 @@ export function PaymentsPage() {
           <Download className="size-4" />
           Download Data
         </Button>
+        {isAdmin && (
+          <NoObjectionDialog
+            cohort={selectedIds.cohort}
+            year={filters.year}
+            term={filters.term}
+          />
+        )}
       </div>
 
       {/* Pagination */}

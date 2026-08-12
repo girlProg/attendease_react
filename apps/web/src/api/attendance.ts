@@ -175,6 +175,43 @@ export const exportPayments = (params: Record<string, string | number>) => {
     .then((response) => downloadBlobFromResponse(response, "payments_export.csv"));
 };
 
+export interface NoObjectionResult {
+  id: number;
+  created: boolean;
+  students_added: number;
+  total_students: number;
+  not_found: string[];
+}
+
+// Admin-only: mark students as having no objection for a (cohort, year, term).
+// With a CSV file, students are matched on the "Beneficiary ID" column;
+// otherwise the qualifying students for the scope are used.
+export const buildNoObjection = (input: {
+  cohort: number;
+  year: string;
+  term: string;
+  file?: File | null;
+}) => {
+  if (input.file) {
+    const data = new FormData();
+    data.append("cohort", String(input.cohort));
+    data.append("year", input.year);
+    data.append("term", input.term);
+    data.append("file", input.file);
+    return api
+      .post<NoObjectionResult>("/no-objection/build/", data)
+      .then((response) => response.data);
+  }
+  return api
+    .post<NoObjectionResult>("/no-objection/build/", {
+      cohort: input.cohort,
+      year: input.year,
+      term: input.term,
+      from_qualifying: true,
+    })
+    .then((response) => response.data);
+};
+
 export const getTermAverages = (params: {
   year?: string;
   school?: number;
