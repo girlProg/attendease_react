@@ -232,6 +232,24 @@ export function UploadRecordsDialog() {
             </div>
           )}
 
+          {report?.warnings && report.warnings.length > 0 && (
+            <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              <p className="flex items-center gap-2 font-medium">
+                <AlertCircle className="size-4 shrink-0" />
+                {report.warnings.length} row(s) skipped — no matching beneficiary.
+                {report.committed ? " The rest were saved." : " The rest will be saved."}
+              </p>
+              <ul className="max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs">
+                {report.warnings.slice(0, 50).map((rowWarning, index) => (
+                  <li key={index}>
+                    Row {rowWarning.row}
+                    {rowWarning.beneficiary_id ? ` (${rowWarning.beneficiary_id})` : ""}: {rowWarning.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {mutation.isError && (
             <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle className="size-4 shrink-0" />

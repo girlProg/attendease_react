@@ -21,6 +21,7 @@ export interface UploadReport {
   valid: boolean;
   committed?: boolean;
   errors?: UploadRowError[];
+  warnings?: UploadRowError[];
   preview?: UploadPreviewRow[];
   to_create?: number;
   to_update?: number;
