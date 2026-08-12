@@ -212,6 +212,34 @@ export function UploadRecordsDialog() {
                 Will create {report.to_create ?? 0}, update {report.to_update ?? 0}, skip{" "}
                 {report.skipped ?? 0}. Click “Confirm &amp; Commit” to apply.
               </p>
+              {report.skip_reasons && Object.keys(report.skip_reasons).length > 0 && (
+                <p className="mt-1 text-xs">
+                  Skipped:{" "}
+                  {Object.entries(report.skip_reasons)
+                    .map(([reason, count]) => `${count} ${reason}`)
+                    .join(", ")}
+                  .
+                </p>
+              )}
+              {report.preview && report.preview.some((row) => row.action === "skip") && (
+                <details className="mt-2 text-xs">
+                  <summary className="cursor-pointer font-medium">
+                    Show skipped rows
+                  </summary>
+                  <ul className="mt-1 max-h-40 list-disc space-y-1 overflow-y-auto pl-5">
+                    {report.preview
+                      .filter((row) => row.action === "skip")
+                      .slice(0, 100)
+                      .map((row, index) => (
+                        <li key={index}>
+                          Row {row.row}
+                          {row.beneficiary_id ? ` (${row.beneficiary_id})` : ""}
+                          {row.note ? ` — ${row.note}` : ""}
+                        </li>
+                      ))}
+                  </ul>
+                </details>
+              )}
             </div>
           )}
 

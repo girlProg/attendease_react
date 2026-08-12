@@ -26,6 +26,7 @@ export interface UploadReport {
   to_create?: number;
   to_update?: number;
   skipped?: number;
+  skip_reasons?: Record<string, number>;
   created?: number;
   updated?: number;
   batch_id?: number;
