@@ -36,7 +36,21 @@ export function AttendancePage() {
       {activeTab === "Statistics" ? (
         <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["term", "year", "school", "week"]} />
       ) : activeTab === "Overview" ? (
-        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
+        <>
+          <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
+          {canWrite && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+                onClick={() => navigate("/attendance/new")}
+              >
+                <Plus className="size-4" />
+                New Attendance
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
