@@ -166,6 +166,15 @@ export const exportStudents = (cohortId: number) => {
     .then((response) => downloadBlobFromResponse(response, "students_export.xlsx"));
 };
 
+export const exportPayments = (params: Record<string, string | number>) => {
+  return api
+    .get("/student/export-payments/", {
+      params,
+      responseType: "blob",
+    })
+    .then((response) => downloadBlobFromResponse(response, "payments_export.csv"));
+};
+
 export const getTermAverages = (params: {
   year?: string;
   school?: number;

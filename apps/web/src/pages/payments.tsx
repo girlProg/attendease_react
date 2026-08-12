@@ -30,7 +30,7 @@ import {
 } from "@workspace/ui/components/select"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getTermAverages, getCohorts } from "@/api/attendance"
+import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
@@ -134,6 +134,16 @@ export function PaymentsPage() {
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+          onClick={() =>
+            exportPayments({
+              ...(filters.year && { year: filters.year }),
+              ...(selectedIds.school && { school: selectedIds.school }),
+              ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
+              ...(filters.term && { term: filters.term }),
+              ...(appliedSearch && { name: appliedSearch }),
+              graduated: "false",
+            })
+          }
         >
           <Download className="size-4" />
           Download Data
