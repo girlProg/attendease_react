@@ -200,8 +200,8 @@ export function BeneficiariesPage() {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs font-semibold text-brand">{record.class_name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{record.current_class}</TableCell>
+                <TableCell className="text-xs font-semibold text-brand">{record.class_name || "—"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{record.current_class || record.class_name || "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
