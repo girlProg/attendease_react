@@ -182,6 +182,7 @@ export const getTermAverages = (params: {
   term?: string;
   name?: string;
   graduated?: string;
+  qualifying?: string;
   page?: number;
   page_size?: number;
 }) =>

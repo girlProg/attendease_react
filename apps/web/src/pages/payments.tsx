@@ -63,6 +63,7 @@ export function PaymentsPage() {
       ...(filters.term && { term: filters.term }),
       ...(appliedSearch && { name: appliedSearch }),
       graduated: "false",  // graduated students are not paid
+      qualifying: "true",  // only students who qualify in the filtered scope
       page,
       page_size: pageSize,
     }),
@@ -142,6 +143,7 @@ export function PaymentsPage() {
               ...(filters.term && { term: filters.term }),
               ...(appliedSearch && { name: appliedSearch }),
               graduated: "false",
+              qualifying: "true",
             })
           }
         >
