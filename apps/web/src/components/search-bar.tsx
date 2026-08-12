@@ -8,7 +8,7 @@ interface SearchBarProps {
   onSearch: (value: string) => void
 }
 
-export function SearchBar({ placeholder = "Find Student by Name", onSearch }: SearchBarProps) {
+export function SearchBar({ placeholder = "Find Student by Name or Beneficiary ID", onSearch }: SearchBarProps) {
   const [value, setValue] = useState("")
 
   return (
