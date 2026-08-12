@@ -212,6 +212,32 @@ export const buildNoObjection = (input: {
     .then((response) => response.data);
 };
 
+export interface NoObjectionStatus {
+  exists: boolean
+  id: number | null
+  total_students: number
+}
+
+// Does a no-objection submission already exist for this (cohort, year, term)?
+export const getNoObjectionStatus = (params: {
+  cohort?: number
+  year?: string
+  term?: string
+}) =>
+  api
+    .get<NoObjectionStatus>("/no-objection/status/", { params })
+    .then((response) => response.data)
+
+// Superuser-only: delete the no-objection submission for a (cohort, year, term).
+export const deleteNoObjection = (params: {
+  cohort: number
+  year: string
+  term: string
+}) =>
+  api
+    .delete<{ deleted: boolean }>("/no-objection/remove/", { params })
+    .then((response) => response.data)
+
 export const getTermAverages = (params: {
   year?: string;
   school?: number;

@@ -207,6 +207,7 @@ export function PaymentsPage() {
         <div className="flex">
           <NoObjectionDialog
             cohort={selectedIds.cohort}
+            cohortName={cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name}
             year={filters.year}
             term={filters.term}
           />
