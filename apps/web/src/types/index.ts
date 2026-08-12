@@ -126,6 +126,7 @@ export interface UserProfile {
   phone_number: string;
   photo: string | null;
   role?: string;
+  is_superuser?: boolean;
   lgas?: string[];
 }
 

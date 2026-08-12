@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Download } from "lucide-react"
+import { Plus, Download, Users, CheckCircle2, XCircle, Clock, Wallet, Banknote, PiggyBank } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -38,7 +38,7 @@ import type { Payee } from "@/types"
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
-  const { isAdmin } = useAuth()
+  const { isSuperuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -83,22 +83,69 @@ export function PaymentsPage() {
     return !record.payments?.find((payment) => payment.term === selectedTerm)
   }).length
 
+  const stats = [
+    {
+      label: "Number of Students",
+      value: totalCount.toLocaleString(),
+      icon: Users,
+      color: "bg-sidebar",
+    },
+    {
+      label: "Successful Disbursements",
+      value: (records.length - awaitingCount).toLocaleString(),
+      icon: CheckCircle2,
+      color: "bg-[var(--stat-accent-2)]",
+    },
+    {
+      label: "Failed Disbursements",
+      value: "0",
+      icon: XCircle,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+    {
+      label: "Awaiting / Ineligible",
+      value: awaitingCount.toLocaleString(),
+      icon: Clock,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+    {
+      label: "Total Amount Debited",
+      value: formatNaira(0),
+      icon: Wallet,
+      color: "bg-sidebar",
+    },
+    {
+      label: "Total Amount Disbursed",
+      value: formatNaira(0),
+      icon: Banknote,
+      color: "bg-[var(--stat-accent-2)]",
+    },
+    {
+      label: "Total Pending Credit",
+      value: formatNaira(0),
+      icon: PiggyBank,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
-      <div className="space-y-4 rounded-2xl border border-border/40 bg-white p-6">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">Number of Students: <span className="font-bold">{totalCount.toLocaleString()}</span></p>
-          <p className="text-sm font-semibold text-foreground">Number of Successful Disbursements: <span className="font-bold">{(records.length - awaitingCount).toLocaleString()}</span></p>
-          <p className="text-sm font-semibold text-foreground">Number of Failed Disbursements: <span className="font-bold">0</span></p>
-          <p className="text-sm font-semibold text-foreground">Number of Awaiting/Ineligible Disbursements: <span className="font-bold">{awaitingCount.toLocaleString()}</span></p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-foreground">Total Amount Debited: {formatNaira(0)}</p>
-          <p className="text-sm font-bold text-foreground">Total Amount Disbursed: {formatNaira(0)}</p>
-          <p className="text-sm font-bold text-foreground">Total Pending Credit: {formatNaira(0)}</p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex items-center gap-4 rounded-2xl border border-border/40 bg-white p-5"
+          >
+            <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}>
+              <stat.icon className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-xl font-bold text-foreground">{stat.value}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
@@ -153,14 +200,18 @@ export function PaymentsPage() {
           <Download className="size-4" />
           Download Data
         </Button>
-        {isAdmin && (
+      </div>
+
+      {/* No Objection (superusers only) — kept on its own row */}
+      {isSuperuser && (
+        <div className="flex">
           <NoObjectionDialog
             cohort={selectedIds.cohort}
             year={filters.year}
             term={filters.term}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <PaginationBar
