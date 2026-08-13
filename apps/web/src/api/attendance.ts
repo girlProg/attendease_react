@@ -116,9 +116,11 @@ export const downloadLgaTemplates = (params: {
     .then((response) => downloadBlobFromResponse(response, "lga_templates.zip"));
 };
 
-export const uploadAttendanceCsv = (file: File) => {
+export const uploadAttendanceCsv = (file: File, verify = false) => {
   const formData = new FormData();
   formData.append("file", file);
+  // When set, students whose attendance is uploaded are also marked verified.
+  if (verify) formData.append("verify", "true");
   return api
     .post("/attendance/upload-csv/", formData, {
       headers: { "Content-Type": "multipart/form-data" },

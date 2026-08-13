@@ -16,17 +16,20 @@ import { uploadAttendanceCsv } from "@/api/attendance"
 export function CsvUploadDialog() {
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [verify, setVerify] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   const uploadMutation = useMutation({
-    mutationFn: uploadAttendanceCsv,
+    mutationFn: ({ file, verify }: { file: File; verify: boolean }) =>
+      uploadAttendanceCsv(file, verify),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
       queryClient.invalidateQueries({ queryKey: ["attendance"] })
       queryClient.invalidateQueries({ queryKey: ["attendance-summary"] })
       queryClient.invalidateQueries({ queryKey: ["attendance-popup"] })
+      queryClient.invalidateQueries({ queryKey: ["students-summary"] })
       setTimeout(() => {
         setOpen(false)
         setFile(null)
@@ -37,7 +40,7 @@ export function CsvUploadDialog() {
 
   function handleUpload() {
     if (file) {
-      uploadMutation.mutate(file)
+      uploadMutation.mutate({ file, verify })
     }
   }
 
@@ -45,6 +48,7 @@ export function CsvUploadDialog() {
     setOpen(nextOpen)
     if (!nextOpen) {
       setFile(null)
+      setVerify(false)
       uploadMutation.reset()
     }
   }
@@ -91,10 +95,31 @@ export function CsvUploadDialog() {
             />
           </div>
 
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 p-3">
+            <input
+              type="checkbox"
+              checked={verify}
+              onChange={(event) => setVerify(event.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-brand"
+            />
+            <span className="text-sm">
+              <span className="font-medium text-foreground">
+                Mark these students as verified
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Optional. Recording attendance confirms the student is at this
+                school, so each student in the file is also marked verified.
+                Verified students are the ones shown and counted for the 2nd
+                cohort. Leave unticked to only record attendance.
+              </span>
+            </span>
+          </label>
+
           {uploadMutation.isSuccess && (
             <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
               <CheckCircle className="size-4 shrink-0" />
-              CSV uploaded successfully.
+              CSV uploaded successfully
+              {verify ? " (students marked verified)." : "."}
             </div>
           )}
 
