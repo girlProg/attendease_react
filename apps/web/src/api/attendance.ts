@@ -116,13 +116,24 @@ export const downloadLgaTemplates = (params: {
     .then((response) => downloadBlobFromResponse(response, "lga_templates.zip"));
 };
 
-export const uploadAttendanceCsv = (file: File, verify = false) => {
+export interface AttendanceUploadReport {
+  valid: boolean;
+  committed: boolean;
+  created: number;
+  updated: number;
+  total_processed: number;
+  total_errors: number;
+  errors: { row: number; beneficiary_id?: string; error: string }[];
+}
+
+// commit=false is the "Check file" preview: validates every row and reports
+// problem rows without writing anything. commit=true records the attendance.
+export const uploadAttendanceCsv = (file: File, commit = true) => {
   const formData = new FormData();
   formData.append("file", file);
-  // When set, students whose attendance is uploaded are also marked verified.
-  if (verify) formData.append("verify", "true");
+  formData.append("commit", commit ? "true" : "false");
   return api
-    .post("/attendance/upload-csv/", formData, {
+    .post<AttendanceUploadReport>("/attendance/upload-csv/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     })
     .then((response) => response.data);
