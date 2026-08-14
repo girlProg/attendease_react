@@ -12,7 +12,7 @@ import {
 import { Input } from "@workspace/ui/components/input"
 import { PrimaryButton } from "@/components/primary-button"
 import {
-  getSchoolsInLga,
+  getSchoolsForMerge,
   mergeSchools,
   type MergeSchoolsResult,
 } from "@/api/attendance"
@@ -20,9 +20,13 @@ import {
 export function SchoolMergeDialog({
   lga,
   lgaName,
+  cohort,
+  cohortName,
 }: {
   lga?: number
   lgaName?: string
+  cohort?: number
+  cohortName?: string
 }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -32,9 +36,9 @@ export function SchoolMergeDialog({
   const [keeper, setKeeper] = useState<number | null>(null)
 
   const { data: schools = [], isLoading } = useQuery({
-    queryKey: ["schools-in-lga", lga],
-    queryFn: () => getSchoolsInLga(lga as number),
-    enabled: open && Boolean(lga),
+    queryKey: ["schools-for-merge", lga, cohort],
+    queryFn: () => getSchoolsForMerge(lga as number, cohort as number),
+    enabled: open && Boolean(lga) && Boolean(cohort),
   })
 
   const filtered = useMemo(() => {
@@ -53,7 +57,7 @@ export function SchoolMergeDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["school"] })
-      queryClient.invalidateQueries({ queryKey: ["schools-in-lga", lga] })
+      queryClient.invalidateQueries({ queryKey: ["schools-for-merge", lga, cohort] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
       queryClient.invalidateQueries({ queryKey: ["students-summary"] })
       setSelected(new Set())
@@ -86,7 +90,7 @@ export function SchoolMergeDialog({
     }
   }
 
-  const ready = Boolean(lga)
+  const ready = Boolean(lga) && Boolean(cohort)
   const sourceCount = [...selected].filter((id) => id !== keeper).length
   const canMerge = ready && keeper !== null && sourceCount >= 1 && !mutation.isPending
 
@@ -106,14 +110,15 @@ export function SchoolMergeDialog({
         <DialogDescription>
           Tick the schools that are the same, choose the one to <strong>keep</strong>,
           and merge. All students and attendance move onto the kept school; the
-          others are deleted. Scoped to the selected LGA.
+          others are deleted. Shows only schools in the selected LGA and cohort
+          that have verified students.
         </DialogDescription>
 
         <div className="mt-4 space-y-3 overflow-hidden">
           {!ready && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
-              Select an LGA on the page first — merging is within one LGA.
+              Select an LGA and a cohort on the page first — merging is within one LGA.
             </div>
           )}
 
@@ -121,6 +126,7 @@ export function SchoolMergeDialog({
             <>
               <div className="rounded-lg bg-muted/30 p-2 text-xs text-muted-foreground">
                 LGA: <span className="font-semibold text-foreground">{lgaName ?? lga}</span>
+                {" · "}Cohort: <span className="font-semibold text-foreground">{cohortName ?? cohort}</span>
               </div>
 
               <div className="relative">

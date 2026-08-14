@@ -167,10 +167,13 @@ export const getSchools = (lga?: string, cohort?: string) => {
   return api.get<PaginatedResponse<School>>("/school/", { params }).then((r) => r.data.results);
 };
 
-// All schools in one LGA (by id), each with a student_count — for the merge UI.
-export const getSchoolsInLga = (lgaId: number) =>
+// Schools in one LGA + cohort that have verified students, each with a
+// student_count — for the merge UI.
+export const getSchoolsForMerge = (lgaId: number, cohortId: number) =>
   api
-    .get<PaginatedResponse<School>>("/school/", { params: { lga: lgaId, page_size: 1000 } })
+    .get<PaginatedResponse<School>>("/school/", {
+      params: { lga: lgaId, cohort: cohortId, verified: true, page_size: 1000 },
+    })
     .then((r) => r.data.results);
 
 export interface MergeSchoolsResult {

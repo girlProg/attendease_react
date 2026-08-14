@@ -103,7 +103,12 @@ export function BeneficiariesPage() {
           Download
         </Button>
         {isSuperuser && (
-          <SchoolMergeDialog lga={selectedIds.lga} lgaName={filters.lga} />
+          <SchoolMergeDialog
+            lga={selectedIds.lga}
+            lgaName={filters.lga}
+            cohort={selectedIds.cohort}
+            cohortName={filters.cohort}
+          />
         )}
       </div>
 
