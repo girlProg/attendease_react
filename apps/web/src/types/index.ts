@@ -24,6 +24,8 @@ export interface LGA {
 export interface School {
   id: number;
   name: string;
+  student_count?: number;
+  lga?: { id: number; name: string };
 }
 
 export interface Student {

@@ -3,6 +3,8 @@ import { Download, Phone } from "lucide-react"
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { useAuth } from "@/contexts/auth-context"
+import { SchoolMergeDialog } from "@/components/school-merge-dialog"
 import { Button } from "@workspace/ui/components/button"
 import {
   Table,
@@ -31,6 +33,7 @@ function classChangeError(error: unknown): string {
 export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
   const queryClient = useQueryClient()
+  const { isSuperuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -99,6 +102,9 @@ export function BeneficiariesPage() {
           <Download className="size-4" />
           Download
         </Button>
+        {isSuperuser && (
+          <SchoolMergeDialog lga={selectedIds.lga} lgaName={filters.lga} />
+        )}
       </div>
 
       {/* Class Transfer */}

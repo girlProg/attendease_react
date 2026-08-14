@@ -167,6 +167,24 @@ export const getSchools = (lga?: string, cohort?: string) => {
   return api.get<PaginatedResponse<School>>("/school/", { params }).then((r) => r.data.results);
 };
 
+// All schools in one LGA (by id), each with a student_count — for the merge UI.
+export const getSchoolsInLga = (lgaId: number) =>
+  api
+    .get<PaginatedResponse<School>>("/school/", { params: { lga: lgaId, page_size: 1000 } })
+    .then((r) => r.data.results);
+
+export interface MergeSchoolsResult {
+  merged: number;
+  moved: number;
+  skipped: { from_id: number | string; error: string }[];
+}
+
+// Superuser-only: merge from_ids schools into into_id (the keeper).
+export const mergeSchools = (input: { into_id: number; from_ids: number[]; force?: boolean }) =>
+  api
+    .post<MergeSchoolsResult>("/school/merge/", input)
+    .then((r) => r.data);
+
 export const getAttendanceYears = () =>
   api.get<string[]>("/attendance/years/").then((response) => response.data);
 
