@@ -47,6 +47,7 @@ export interface AttendanceUploadHistoryRow {
   week: number;
   student_count: number;
   average_attendance: number | null;
+  uploaded_by: string | null;
   created_at: string;
   updated_at: string;
 }

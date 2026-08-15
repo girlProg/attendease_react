@@ -70,6 +70,7 @@ export function UploadHistory({
           <TableHeader>
             <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
               <TableHead className="text-xs font-semibold text-sidebar">Uploaded</TableHead>
+              <TableHead className="text-xs font-semibold text-sidebar">Uploaded By</TableHead>
               <TableHead className="text-xs font-semibold text-sidebar">School</TableHead>
               <TableHead className="text-xs font-semibold text-sidebar">LGA</TableHead>
               <TableHead className="text-xs font-semibold text-sidebar">Cohort</TableHead>
@@ -82,7 +83,7 @@ export function UploadHistory({
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableEmptyState colSpan={9} />
+              <TableEmptyState colSpan={10} />
             ) : (
               rows.map((row) => (
                 <TableRow key={row.id} className="border-border/40">
@@ -94,6 +95,7 @@ export function UploadHistory({
                       </span>
                     )}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{row.uploaded_by ?? "—"}</TableCell>
                   <TableCell className="text-xs font-semibold text-sidebar">{row.school}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{row.lga}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{row.cohort}</TableCell>
