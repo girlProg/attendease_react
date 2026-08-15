@@ -12,8 +12,9 @@ import { useLogVisit } from "@/hooks/use-log-visit"
 import { Overview } from "./overview"
 import { RealTime } from "./real-time"
 import { Statistics } from "./statistics"
+import { UploadHistory } from "./upload-history"
 
-const tabs = ["Overview", "Historical", "Real-Time", "Statistics"] as const
+const tabs = ["Overview", "Upload History", "Real-Time", "Statistics"] as const
 
 export function AttendancePage() {
   const [activeTab, setActiveTab] = useState<string>("Overview")
@@ -51,6 +52,8 @@ export function AttendancePage() {
             </div>
           )}
         </>
+      ) : activeTab === "Upload History" ? (
+        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
       ) : (
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
@@ -95,7 +98,7 @@ export function AttendancePage() {
       {/* Tab content */}
       {activeTab === "Overview" && <Overview filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
-      {activeTab === "Historical" && <div className="py-12 text-center text-muted-foreground">Historical view coming soon</div>}
+      {activeTab === "Upload History" && <UploadHistory filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Statistics" && <Statistics filters={filters} />}
     </div>
   )

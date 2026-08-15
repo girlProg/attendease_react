@@ -37,6 +37,51 @@ export const getAttendance = (
     .then((r) => r.data);
 };
 
+export interface AttendanceUploadHistoryRow {
+  id: number;
+  school: string;
+  lga: string;
+  cohort: string;
+  year: number | null;
+  term: number;
+  week: number;
+  student_count: number;
+  average_attendance: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Attendance upload history: one row per submission (school/cohort/week) with
+// the number of students recorded and the average attendance. Filters are by ID
+// so same-named schools/LGAs don't leak in.
+export const getAttendanceUploadHistory = (
+  page = 1,
+  pageSize = 50,
+  filters: {
+    cohort?: number;
+    lga?: number;
+    school?: number;
+    year?: string;
+    term?: string;
+    week?: string;
+  } = {},
+) => {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (filters.cohort) params.cohort = filters.cohort;
+  if (filters.lga) params.lga = filters.lga;
+  if (filters.school) params.school = filters.school;
+  if (filters.year) params.year = filters.year;
+  if (filters.term) params.term = filters.term;
+  if (filters.week && filters.week !== "All Weeks") params.week = filters.week;
+
+  return api
+    .get<PaginatedResponse<AttendanceUploadHistoryRow>>(
+      "/attendance-submission/history/",
+      { params },
+    )
+    .then((r) => r.data);
+};
+
 export const getStudents = (
   page = 1,
   pageSize = 100,
