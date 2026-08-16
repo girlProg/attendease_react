@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarDays,
   ChartPie,
+  ClipboardList,
   CreditCard,
   Home,
   Settings,
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Attendance", path: "/attendance", icon: ChartPie },
   { label: "Students", path: "/students", icon: Users },
   { label: "Payments", path: "/payments", icon: CreditCard, adminOnly: true },
+  { label: "Case Management", path: "/cases", icon: ClipboardList, caseManager: true },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Ask", path: "/ask", icon: Sparkles, strictAdmin: true },
   { label: "Profile", path: "/profile", icon: User },
@@ -38,10 +40,11 @@ const navItems = [
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin, isViewer } = useAuth()
+  const { isAdmin, isViewer, isSpiu } = useAuth()
 
   const visibleItems = navItems.filter((item) => {
     if (item.strictAdmin) return isAdmin
+    if (item.caseManager) return isAdmin || isSpiu
     return !item.adminOnly || isAdmin || isViewer
   })
   const isFloating = appConfig.sidebar.style === "floating"

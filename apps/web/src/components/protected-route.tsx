@@ -21,3 +21,11 @@ export function AdminRoute() {
   if (!isAdmin && !isViewer) return <Navigate to="/" replace />
   return <Outlet />
 }
+
+export function CaseManagerRoute() {
+  const { isAdmin, isSpiu, isLoading } = useAuth()
+
+  if (isLoading) return null
+  if (!isAdmin && !isSpiu) return <Navigate to="/" replace />
+  return <Outlet />
+}
