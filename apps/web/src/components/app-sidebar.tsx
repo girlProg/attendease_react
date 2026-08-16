@@ -43,8 +43,10 @@ export function AppSidebar() {
   const { isAdmin, isViewer, isSpiu } = useAuth()
 
   const visibleItems = navItems.filter((item) => {
+    // SPIU is a case-management operator: only Case Management + Profile.
+    if (isSpiu) return item.caseManager || item.path === "/profile"
     if (item.strictAdmin) return isAdmin
-    if (item.caseManager) return isAdmin || isSpiu
+    if (item.caseManager) return isAdmin
     return !item.adminOnly || isAdmin || isViewer
   })
   const isFloating = appConfig.sidebar.style === "floating"

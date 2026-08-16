@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout"
 import { ProtectedRoute, AdminRoute, CaseManagerRoute } from "@/components/protected-route"
 import { AttendancePage } from "@/pages/attendance"
 import { CaseManagementPage } from "@/pages/cases"
+import { CaseDetailPage } from "@/pages/case-detail"
 import { NewAttendancePage } from "@/pages/new-attendance"
 import { LoginPage } from "@/pages/login"
 import { BeneficiariesPage } from "@/pages/beneficiaries"
@@ -33,6 +34,7 @@ export function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route element={<CaseManagerRoute />}>
           <Route path="cases" element={<CaseManagementPage />} />
+          <Route path="cases/:id" element={<CaseDetailPage />} />
         </Route>
         <Route element={<AdminRoute />}>
           <Route path="ask" element={<AskPage />} />

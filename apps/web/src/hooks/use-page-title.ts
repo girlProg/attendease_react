@@ -16,5 +16,6 @@ const titles: Record<string, string> = {
 
 export function usePageTitle() {
   const { pathname } = useLocation()
+  if (pathname.startsWith("/cases")) return "Case Management"
   return titles[pathname] ?? "Home"
 }
