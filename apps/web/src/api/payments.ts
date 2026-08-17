@@ -40,3 +40,27 @@ export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =
   api
     .post<DisbursementBatch>("/disbursement-batch/", params)
     .then((response) => response.data)
+
+export interface GeneratePaymentsResult {
+  created: number
+  would_create: number
+  skipped_existing: number
+  skipped_no_account: number
+  total_candidates: number
+  committed: boolean
+}
+
+/**
+ * Create pending (undisbursed) Payment rows for the disbursable students in a
+ * (cohort, year, term) scope. Dry run unless `commit` is true. Idempotent —
+ * skips students already paid for that term and those without a usable account.
+ */
+export const generatePayments = (params: {
+  cohort: number
+  year: string | number
+  term: string | number
+  commit?: boolean
+}) =>
+  api
+    .post<GeneratePaymentsResult>("/student/generate-payments/", params)
+    .then((response) => response.data)

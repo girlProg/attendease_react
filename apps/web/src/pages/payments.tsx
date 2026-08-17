@@ -34,6 +34,7 @@ import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { DisburseDialog } from "@/components/disburse-dialog"
+import { GeneratePaymentsDialog } from "@/components/generate-payments-dialog"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
@@ -80,10 +81,13 @@ export function PaymentsPage() {
   const termSelected = !!filters.term
   const selectedTerm = filters.term ? parseInt(filters.term, 10) : null
 
-  const isAwaiting = (record: (typeof records)[number]) => {
-    if (!selectedTerm) return !record.payments?.length
-    return !record.payments?.find((payment) => payment.term === selectedTerm)
-  }
+  // "Successful" means an actually-disbursed payment exists; a merely-pending
+  // payment (created by Generate Payments, not yet sent) still counts as awaiting.
+  const isDisbursed = (record: (typeof records)[number]) =>
+    selectedTerm
+      ? (record.payments?.some((p) => p.term === selectedTerm && p.disbursed) ?? false)
+      : (record.payments?.some((p) => p.disbursed) ?? false)
+  const isAwaiting = (record: (typeof records)[number]) => !isDisbursed(record)
   const awaitingCount = records.filter(isAwaiting).length
 
   // Clicking a card filters the (loaded) student list to just those rows.
@@ -241,6 +245,11 @@ export function PaymentsPage() {
             <SelectItem value="caregiver">Pay Caregiver</SelectItem>
           </SelectContent>
         </Select>
+        <GeneratePaymentsDialog
+          cohort={selectedIds.cohort}
+          year={filters.year}
+          term={filters.term}
+        />
         <DisburseDialog
           paymentIds={pendingPaymentIds}
           amount={amountPerStudent}
