@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Download, Users, CheckCircle2, XCircle, Clock, Wallet, Banknote, PiggyBank } from "lucide-react"
+import { Download, Users, CheckCircle2, XCircle, Clock, Wallet, Banknote, PiggyBank } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -33,6 +33,7 @@ import {
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
+import { DisburseDialog } from "@/components/disburse-dialog"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
@@ -95,6 +96,17 @@ export function PaymentsPage() {
         : activeCard === "failed"
           ? []
           : records
+
+  // Undisbursed payment ids for the selected term across the displayed rows —
+  // what the Disburse button submits. Disbursement is per-term, so it stays
+  // empty until a term is chosen.
+  const pendingPaymentIds = selectedTerm
+    ? displayedRecords.flatMap((record) =>
+        (record.payments ?? [])
+          .filter((payment) => payment.term === selectedTerm && !payment.disbursed)
+          .map((payment) => payment.id),
+      )
+    : []
 
   const stats = [
     {
@@ -229,13 +241,13 @@ export function PaymentsPage() {
             <SelectItem value="caregiver">Pay Caregiver</SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-        >
-          <Plus className="size-4" />
-          Disburse Payment
-        </Button>
+        <DisburseDialog
+          paymentIds={pendingPaymentIds}
+          amount={amountPerStudent}
+          payee={payee}
+          termLabel={termSelected ? getTermLabel(filters.term) : null}
+          termSelected={termSelected}
+        />
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
