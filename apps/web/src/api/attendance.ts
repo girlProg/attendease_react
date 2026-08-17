@@ -351,6 +351,7 @@ export const getTermAverages = (params: {
       id: number;
       term: number;
       disbursed: boolean;
+      disbursement_status?: string | null;
       amount_received: string;
       batch_reference: string;
       bvn: string;

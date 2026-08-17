@@ -44,6 +44,7 @@ export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =
 export interface GeneratePaymentsResult {
   created: number
   would_create: number
+  to_disburse: number
   skipped_existing: number
   skipped_no_account: number
   total_candidates: number
@@ -51,16 +52,37 @@ export interface GeneratePaymentsResult {
 }
 
 /**
- * Create pending (undisbursed) Payment rows for the disbursable students in a
- * (cohort, year, term) scope. Dry run unless `commit` is true. Idempotent —
- * skips students already paid for that term and those without a usable account.
+ * Create pending (undisbursed) Payment rows for the disbursable students in the
+ * current payments-page scope. The filters (cohort, year, term, school, search)
+ * go as query params so the backend applies the same scoping as the list —
+ * letting generation target a single school. Dry run unless `commit` is true;
+ * idempotent (skips students already paid or without a usable account).
  */
-export const generatePayments = (params: {
-  cohort: number
+/**
+ * Manually kick a bank status-check for every in-flight disbursement batch.
+ * Returns how many were queued. Advancing to terminal still depends on the
+ * bank; this just forces a check now instead of waiting for the schedule.
+ */
+export const pollPendingDisbursements = () =>
+  api
+    .post<{ queued: number }>("/disbursement-batch/poll-pending/")
+    .then((response) => response.data)
+
+export const generatePayments = ({
+  commit,
+  ...scope
+}: {
+  cohort: number | string
   year: string | number
   term: string | number
+  school?: number | string
+  name?: string
   commit?: boolean
 }) =>
   api
-    .post<GeneratePaymentsResult>("/student/generate-payments/", params)
+    .post<GeneratePaymentsResult>(
+      "/student/generate-payments/",
+      { commit },
+      { params: scope },
+    )
     .then((response) => response.data)

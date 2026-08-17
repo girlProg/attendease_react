@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { Download, Users, CheckCircle2, XCircle, Clock, Wallet, Banknote, PiggyBank } from "lucide-react"
-import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw } from "lucide-react"
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { useAuth } from "@/contexts/auth-context"
@@ -23,20 +23,44 @@ import { StatusBadge } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
+import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
-import { GeneratePaymentsDialog } from "@/components/generate-payments-dialog"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
+
+// Map a payment to its status badge. `disbursed` (bank-confirmed) wins; otherwise
+// show the latest disbursement-transaction status *as-is* so each stage is
+// distinguishable (pending vs submitted vs processing vs unknown vs failed),
+// not all collapsed into one "pending".
+function paymentStatusBadge(payment?: {
+  disbursed: boolean
+  disbursement_status?: string | null
+}): { variant: "success" | "warning" | "error" | "info" | "neutral"; label: string } {
+  if (payment?.disbursed || payment?.disbursement_status === "successful") {
+    return { variant: "success", label: "DISBURSED" }
+  }
+  switch (payment?.disbursement_status) {
+    case "pending":
+      return { variant: "neutral", label: "PENDING" }
+    case "submitted":
+      return { variant: "info", label: "SUBMITTED" }
+    case "processing":
+      // Zenith's post-upload state is "awaiting approval" (mapped internally to
+      // processing) — show the bank's own wording.
+      return { variant: "warning", label: "AWAITING APPROVAL" }
+    case "unknown":
+      return { variant: "warning", label: "UNKNOWN" }
+    case "failed":
+      return { variant: "error", label: "FAILED" }
+    case "failed_retryable":
+      return { variant: "error", label: "FAILED (RETRYABLE)" }
+    default:
+      return { variant: "neutral", label: "NOT DISBURSED" }
+  }
+}
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
@@ -51,13 +75,10 @@ export function PaymentsPage() {
   // caregiver) and can be overridden per disbursement. The override is keyed to
   // the cohort so switching cohorts falls back to that cohort's default.
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  // Default payee for the selected cohort (Niger=student, Kaduna=caregiver); the
+  // Disburse dialog lets you override it per disbursement.
   const cohortPayee: Payee =
     cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.payee ?? "caregiver"
-  const [payeeChoice, setPayeeChoice] = useState<{ cohortId?: number; value: Payee } | null>(null)
-  const payee: Payee =
-    payeeChoice && payeeChoice.cohortId === selectedIds.cohort
-      ? payeeChoice.value
-      : cohortPayee
 
   const { data, isError } = useQuery({
     queryKey: ["term-averages", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
@@ -73,6 +94,32 @@ export function PaymentsPage() {
       page_size: pageSize,
     }),
     placeholderData: keepPreviousData,
+    // Live-refresh while any disbursement is still in-flight so the status
+    // badges advance on their own (SUBMITTED -> AWAITING APPROVAL -> DISBURSED)
+    // without a manual reload. Stops polling once everything is terminal.
+    refetchInterval: (query) => {
+      const rows = query.state.data?.results ?? []
+      const inFlight = rows.some((record) =>
+        (record.payments ?? []).some(
+          (payment) =>
+            !payment.disbursed &&
+            ["pending", "submitted", "processing", "unknown"].includes(
+              payment.disbursement_status ?? "",
+            ),
+        ),
+      )
+      return inFlight ? 8000 : false
+    },
+  })
+
+  // Manual "check now": force a bank status poll of all in-flight batches, then
+  // refetch the list so the badges reflect the freshest state.
+  const queryClient = useQueryClient()
+  const refreshStatuses = useMutation({
+    mutationFn: pollPendingDisbursements,
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["term-averages"] })
+    },
   })
 
   const records = data?.results ?? []
@@ -101,17 +148,6 @@ export function PaymentsPage() {
           ? []
           : records
 
-  // Undisbursed payment ids for the selected term across the displayed rows —
-  // what the Disburse button submits. Disbursement is per-term, so it stays
-  // empty until a term is chosen.
-  const pendingPaymentIds = selectedTerm
-    ? displayedRecords.flatMap((record) =>
-        (record.payments ?? [])
-          .filter((payment) => payment.term === selectedTerm && !payment.disbursed)
-          .map((payment) => payment.id),
-      )
-    : []
-
   const stats = [
     {
       key: "all",
@@ -135,34 +171,18 @@ export function PaymentsPage() {
       color: "bg-[var(--stat-accent-1)]",
     },
     {
-      key: "awaiting",
-      label: "Awaiting / Ineligible",
-      value: awaitingCount.toLocaleString(),
-      icon: Clock,
-      color: "bg-[var(--stat-accent-1)]",
-    },
-    {
-      label: "Total Amount Debited",
-      value: formatNaira(0),
-      icon: Wallet,
-      color: "bg-sidebar",
-    },
-    {
       label: "Total Amount Disbursed",
       value: formatNaira(0),
       icon: Banknote,
       color: "bg-[var(--stat-accent-2)]",
     },
-    {
-      label: "Total Pending Credit",
-      value: formatNaira(0),
-      icon: PiggyBank,
-      color: "bg-[var(--stat-accent-1)]",
-    },
   ]
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
+
       {/* Summary Stats — clickable cards filter the list below */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
@@ -218,45 +238,31 @@ export function PaymentsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
-
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        <Input
-          placeholder="Amount Per Student"
-          value={amountPerStudent}
-          onChange={(event) => setAmountPerStudent(event.target.value)}
-          className="h-11 w-52 rounded-full border-sidebar/30 !bg-white shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
-        />
-        <Select
-          value={payee}
-          onValueChange={(value) =>
-            value &&
-            setPayeeChoice({ cohortId: selectedIds.cohort, value: value as Payee })
-          }
-        >
-          <SelectTrigger className="h-11 w-44 rounded-full border-sidebar/30 !bg-white px-4 shadow-sm">
-            <SelectValue placeholder="Payee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="student">Pay Student</SelectItem>
-            <SelectItem value="caregiver">Pay Caregiver</SelectItem>
-          </SelectContent>
-        </Select>
-        <GeneratePaymentsDialog
-          cohort={selectedIds.cohort}
-          year={filters.year}
-          term={filters.term}
-        />
-        <DisburseDialog
-          paymentIds={pendingPaymentIds}
-          amount={amountPerStudent}
-          payee={payee}
-          termLabel={termSelected ? getTermLabel(filters.term) : null}
-          termSelected={termSelected}
-        />
+        {/* Amount input with the Disburse button embedded inside it */}
+        <div className="relative flex items-center">
+          <Input
+            placeholder="Amount Per Student"
+            value={amountPerStudent}
+            onChange={(event) => setAmountPerStudent(event.target.value)}
+            className="h-11 w-64 rounded-full border-sidebar/30 !bg-white pr-32 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
+          />
+          <DisburseDialog
+            cohort={selectedIds.cohort}
+            year={filters.year}
+            term={filters.term}
+            school={selectedIds.school}
+            name={appliedSearch || undefined}
+            amount={amountPerStudent}
+            defaultPayee={cohortPayee}
+            termLabel={termSelected ? getTermLabel(filters.term) : null}
+            termSelected={termSelected}
+            triggerLabel="Disburse"
+            triggerClassName="absolute right-1.5 inline-flex h-8 w-28 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
+          />
+        </div>
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
@@ -277,17 +283,27 @@ export function PaymentsPage() {
         </Button>
       </div>
 
-      {/* No Objection (superusers only) — kept on its own row */}
-      {isSuperuser && (
-        <div className="flex">
+      {/* Refresh Status + No Objection (superuser) — centered on one row */}
+      <div className="flex justify-center gap-3">
+        <Button
+          variant="outline"
+          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+          disabled={refreshStatuses.isPending}
+          onClick={() => refreshStatuses.mutate()}
+          title="Check the bank for the latest status of in-flight disbursements"
+        >
+          <RefreshCw className={`size-4 ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
+          {refreshStatuses.isPending ? "Checking…" : "Refresh Status"}
+        </Button>
+        {isSuperuser && (
           <NoObjectionDialog
             cohort={selectedIds.cohort}
             cohortName={cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name}
             year={filters.year}
             term={filters.term}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Pagination */}
       <PaginationBar
@@ -371,10 +387,10 @@ export function PaymentsPage() {
                                 {payment ? formatNaira(parseFloat(payment.amount_received)) : "—"}
                               </TableCell>
                               <TableCell className="text-center">
-                                <StatusBadge
-                                  variant={payment?.disbursed ? "success" : "error"}
-                                  label={payment?.disbursed ? "DISBURSED" : "NOT DISBURSED"}
-                                />
+                                {(() => {
+                                  const badge = paymentStatusBadge(payment)
+                                  return <StatusBadge variant={badge.variant} label={badge.label} />
+                                })()}
                               </TableCell>
                             </>
                           )

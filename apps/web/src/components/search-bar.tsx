@@ -19,10 +19,10 @@ export function SearchBar({ placeholder = "Find Student by Name or Beneficiary I
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => event.key === "Enter" && onSearch(value)}
-        className="h-11 rounded-full border-sidebar/30 !bg-white pl-9 pr-24 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
+        className="h-11 rounded-full border-sidebar/30 !bg-white pl-9 pr-32 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
       />
       <Button
-        className="absolute right-1.5 h-8 rounded-full bg-sidebar px-5 text-white hover:bg-sidebar/90"
+        className="absolute right-1.5 h-8 w-28 rounded-full bg-sidebar text-white hover:bg-sidebar/90"
         onClick={() => onSearch(value)}
       >
         Search
