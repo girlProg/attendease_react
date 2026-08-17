@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Wallet, CheckCircle, AlertCircle } from "lucide-react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   Dialog,
@@ -35,9 +35,19 @@ export function GeneratePaymentsDialog({
 
   const ready = Boolean(cohort && year && term)
 
-  const preview = useMutation({
-    mutationFn: () =>
-      generatePayments({ cohort: cohort as number, year: year as string, term: term as string }),
+  // Dry-run preview: fires whenever the dialog is open and a scope is selected.
+  // Must be a query (not fired from the open handler) — the trigger sets `open`
+  // directly, so an open-handler mutation would never run and the Create button
+  // would stay disabled forever.
+  const preview = useQuery({
+    queryKey: ["generate-payments-preview", cohort, year, term],
+    queryFn: () =>
+      generatePayments({
+        cohort: cohort as number,
+        year: year as string,
+        term: term as string,
+      }),
+    enabled: open && ready,
   })
 
   const commit = useMutation({
@@ -50,6 +60,7 @@ export function GeneratePaymentsDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["term-averages"] })
+      queryClient.invalidateQueries({ queryKey: ["generate-payments-preview"] })
     },
   })
 
@@ -57,12 +68,7 @@ export function GeneratePaymentsDialog({
 
   function handleOpenChange(next: boolean) {
     setOpen(next)
-    if (next && ready) {
-      preview.mutate() // fetch the dry-run counts as the dialog opens
-    } else if (!next) {
-      preview.reset()
-      commit.reset()
-    }
+    if (!next) commit.reset()
   }
 
   const done = Boolean(commit.data)
@@ -94,7 +100,7 @@ export function GeneratePaymentsDialog({
             </div>
           )}
 
-          {preview.isPending && (
+          {ready && preview.isFetching && (
             <p className="text-sm text-muted-foreground">Checking candidates…</p>
           )}
 
