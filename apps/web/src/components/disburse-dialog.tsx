@@ -255,6 +255,12 @@ export function DisburseDialog({
                 successful, {result.counts.in_flight} in flight,{" "}
                 {result.counts.failed} failed.
               </p>
+              {result.skipped && Object.keys(result.skipped).length > 0 && (
+                <p className="text-xs">
+                  {Object.keys(result.skipped).length} payment(s) skipped
+                  (already in progress or disbursed).
+                </p>
+              )}
             </div>
           )}
 

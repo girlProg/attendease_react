@@ -22,6 +22,9 @@ export interface DisbursementBatch {
   counts: DisbursementBatchCounts
   created_at: string
   updated_at: string
+  // Payments left out of this batch (already in-flight / disbursed), keyed by
+  // payment id → reason. Present on the create response only.
+  skipped?: Record<string, string>
 }
 
 export interface CreateDisbursementBatchParams {
