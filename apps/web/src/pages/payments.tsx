@@ -28,6 +28,7 @@ import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
+import { DisbursementSwitch } from "@/components/disbursement-switch"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
@@ -283,8 +284,9 @@ export function PaymentsPage() {
         </Button>
       </div>
 
-      {/* Refresh Status + No Objection (superuser) — centered on one row */}
-      <div className="flex justify-center gap-3">
+      {/* Disbursement switch + Refresh Status + No Objection — centered on one row */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <DisbursementSwitch />
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"

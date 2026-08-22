@@ -44,6 +44,24 @@ export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =
     .post<DisbursementBatch>("/disbursement-batch/", params)
     .then((response) => response.data)
 
+export interface DisbursementSettings {
+  enabled: boolean
+  updated_at: string | null
+  updated_by: string | null
+}
+
+/** Read the global disbursement on/off switch (admins). */
+export const getDisbursementSettings = () =>
+  api
+    .get<DisbursementSettings>("/disbursement-settings/")
+    .then((response) => response.data)
+
+/** Flip the global disbursement switch (superusers only). */
+export const setDisbursementSettings = (enabled: boolean) =>
+  api
+    .put<DisbursementSettings>("/disbursement-settings/", { enabled })
+    .then((response) => response.data)
+
 export interface GeneratePaymentsResult {
   created: number
   would_create: number
