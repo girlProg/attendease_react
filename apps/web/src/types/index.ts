@@ -129,7 +129,7 @@ export interface UserProfile {
   photo: string | null;
   role?: string;
   is_superuser?: boolean;
-  is_staffuser?: boolean;
+  is_staff?: boolean;
   lgas?: string[];
 }
 

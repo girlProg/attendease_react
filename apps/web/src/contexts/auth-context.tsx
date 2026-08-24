@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const role = profile?.role ?? "user"
   const isAdmin = role === "admin"
   const isSuperuser = profile?.is_superuser ?? false
-  const isStaffuser = profile?.is_staffuser ?? false
+  const isStaffuser = profile?.is_staff ?? false
   const isViewer = role === "viewer" || role === "view_only"
   // SPIU is a case-management operator: read-only everywhere except the case
   // management screens, so it must not surface general write actions.
