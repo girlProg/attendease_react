@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { AxiosError } from "axios"
-import { ChevronDown, Loader2, Send, Sparkles } from "lucide-react"
+import { AlertTriangle, ChevronDown, Loader2, Send, Sparkles } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -164,10 +164,25 @@ export function AskPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Ask</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground">Ask</h1>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+            Experimental
+          </span>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Ask a question about students, attendance, schools or payments in plain
           English.
+        </p>
+      </div>
+
+      <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+        <p>
+          This feature is <span className="font-semibold">experimental</span> and
+          can make mistakes. Answers are generated automatically and may be
+          incomplete or incorrect — always verify against the dashboard before
+          acting on them.
         </p>
       </div>
 

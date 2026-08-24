@@ -9,6 +9,7 @@ interface AuthContextValue {
   role: string
   isAdmin: boolean
   isSuperuser: boolean
+  isStaffuser: boolean
   isViewer: boolean
   isSpiu: boolean
   canWrite: boolean
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextValue>({
   role: "user",
   isAdmin: false,
   isSuperuser: false,
+  isStaffuser: false,
   isViewer: false,
   isSpiu: false,
   canWrite: false,
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const role = profile?.role ?? "user"
   const isAdmin = role === "admin"
   const isSuperuser = profile?.is_superuser ?? false
+  const isStaffuser = profile?.is_staffuser ?? false
   const isViewer = role === "viewer" || role === "view_only"
   // SPIU is a case-management operator: read-only everywhere except the case
   // management screens, so it must not surface general write actions.
@@ -42,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canWrite = !isViewer && !isSpiu
 
   return (
-    <AuthContext.Provider value={{ profile, role, isAdmin, isSuperuser, isViewer, isSpiu, canWrite, isLoading }}>
+    <AuthContext.Provider value={{ profile, role, isAdmin, isSuperuser, isStaffuser, isViewer, isSpiu, canWrite, isLoading }}>
       {children}
     </AuthContext.Provider>
   )
