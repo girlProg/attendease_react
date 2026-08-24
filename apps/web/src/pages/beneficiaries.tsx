@@ -33,7 +33,7 @@ function classChangeError(error: unknown): string {
 export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
   const queryClient = useQueryClient()
-  const { isSuperuser } = useAuth()
+  const { isStaffuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -102,7 +102,7 @@ export function BeneficiariesPage() {
           <Download className="size-4" />
           Download
         </Button>
-        {isSuperuser && (
+        {isStaffuser && (
           <SchoolMergeDialog
             lga={selectedIds.lga}
             lgaName={filters.lga}
