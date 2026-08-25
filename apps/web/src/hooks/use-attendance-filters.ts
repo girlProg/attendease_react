@@ -21,15 +21,25 @@ export function useAttendanceFilters() {
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
   const { data: attendanceYears } = useQuery({ queryKey: ["attendance-years"], queryFn: getAttendanceYears })
   const { data: lgaList } = useQuery({ queryKey: ["lga"], queryFn: getLGAs })
+  const selectedCohortId = cohorts?.find((cohort) => cohort.name === filters.cohort)?.id
+  const selectedLgaId = lgaList?.find((lga) => lga.name === filters.lga)?.id
+
+  // Scope schools by ID, and only once the chosen LGA name has resolved to an
+  // ID — otherwise the first render (before the LGA list lands) fetches every
+  // school in the state.
   const { data: schoolList } = useQuery({
-    queryKey: ["school", filters.lga, filters.cohort],
-    queryFn: () => getSchools(filters.lga, filters.cohort),
+    queryKey: ["school", selectedLgaId, selectedCohortId],
+    queryFn: () => getSchools(selectedLgaId, selectedCohortId),
+    enabled: !filters.lga || selectedLgaId !== undefined,
   })
 
   const cohortNames = cohorts?.map((cohort) => cohort.name) ?? []
   const years = attendanceYears ?? []
   const lgaNames = lgaList?.map((lga) => lga.name) ?? []
-  const schoolNames = schoolList?.map((school) => school.name) ?? []
+  // One School row exists per cohort, so the same name legitimately repeats.
+  // Collapse them for the dropdown — three identical "Kajuru Primary" entries
+  // are unusable; picking a cohort is what disambiguates the underlying row.
+  const schoolNames = [...new Set(schoolList?.map((school) => school.name) ?? [])]
 
   const setFilter = (key: string, value: string) =>
     setFilters((previous) => {
@@ -53,8 +63,6 @@ export function useAttendanceFilters() {
     filters.week
   )
 
-  const selectedCohortId = cohorts?.find((cohort) => cohort.name === filters.cohort)?.id
-  const selectedLgaId = lgaList?.find((lga) => lga.name === filters.lga)?.id
   const selectedSchoolId = schoolList?.find((school) => school.name === filters.school)?.id
 
   return {

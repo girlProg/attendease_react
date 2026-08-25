@@ -195,12 +195,19 @@ function SchoolSummaryRow({
   )
 }
 
-export function Statistics({ filters }: { filters: Record<string, string> }) {
+export function Statistics({
+  filters,
+  selectedIds = {},
+}: {
+  filters: Record<string, string>
+  selectedIds?: { lga?: number; cohort?: number }
+}) {
   const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
 
   const { data: schools, isLoading } = useQuery({
-    queryKey: ["schools-for-stats", filters.lga, filters.cohort],
-    queryFn: () => getSchools(filters.lga, filters.cohort),
+    queryKey: ["schools-for-stats", selectedIds.lga, selectedIds.cohort],
+    // By ID — the name filters are icontains and leak other LGAs' schools.
+    queryFn: () => getSchools(selectedIds.lga, selectedIds.cohort),
   })
 
   return (

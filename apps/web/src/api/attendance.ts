@@ -241,10 +241,19 @@ export const getCohorts = () =>
 export const getLGAs = () =>
   api.get<PaginatedResponse<LGA>>("/lga/", { params: { page_size: 100 } }).then((r) => r.data.results);
 
-export const getSchools = (lga?: string, cohort?: string) => {
-  const params: Record<string, string | number> = { page_size: 500 };
-  if (lga) params.lga__name = lga;
-  if (cohort) params.cohort__name = cohort;
+/**
+ * Schools, optionally scoped to an LGA and cohort.
+ *
+ * Filters by **ID, never by name**. The name filters on the server are
+ * `icontains`, so `lga__name=Kaura` also matches "Kaura Namoda" and drags in
+ * every school from the other LGA — which is how one LGA came back with a
+ * thousand-plus schools. School names also repeat legitimately (one School row
+ * per cohort), so name filtering can never be exact here.
+ */
+export const getSchools = (lgaId?: number, cohortId?: number) => {
+  const params: Record<string, string | number> = { page_size: 1000 };
+  if (lgaId) params.lga = lgaId;
+  if (cohortId) params.cohort = cohortId;
   return api.get<PaginatedResponse<School>>("/school/", { params }).then((r) => r.data.results);
 };
 
@@ -436,6 +445,7 @@ export interface SchoolRegisterPage {
 export interface SchoolRegisterRow {
   id: number;
   school: string;
+  school_id: number;
   lga: string;
   year: number;
   term: number;

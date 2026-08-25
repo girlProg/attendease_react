@@ -101,8 +101,16 @@ export function Registers({
   })
 
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [pending, setPending] = useState<File[] | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)
+  // A staged upload: the files, plus the school they're bound for. The school
+  // comes from the filter bar for the main button, or straight from a row in
+  // the coverage panel — so it's carried explicitly rather than re-read from
+  // the filters at submit time.
+  const [pending, setPending] = useState<{
+    files: File[]
+    schoolId: number
+    schoolName: string
+  } | null>(null)
 
   const rows = data?.results ?? []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
@@ -115,15 +123,21 @@ export function Registers({
     Boolean(filters.year) &&
     Boolean(filters.term)
 
-  const existing = rows.find(
-    (row) =>
-      row.year === Number(filters.year) && row.term === Number(filters.term),
-  )
+  // Does the school this upload is bound for already have a register this term?
+  // Matched by ID — names repeat across cohorts.
+  const existing = pending
+    ? (rows.find(
+        (row) =>
+          row.school_id === pending.schoolId &&
+          row.year === Number(filters.year) &&
+          row.term === Number(filters.term),
+      ) ?? null)
+    : null
 
   const upload = useMutation({
-    mutationFn: (files: File[]) =>
+    mutationFn: ({ files, schoolId }: { files: File[]; schoolId: number }) =>
       uploadSchoolRegister(
-        selectedIds.school as number,
+        schoolId,
         filters.year as string,
         filters.term as string,
         files,
@@ -151,9 +165,20 @@ export function Registers({
       setUploadError(errorMessage(err, "Could not delete that page.")),
   })
 
+  // Which school the next file-picker result belongs to. A ref, not state:
+  // it's set immediately before opening the picker and read in its change
+  // handler, so it must not wait for a re-render.
+  const uploadTargetRef = useRef<{ schoolId: number; schoolName: string } | null>(null)
+
+  function pickFilesFor(schoolId: number, schoolName: string) {
+    uploadTargetRef.current = { schoolId, schoolName }
+    fileInputRef.current?.click()
+  }
+
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
-    if (files.length) setPending(files)
+    const target = uploadTargetRef.current
+    if (files.length && target) setPending({ files, ...target })
     e.target.value = ""
   }
 
@@ -174,7 +199,12 @@ export function Registers({
             <Button
               variant="outline"
               disabled={!canUpload || upload.isPending}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() =>
+                pickFilesFor(
+                  selectedIds.school as number,
+                  filters.school ?? `#${selectedIds.school}`,
+                )
+              }
               className="h-11 w-full shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
             >
               <Upload className="size-4" />
@@ -194,7 +224,13 @@ export function Registers({
         <p className="text-xs text-red-600 sm:text-right">{uploadError}</p>
       )}
 
-      {isStaffuser && <CoveragePanel filters={filters} selectedIds={selectedIds} />}
+      {isStaffuser && (
+        <CoveragePanel
+          filters={filters}
+          selectedIds={selectedIds}
+          onUploadFor={pickFilesFor}
+        />
+      )}
 
       {/* Confirm before sending: the filters above decide where these photos
           land, and a mis-set school filter is otherwise invisible. */}
@@ -208,7 +244,7 @@ export function Registers({
             <div className="flex justify-between gap-4">
               <dt className="shrink-0 text-muted-foreground">School</dt>
               <dd className="min-w-0 break-words text-right font-medium text-foreground">
-                {existing?.school ?? `#${selectedIds.school}`}
+                {pending?.schoolName}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -219,18 +255,20 @@ export function Registers({
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Photos</dt>
-              <dd className="font-medium text-foreground">{pending?.length ?? 0}</dd>
+              <dd className="font-medium text-foreground">
+                {pending?.files.length ?? 0}
+              </dd>
             </div>
           </dl>
           {existing && (
             <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
               This register already has {existing.page_count} photo(s). These{" "}
-              {pending?.length ?? 0} will be <strong>added</strong> to it — nothing
-              existing is replaced.
+              {pending?.files.length ?? 0} will be <strong>added</strong> to it —
+              nothing existing is replaced.
             </p>
           )}
           <ul className="mt-3 max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs text-muted-foreground">
-            {pending?.map((file) => (
+            {pending?.files.map((file) => (
               <li key={file.name} className="break-all">
                 {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
               </li>
@@ -247,7 +285,10 @@ export function Registers({
             <PrimaryButton
               className="h-10 w-auto px-6"
               disabled={upload.isPending}
-              onClick={() => pending && upload.mutate(pending)}
+              onClick={() =>
+                pending &&
+                upload.mutate({ files: pending.files, schoolId: pending.schoolId })
+              }
             >
               {upload.isPending ? "Uploading…" : "Upload"}
             </PrimaryButton>
@@ -330,9 +371,11 @@ export function Registers({
 function CoveragePanel({
   filters,
   selectedIds,
+  onUploadFor,
 }: {
   filters: Record<string, string>
   selectedIds: SelectedIds
+  onUploadFor: (schoolId: number, schoolName: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const ready = Boolean(filters.year) && Boolean(filters.term)
@@ -405,13 +448,25 @@ function CoveragePanel({
             ) : (
               <ul className="max-h-64 space-y-1 overflow-y-auto text-xs">
                 {data.missing.map((school) => (
-                  <li key={school.school} className="flex justify-between gap-3">
+                  <li
+                    key={school.school}
+                    className="flex items-center justify-between gap-2"
+                  >
                     <span className="min-w-0 break-words text-foreground">
                       {school.name}
+                      <span className="ml-2 text-muted-foreground">{school.lga}</span>
                     </span>
-                    <span className="shrink-0 text-muted-foreground">
-                      {school.lga}
-                    </span>
+                    {/* Upload straight from the row — no need to go back and
+                        re-point the school filter at it. */}
+                    <button
+                      type="button"
+                      onClick={() => onUploadFor(school.school, school.name)}
+                      title={`Upload the register for ${school.name}`}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sidebar px-2.5 py-1 text-[11px] font-medium text-sidebar hover:bg-sidebar/5"
+                    >
+                      <Upload className="size-3" />
+                      Upload
+                    </button>
                   </li>
                 ))}
               </ul>

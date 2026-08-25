@@ -109,7 +109,7 @@ export function AttendancePage() {
       {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
       {activeTab === "Upload History" && <UploadHistory filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Registers" && <Registers filters={filters} selectedIds={selectedIds} />}
-      {activeTab === "Statistics" && <Statistics filters={filters} />}
+      {activeTab === "Statistics" && <Statistics filters={filters} selectedIds={selectedIds} />}
     </div>
   )
 }
