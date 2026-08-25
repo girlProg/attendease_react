@@ -1,5 +1,5 @@
 import { useState, useRef } from "react"
-import { Upload, CheckCircle, AlertCircle, ListChecks } from "lucide-react"
+import { Upload, CheckCircle, AlertCircle, ListChecks, Download } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import {
@@ -11,7 +11,21 @@ import {
   DialogClose,
 } from "@workspace/ui/components/dialog"
 import { PrimaryButton } from "@/components/primary-button"
-import { uploadAttendanceCsv, type AttendanceUploadReport } from "@/api/attendance"
+import {
+  uploadAttendanceCsv,
+  downloadExcelTemplate,
+  type AttendanceUploadReport,
+} from "@/api/attendance"
+
+// Pull the backend's typed error (wrong_format etc.) out of an axios failure.
+function uploadErrorMessage(error: unknown): string {
+  const data = (error as { response?: { data?: { error?: string } } })?.response?.data
+  return (
+    data?.error ??
+    (error as Error)?.message ??
+    "Upload failed. Please try again."
+  )
+}
 
 export function CsvUploadDialog() {
   const [open, setOpen] = useState(false)
@@ -64,8 +78,8 @@ export function CsvUploadDialog() {
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-sidebar/30 p-8 transition-colors hover:border-sidebar/60"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="size-8 text-sidebar/50" />
-            <p className="text-sm font-medium text-foreground">
+            <Upload className="size-8 shrink-0 text-sidebar/50" />
+            <p className="w-full break-all px-2 text-center text-sm font-medium text-foreground">
               {file ? file.name : "Click to select a CSV file"}
             </p>
             {file && (
@@ -93,8 +107,51 @@ export function CsvUploadDialog() {
             rows and skips the rest, leaving a partial update.
           </div>
 
+          {/* Missing students — the whole upload is blocked until the file
+              covers every student in the school. */}
+          {report && (report.missing_students?.length ?? 0) > 0 && (
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              <p className="flex items-center gap-2 font-medium">
+                <AlertCircle className="size-4 shrink-0" />
+                {report.missing_count} student(s) are missing from this file.
+              </p>
+              <p className="mt-1 text-xs">
+                Attendance can’t be uploaded until every student is included.
+                Download the updated attendance sheet for this school, fill in the
+                new students, then upload again.
+              </p>
+              {report.template && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    report.template &&
+                    downloadExcelTemplate({
+                      school: report.template.school,
+                      cohort: report.template.cohort,
+                      term: String(report.template.term),
+                      week: String(report.template.week),
+                      year: String(report.template.year),
+                    })
+                  }
+                  className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-500 bg-white px-4 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                >
+                  <Download className="size-4" />
+                  Download updated attendance
+                </button>
+              )}
+              <ul className="mt-2 max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs">
+                {report.missing_students?.slice(0, 20).map((student) => (
+                  <li key={student.beneficiary_id || student.name}>
+                    {student.name}
+                    {student.beneficiary_id ? ` (${student.beneficiary_id})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Preview / check result */}
-          {report && !report.committed && (
+          {report && !report.committed && !report.missing_students?.length && (
             <div
               className={`rounded-lg p-3 text-sm ${
                 report.valid
@@ -149,7 +206,7 @@ export function CsvUploadDialog() {
           {mutation.isError && (
             <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle className="size-4 shrink-0" />
-              {(mutation.error as Error)?.message ?? "Upload failed. Please try again."}
+              {uploadErrorMessage(mutation.error)}
             </div>
           )}
 

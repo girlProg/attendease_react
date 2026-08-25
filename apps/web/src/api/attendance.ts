@@ -180,6 +180,18 @@ export interface AttendanceUploadReport {
   total_processed: number;
   total_errors: number;
   errors: { row: number; beneficiary_id?: string; error: string }[];
+  // Set when the file is missing students for the school — the upload is blocked
+  // until every student is included; `template` drives the re-download button.
+  missing_students?: { beneficiary_id: string; name: string }[];
+  missing_count?: number;
+  template?: {
+    school: number;
+    cohort: number;
+    year: number;
+    term: number;
+    week: number;
+  } | null;
+  error_type?: string;
 }
 
 // commit=false is the "Check file" preview: validates every row and reports
