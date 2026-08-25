@@ -11,10 +11,17 @@ import { useLogVisit } from "@/hooks/use-log-visit"
 
 import { Overview } from "./overview"
 import { RealTime } from "./real-time"
+import { Registers } from "./registers"
 import { Statistics } from "./statistics"
 import { UploadHistory } from "./upload-history"
 
-const tabs = ["Overview", "Upload History", "Real-Time", "Statistics"] as const
+const tabs = [
+  "Overview",
+  "Upload History",
+  "Registers",
+  "Real-Time",
+  "Statistics",
+] as const
 
 export function AttendancePage() {
   const [activeTab, setActiveTab] = useState<string>("Overview")
@@ -54,6 +61,8 @@ export function AttendancePage() {
         </>
       ) : activeTab === "Upload History" ? (
         <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
+      ) : activeTab === "Registers" ? (
+        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["term", "week"]} />
       ) : (
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
@@ -99,6 +108,7 @@ export function AttendancePage() {
       {activeTab === "Overview" && <Overview filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
       {activeTab === "Upload History" && <UploadHistory filters={filters} selectedIds={selectedIds} />}
+      {activeTab === "Registers" && <Registers filters={filters} selectedIds={selectedIds} />}
       {activeTab === "Statistics" && <Statistics filters={filters} />}
     </div>
   )

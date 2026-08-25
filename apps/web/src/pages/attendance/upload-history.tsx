@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { Download } from "lucide-react"
 
 import {
   Table,
@@ -12,7 +13,10 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { usePagination } from "@/hooks/use-pagination"
-import { getAttendanceUploadHistory } from "@/api/attendance"
+import {
+  downloadAttendanceFile,
+  getAttendanceUploadHistory,
+} from "@/api/attendance"
 
 type SelectedIds = { cohort?: number; lga?: number; school?: number }
 
@@ -79,11 +83,12 @@ export function UploadHistory({
               <TableHead className="text-center text-xs font-semibold text-sidebar">Week</TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">Students</TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">Avg. Attendance</TableHead>
+              <TableHead className="text-center text-xs font-semibold text-sidebar">File</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableEmptyState colSpan={10} />
+              <TableEmptyState colSpan={11} />
             ) : (
               rows.map((row) => (
                 <TableRow key={row.id} className="border-border/40">
@@ -109,6 +114,20 @@ export function UploadHistory({
                   </TableCell>
                   <TableCell className="text-center text-xs text-muted-foreground">
                     {row.average_attendance === null ? "—" : `${row.average_attendance}%`}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {row.has_source_file ? (
+                      <button
+                        type="button"
+                        onClick={() => downloadAttendanceFile(row.id)}
+                        title="Download the uploaded attendance file"
+                        className="inline-flex items-center justify-center rounded-full p-1.5 text-sidebar hover:bg-sidebar/10"
+                      >
+                        <Download className="size-4" />
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

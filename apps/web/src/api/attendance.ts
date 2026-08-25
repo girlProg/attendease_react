@@ -48,9 +48,19 @@ export interface AttendanceUploadHistoryRow {
   student_count: number;
   average_attendance: number | null;
   uploaded_by: string | null;
+  has_source_file: boolean;
   created_at: string;
   updated_at: string;
 }
+
+// Download the original uploaded attendance file for a submission (LGA-scoped
+// on the server; only present when has_source_file is true).
+export const downloadAttendanceFile = (submissionId: number) =>
+  api
+    .get(`/attendance-submission/${submissionId}/file/`, { responseType: "blob" })
+    .then((response) =>
+      downloadBlobFromResponse(response, `attendance_${submissionId}.csv`),
+    );
 
 // Attendance upload history: one row per submission (school/cohort/week) with
 // the number of students recorded and the average attendance. Filters are by ID
@@ -390,3 +400,48 @@ export const bulkChangeClass = (payload: {
     .post<{ updated: number }>("/student/bulk-change-class/", payload)
     .then((response) => response.data);
 
+
+export interface SchoolRegisterRow {
+  id: number;
+  school: string;
+  lga: string;
+  year: number;
+  original_filename: string;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// End-of-year school attendance registers. One current file per (school, year);
+// re-uploading replaces it. Server enforces LGA scoping.
+export const getSchoolRegisters = (
+  page = 1,
+  pageSize = 50,
+  filters: { school?: number; year?: string } = {},
+) => {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (filters.school) params.school = filters.school;
+  if (filters.year) params.year = filters.year;
+  return api
+    .get<PaginatedResponse<SchoolRegisterRow>>("/school-register/", { params })
+    .then((r) => r.data);
+};
+
+export const uploadSchoolRegister = (
+  schoolId: number,
+  year: number | string,
+  file: File,
+) => {
+  const form = new FormData();
+  form.append("school_id", String(schoolId));
+  form.append("year", String(year));
+  form.append("file", file);
+  return api
+    .post<SchoolRegisterRow>("/school-register/", form)
+    .then((r) => r.data);
+};
+
+export const downloadSchoolRegister = (id: number, filename: string) =>
+  api
+    .get(`/school-register/${id}/file/`, { responseType: "blob" })
+    .then((response) => downloadBlobFromResponse(response, filename));
