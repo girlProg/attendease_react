@@ -1,5 +1,6 @@
+import { useState } from "react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
-import { Download } from "lucide-react"
+import { Download, Eye } from "lucide-react"
 
 import {
   Table,
@@ -12,6 +13,7 @@ import {
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { CsvPreviewDialog } from "@/components/csv-preview-dialog"
 import { usePagination } from "@/hooks/use-pagination"
 import {
   downloadAttendanceFile,
@@ -47,6 +49,7 @@ export function UploadHistory({
     week: filters.week,
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([historyFilters])
+  const [preview, setPreview] = useState<{ id: number; title: string } | null>(null)
 
   const { data, isError } = useQuery({
     queryKey: ["attendance-upload-history", page, pageSize, historyFilters],
@@ -119,14 +122,29 @@ export function UploadHistory({
                   </TableCell>
                   <TableCell className="text-center">
                     {row.has_source_file ? (
-                      <button
-                        type="button"
-                        onClick={() => downloadAttendanceFile(row.id)}
-                        title="Download the uploaded attendance file"
-                        className="inline-flex items-center justify-center rounded-full p-1.5 text-sidebar hover:bg-sidebar/10"
-                      >
-                        <Download className="size-4" />
-                      </button>
+                      <span className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreview({
+                              id: row.id,
+                              title: `${row.school} — ${row.year ?? "?"} Term ${row.term}, Week ${row.week}`,
+                            })
+                          }
+                          title="View the uploaded attendance file"
+                          className="inline-flex items-center justify-center rounded-full p-1.5 text-sidebar hover:bg-sidebar/10"
+                        >
+                          <Eye className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadAttendanceFile(row.id)}
+                          title="Download the uploaded attendance file"
+                          className="inline-flex items-center justify-center rounded-full p-1.5 text-sidebar hover:bg-sidebar/10"
+                        >
+                          <Download className="size-4" />
+                        </button>
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -137,6 +155,14 @@ export function UploadHistory({
           </TableBody>
         </Table>
       </div>
+
+      {preview && (
+        <CsvPreviewDialog
+          submissionId={preview.id}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   )
 }

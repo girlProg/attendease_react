@@ -6,13 +6,13 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query"
 import {
-  Download,
   Upload,
   AlertCircle,
+  Images,
+  CheckCircle2,
+  CircleSlash,
   ChevronDown,
   ChevronRight,
-  Trash2,
-  Images,
 } from "lucide-react"
 
 import {
@@ -33,18 +33,20 @@ import { Button } from "@workspace/ui/components/button"
 import { PrimaryButton } from "@/components/primary-button"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
+import { SearchBar } from "@/components/search-bar"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { RegisterSlideshow } from "@/components/register-slideshow"
 import { usePagination } from "@/hooks/use-pagination"
 import { useAuth } from "@/contexts/auth-context"
 import {
   deleteRegisterPage,
-  downloadRegisterPage,
+  getRegisterCoverage,
   getSchoolRegisters,
   uploadSchoolRegister,
   type SchoolRegisterRow,
 } from "@/api/attendance"
 
-type SelectedIds = { school?: number }
+type SelectedIds = { school?: number; lga?: number; cohort?: number }
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -58,9 +60,7 @@ function formatWhen(iso: string) {
 
 function errorMessage(err: unknown, fallback: string): string {
   const data = (
-    err as {
-      response?: { data?: { detail?: string; files?: string[] } }
-    }
+    err as { response?: { data?: { detail?: string; files?: string[] } } }
   )?.response?.data
   // DRF returns per-file validation errors under `files`.
   return data?.files?.[0] ?? data?.detail ?? fallback
@@ -68,9 +68,11 @@ function errorMessage(err: unknown, fallback: string): string {
 
 /**
  * Termly school attendance registers. A register is the physical book,
- * photographed page by page — so an upload is a *set* of photos that gets added
- * to the register for the selected school + year + term. Existing pages are
- * never overwritten; individual pages can be deleted to undo a mistake.
+ * photographed page by page — so an upload is a *set* of photos added to the
+ * register for the selected school + year + term, and clicking a row pages
+ * through those photos as a slideshow.
+ *
+ * Uploading is staff-only (`is_staff`), matching the server.
  */
 export function Registers({
   filters = {},
@@ -79,14 +81,16 @@ export function Registers({
   filters?: Record<string, string>
   selectedIds?: SelectedIds
 }) {
-  const { canWrite } = useAuth()
+  const { isStaffuser } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [search, setSearch] = useState("")
   const registerFilters = {
     school: selectedIds.school,
     year: filters.year,
     term: filters.term,
+    search,
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([registerFilters])
 
@@ -98,16 +102,19 @@ export function Registers({
 
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [pending, setPending] = useState<File[] | null>(null)
-  const [expanded, setExpanded] = useState<number | null>(null)
+  const [viewing, setViewing] = useState<number | null>(null)
 
   const rows = data?.results ?? []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
+  // Re-read from the fresh list so the slideshow updates after a page delete.
+  const viewingRegister = rows.find((row) => row.id === viewing) ?? null
 
   const canUpload =
-    canWrite && Boolean(selectedIds.school) && Boolean(filters.year) && Boolean(filters.term)
+    isStaffuser &&
+    Boolean(selectedIds.school) &&
+    Boolean(filters.year) &&
+    Boolean(filters.term)
 
-  // The register the pending upload would land in, if one already exists — used
-  // to tell the user what they're adding to before anything is sent.
   const existing = rows.find(
     (row) =>
       row.year === Number(filters.year) && row.term === Number(filters.term),
@@ -125,6 +132,7 @@ export function Registers({
       setUploadError(null)
       setPending(null)
       queryClient.invalidateQueries({ queryKey: ["school-registers"] })
+      queryClient.invalidateQueries({ queryKey: ["register-coverage"] })
     },
     onError: (err: unknown) => {
       setPending(null)
@@ -135,8 +143,10 @@ export function Registers({
   const removePage = useMutation({
     mutationFn: ({ registerId, pageId }: { registerId: number; pageId: number }) =>
       deleteRegisterPage(registerId, pageId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["school-registers"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["school-registers"] })
+      queryClient.invalidateQueries({ queryKey: ["register-coverage"] })
+    },
     onError: (err: unknown) =>
       setUploadError(errorMessage(err, "Could not delete that page.")),
   })
@@ -149,36 +159,42 @@ export function Registers({
 
   return (
     <div className="space-y-6">
-      {canWrite && (
-        <div className="flex flex-col items-stretch gap-2 sm:items-end">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
-            className="hidden"
-            onChange={handleFiles}
-          />
-          <Button
-            variant="outline"
-            disabled={!canUpload || upload.isPending}
-            onClick={() => fileInputRef.current?.click()}
-            className="h-11 w-full gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
-          >
-            <Upload className="size-4" />
-            {upload.isPending ? "Uploading…" : "Upload Register Photos"}
-          </Button>
-          {!canUpload && (
-            <p className="flex items-start gap-1 text-xs text-muted-foreground sm:items-center sm:justify-end">
-              <AlertCircle className="mt-0.5 size-3.5 shrink-0 sm:mt-0" />
-              Select a school, year and term above to upload register photos.
-            </p>
-          )}
-          {uploadError && (
-            <p className="text-xs text-red-600 sm:text-right">{uploadError}</p>
-          )}
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <SearchBar placeholder="Find register by school name" onSearch={setSearch} />
+        {isStaffuser && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
+              className="hidden"
+              onChange={handleFiles}
+            />
+            <Button
+              variant="outline"
+              disabled={!canUpload || upload.isPending}
+              onClick={() => fileInputRef.current?.click()}
+              className="h-11 w-full shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
+            >
+              <Upload className="size-4" />
+              {upload.isPending ? "Uploading…" : "Upload Register Photos"}
+            </Button>
+          </>
+        )}
+      </div>
+
+      {isStaffuser && !canUpload && (
+        <p className="flex items-start gap-1 text-xs text-muted-foreground sm:justify-end">
+          <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+          Select a school, year and term above to upload register photos.
+        </p>
       )}
+      {uploadError && (
+        <p className="text-xs text-red-600 sm:text-right">{uploadError}</p>
+      )}
+
+      {isStaffuser && <CoveragePanel filters={filters} selectedIds={selectedIds} />}
 
       {/* Confirm before sending: the filters above decide where these photos
           land, and a mis-set school filter is otherwise invisible. */}
@@ -192,7 +208,7 @@ export function Registers({
             <div className="flex justify-between gap-4">
               <dt className="shrink-0 text-muted-foreground">School</dt>
               <dd className="min-w-0 break-words text-right font-medium text-foreground">
-                {existing?.school ?? filters.schoolName ?? `#${selectedIds.school}`}
+                {existing?.school ?? `#${selectedIds.school}`}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -253,7 +269,6 @@ export function Registers({
         <Table className="min-w-[820px]">
           <TableHeader>
             <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
-              <TableHead className="w-8" />
               <TableHead className="text-xs font-semibold text-sidebar">School</TableHead>
               <TableHead className="text-xs font-semibold text-sidebar">LGA</TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">Year</TableHead>
@@ -265,115 +280,168 @@ export function Registers({
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableEmptyState colSpan={8} />
+              <TableEmptyState colSpan={7} />
             ) : (
-              rows.map((row) => (
-                <RegisterRow
+              rows.map((row: SchoolRegisterRow) => (
+                <TableRow
                   key={row.id}
-                  row={row}
-                  isOpen={expanded === row.id}
-                  onToggle={() => setExpanded(expanded === row.id ? null : row.id)}
-                  canWrite={canWrite}
-                  onDeletePage={(pageId) =>
-                    removePage.mutate({ registerId: row.id, pageId })
-                  }
-                />
+                  onClick={() => setViewing(row.id)}
+                  title="Click to page through this register"
+                  className="cursor-pointer border-border/40 hover:bg-muted/30"
+                >
+                  <TableCell className="text-xs font-semibold text-sidebar">{row.school}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{row.lga}</TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">{row.year}</TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">{row.term}</TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Images className="size-3.5" />
+                      {row.page_count}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{row.uploaded_by ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatWhen(row.updated_at)}</TableCell>
+                </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {viewingRegister && (
+        <RegisterSlideshow
+          register={viewingRegister}
+          canWrite={isStaffuser}
+          onDeletePage={(pageId) =>
+            removePage.mutate({ registerId: viewingRegister.id, pageId })
+          }
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   )
 }
 
-function RegisterRow({
-  row,
-  isOpen,
-  onToggle,
-  canWrite,
-  onDeletePage,
+/**
+ * Staff-only: for the selected year+term, which schools have handed in a
+ * register and which still owe one. Collapsed by default so it doesn't crowd
+ * the table.
+ */
+function CoveragePanel({
+  filters,
+  selectedIds,
 }: {
-  row: SchoolRegisterRow
-  isOpen: boolean
-  onToggle: () => void
-  canWrite: boolean
-  onDeletePage: (pageId: number) => void
+  filters: Record<string, string>
+  selectedIds: SelectedIds
 }) {
+  const [open, setOpen] = useState(false)
+  const ready = Boolean(filters.year) && Boolean(filters.term)
+
+  const { data, isError } = useQuery({
+    queryKey: [
+      "register-coverage",
+      filters.year,
+      filters.term,
+      selectedIds.lga,
+      selectedIds.cohort,
+    ],
+    queryFn: () =>
+      getRegisterCoverage({
+        year: filters.year as string,
+        term: filters.term as string,
+        lga: selectedIds.lga ? String(selectedIds.lga) : undefined,
+        cohort: selectedIds.cohort ? String(selectedIds.cohort) : undefined,
+      }),
+    enabled: ready,
+  })
+
+  if (!ready) {
+    return (
+      <div className="rounded-2xl border border-border/40 bg-white px-5 py-4 text-xs text-muted-foreground">
+        Select a year and term above to see which schools are missing a register.
+      </div>
+    )
+  }
+  if (isError) return <QueryError />
+  if (!data) return null
+
   return (
-    <>
-      <TableRow className="cursor-pointer border-border/40" onClick={onToggle}>
-        <TableCell className="text-muted-foreground">
-          {isOpen ? (
+    <div className="rounded-2xl border border-border/40 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          {open ? (
             <ChevronDown className="size-4" />
           ) : (
             <ChevronRight className="size-4" />
           )}
-        </TableCell>
-        <TableCell className="text-xs font-semibold text-sidebar">{row.school}</TableCell>
-        <TableCell className="text-xs text-muted-foreground">{row.lga}</TableCell>
-        <TableCell className="text-center text-xs text-muted-foreground">{row.year}</TableCell>
-        <TableCell className="text-center text-xs text-muted-foreground">{row.term}</TableCell>
-        <TableCell className="text-center text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <Images className="size-3.5" />
-            {row.page_count}
+          Register coverage — {data.year} Term {data.term}
+        </span>
+        <span className="flex shrink-0 items-center gap-3 text-xs">
+          <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+            <CheckCircle2 className="size-4" />
+            {data.uploaded_count} uploaded
           </span>
-        </TableCell>
-        <TableCell className="text-xs text-muted-foreground">{row.uploaded_by ?? "—"}</TableCell>
-        <TableCell className="text-xs text-muted-foreground">{formatWhen(row.updated_at)}</TableCell>
-      </TableRow>
-      {isOpen && (
-        <TableRow className="border-border/40 bg-muted/20 hover:bg-muted/20">
-          <TableCell colSpan={8} className="p-0">
-            <ul className="divide-y divide-border/40">
-              {row.pages.length === 0 ? (
-                <li className="px-6 py-3 text-xs text-muted-foreground">
-                  No photos in this register yet.
-                </li>
-              ) : (
-                row.pages.map((p, i) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-4 px-6 py-2"
-                  >
-                    <span className="min-w-0 break-all text-xs text-muted-foreground">
-                      <span className="mr-2 font-medium text-sidebar">{i + 1}.</span>
-                      {p.original_filename || `page ${p.id}`}
+          <span className="inline-flex items-center gap-1 font-medium text-amber-700">
+            <CircleSlash className="size-4" />
+            {data.missing_count} missing
+          </span>
+        </span>
+      </button>
+
+      {open && (
+        <div className="grid gap-4 border-t border-border/40 p-5 md:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">
+              Missing ({data.missing_count})
+            </p>
+            {data.missing.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Every school has submitted a register. 🎉
+              </p>
+            ) : (
+              <ul className="max-h-64 space-y-1 overflow-y-auto text-xs">
+                {data.missing.map((school) => (
+                  <li key={school.school} className="flex justify-between gap-3">
+                    <span className="min-w-0 break-words text-foreground">
+                      {school.name}
                     </span>
-                    <span className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        title="Download this page"
-                        onClick={() =>
-                          downloadRegisterPage(
-                            row.id,
-                            p.id,
-                            p.original_filename || `register_${row.id}_${p.id}`,
-                          )
-                        }
-                        className="inline-flex items-center justify-center rounded-full p-1.5 text-sidebar hover:bg-sidebar/10"
-                      >
-                        <Download className="size-4" />
-                      </button>
-                      {canWrite && (
-                        <button
-                          type="button"
-                          title="Delete this page"
-                          onClick={() => onDeletePage(p.id)}
-                          className="inline-flex items-center justify-center rounded-full p-1.5 text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      )}
+                    <span className="shrink-0 text-muted-foreground">
+                      {school.lga}
                     </span>
                   </li>
-                ))
-              )}
-            </ul>
-          </TableCell>
-        </TableRow>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Uploaded ({data.uploaded_count})
+            </p>
+            {data.uploaded.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No registers uploaded for this term yet.
+              </p>
+            ) : (
+              <ul className="max-h-64 space-y-1 overflow-y-auto text-xs">
+                {data.uploaded.map((school) => (
+                  <li key={school.school} className="flex justify-between gap-3">
+                    <span className="min-w-0 break-words text-foreground">
+                      {school.name}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {school.page_count} photo(s)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
-    </>
+    </div>
   )
 }

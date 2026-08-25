@@ -62,6 +62,19 @@ export const downloadAttendanceFile = (submissionId: number) =>
       downloadBlobFromResponse(response, `attendance_${submissionId}.csv`),
     );
 
+/**
+ * Fetch the uploaded attendance file as raw text, for previewing it in-app.
+ * Browsers can't render a CSV inline the way they do a PDF — they always
+ * download it — so we pull the text and render it as a table instead.
+ */
+export const fetchAttendanceFileText = (submissionId: number) =>
+  api
+    .get(`/attendance-submission/${submissionId}/file/`, {
+      responseType: "text",
+      transformResponse: [(data) => data],
+    })
+    .then((response) => response.data as string);
+
 // Attendance upload history: one row per submission (school/cohort/week) with
 // the number of students recorded and the average attendance. Filters are by ID
 // so same-named schools/LGAs don't leak in.
@@ -439,16 +452,70 @@ export interface SchoolRegisterRow {
 export const getSchoolRegisters = (
   page = 1,
   pageSize = 50,
-  filters: { school?: number; year?: string; term?: string } = {},
+  filters: {
+    school?: number;
+    year?: string;
+    term?: string;
+    search?: string;
+  } = {},
 ) => {
   const params: Record<string, string | number> = { page, page_size: pageSize };
   if (filters.school) params.school = filters.school;
   if (filters.year) params.year = filters.year;
   if (filters.term) params.term = filters.term;
+  if (filters.search) params.search = filters.search;
   return api
     .get<PaginatedResponse<SchoolRegisterRow>>("/school-register/", { params })
     .then((r) => r.data);
 };
+
+export interface RegisterCoverage {
+  year: number;
+  term: number;
+  uploaded: {
+    school: number;
+    name: string;
+    lga: string | null;
+    register: number;
+    page_count: number;
+    updated_at: string;
+  }[];
+  missing: { school: number; name: string; lga: string | null }[];
+  uploaded_count: number;
+  missing_count: number;
+  total: number;
+}
+
+// Staff-only: which schools have submitted a register for a year+term.
+export const getRegisterCoverage = (filters: {
+  year: string;
+  term: string;
+  lga?: string;
+  cohort?: string;
+}) =>
+  api
+    .get<RegisterCoverage>("/school-register/coverage/", { params: filters })
+    .then((r) => r.data);
+
+/**
+ * Fetch a protected register page as an object URL, for showing it inline.
+ * The endpoint requires auth, so an <img src> can't hit it directly — we pull
+ * the bytes through axios and wrap them in a blob URL. Callers MUST revoke the
+ * URL when done or the blobs leak for the life of the tab.
+ */
+export const fetchRegisterPageObjectUrl = (
+  registerId: number,
+  pageId: number,
+) =>
+  api
+    .get(`/school-register/${registerId}/page/${pageId}/`, {
+      params: { inline: 1 },
+      responseType: "blob",
+    })
+    .then((response) => ({
+      url: URL.createObjectURL(response.data as Blob),
+      type: (response.data as Blob).type,
+    }));
 
 export const uploadSchoolRegister = (
   schoolId: number,
