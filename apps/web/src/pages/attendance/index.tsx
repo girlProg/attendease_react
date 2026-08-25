@@ -62,7 +62,7 @@ export function AttendancePage() {
       ) : activeTab === "Upload History" ? (
         <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
       ) : activeTab === "Registers" ? (
-        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["term", "week"]} />
+        <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
       ) : (
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />

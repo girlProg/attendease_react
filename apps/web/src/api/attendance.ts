@@ -413,27 +413,38 @@ export const bulkChangeClass = (payload: {
     .then((response) => response.data);
 
 
+export interface SchoolRegisterPage {
+  id: number;
+  original_filename: string;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface SchoolRegisterRow {
   id: number;
   school: string;
   lga: string;
   year: number;
-  original_filename: string;
+  term: number;
+  pages: SchoolRegisterPage[];
+  page_count: number;
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// End-of-year school attendance registers. One current file per (school, year);
-// re-uploading replaces it. Server enforces LGA scoping.
+// Termly school attendance registers, held as a set of scanned photos. One
+// register per (school, year, term); uploading ADDS pages rather than replacing
+// them. The server enforces LGA scoping and file type/size limits.
 export const getSchoolRegisters = (
   page = 1,
   pageSize = 50,
-  filters: { school?: number; year?: string } = {},
+  filters: { school?: number; year?: string; term?: string } = {},
 ) => {
   const params: Record<string, string | number> = { page, page_size: pageSize };
   if (filters.school) params.school = filters.school;
   if (filters.year) params.year = filters.year;
+  if (filters.term) params.term = filters.term;
   return api
     .get<PaginatedResponse<SchoolRegisterRow>>("/school-register/", { params })
     .then((r) => r.data);
@@ -442,18 +453,31 @@ export const getSchoolRegisters = (
 export const uploadSchoolRegister = (
   schoolId: number,
   year: number | string,
-  file: File,
+  term: number | string,
+  files: File[],
 ) => {
   const form = new FormData();
-  form.append("school_id", String(schoolId));
+  form.append("school", String(schoolId));
   form.append("year", String(year));
-  form.append("file", file);
+  form.append("term", String(term));
+  files.forEach((file) => form.append("files", file));
   return api
     .post<SchoolRegisterRow>("/school-register/", form)
     .then((r) => r.data);
 };
 
-export const downloadSchoolRegister = (id: number, filename: string) =>
+export const downloadRegisterPage = (
+  registerId: number,
+  pageId: number,
+  filename: string,
+) =>
   api
-    .get(`/school-register/${id}/file/`, { responseType: "blob" })
+    .get(`/school-register/${registerId}/page/${pageId}/`, {
+      responseType: "blob",
+    })
     .then((response) => downloadBlobFromResponse(response, filename));
+
+export const deleteRegisterPage = (registerId: number, pageId: number) =>
+  api
+    .delete(`/school-register/${registerId}/page/${pageId}/delete/`)
+    .then((r) => r.data);
