@@ -221,7 +221,7 @@ export function Statistics({ filters }: { filters: Record<string, string> }) {
         <p className="py-12 text-center text-muted-foreground">No schools found for the selected LGA.</p>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-          <Table>
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
                 <TableHead className="w-16 text-center text-xs font-semibold text-sidebar">S/N</TableHead>

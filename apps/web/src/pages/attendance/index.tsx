@@ -47,10 +47,10 @@ export function AttendancePage() {
         <>
           <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
           {canWrite && (
-            <div className="flex justify-end">
+            <div className="flex justify-stretch sm:justify-end">
               <Button
                 variant="outline"
-                className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+                className="h-11 w-full gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
                 onClick={() => navigate("/attendance/new")}
               >
                 <Plus className="size-4" />
@@ -73,7 +73,7 @@ export function AttendancePage() {
             {canWrite && (
               <Button
                 variant="outline"
-                className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+                className="h-11 w-full shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
                 onClick={() => navigate("/attendance/new")}
               >
                 <Plus className="size-4" />
@@ -84,9 +84,11 @@ export function AttendancePage() {
         </>
       )}
 
-      {/* Tabs */}
-      <div className="flex justify-center pt-2">
-        <div className="inline-flex items-center rounded-full border border-brand/40 bg-white p-1">
+      {/* Tabs — five of these overflow a phone screen, so on small viewports the
+          strip scrolls sideways (bleeding to the screen edge to hint at it)
+          instead of pushing the whole page wide. */}
+      <div className="-mx-4 flex justify-start overflow-x-auto px-4 pt-2 [scrollbar-width:none] sm:mx-0 sm:justify-center sm:px-0 [&::-webkit-scrollbar]:hidden">
+        <div className="inline-flex shrink-0 items-center rounded-full border border-brand/40 bg-white p-1">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -94,8 +96,8 @@ export function AttendancePage() {
               onClick={() => setActiveTab(tab)}
               className={
                 activeTab === tab
-                  ? "rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition-colors"
-                  : "rounded-full px-6 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  ? "whitespace-nowrap rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors sm:px-6"
+                  : "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-6"
               }
             >
               {tab}

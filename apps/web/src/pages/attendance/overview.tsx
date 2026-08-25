@@ -140,7 +140,7 @@ export function Overview({
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-        <Table>
+        <Table className="min-w-[520px]">
           <TableHeader>
             <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
               <TableHead className="text-xs font-semibold text-sidebar">Class</TableHead>

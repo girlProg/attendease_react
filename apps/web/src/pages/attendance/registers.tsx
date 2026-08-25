@@ -150,7 +150,7 @@ export function Registers({
   return (
     <div className="space-y-6">
       {canWrite && (
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
           <input
             ref={fileInputRef}
             type="file"
@@ -163,33 +163,35 @@ export function Registers({
             variant="outline"
             disabled={!canUpload || upload.isPending}
             onClick={() => fileInputRef.current?.click()}
-            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            className="h-11 w-full gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
           >
             <Upload className="size-4" />
             {upload.isPending ? "Uploading…" : "Upload Register Photos"}
           </Button>
           {!canUpload && (
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <AlertCircle className="size-3.5" />
+            <p className="flex items-start gap-1 text-xs text-muted-foreground sm:items-center sm:justify-end">
+              <AlertCircle className="mt-0.5 size-3.5 shrink-0 sm:mt-0" />
               Select a school, year and term above to upload register photos.
             </p>
           )}
-          {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+          {uploadError && (
+            <p className="text-xs text-red-600 sm:text-right">{uploadError}</p>
+          )}
         </div>
       )}
 
       {/* Confirm before sending: the filters above decide where these photos
           land, and a mis-set school filter is otherwise invisible. */}
       <Dialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
-        <DialogPopup>
+        <DialogPopup className="max-h-[85vh] w-[calc(100%-2rem)] overflow-y-auto">
           <DialogTitle>Upload register photos?</DialogTitle>
           <DialogDescription>
             Check this is the right register before uploading.
           </DialogDescription>
           <dl className="mt-4 space-y-1 rounded-xl border border-border/60 p-3 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">School</dt>
-              <dd className="text-right font-medium text-foreground">
+              <dt className="shrink-0 text-muted-foreground">School</dt>
+              <dd className="min-w-0 break-words text-right font-medium text-foreground">
                 {existing?.school ?? filters.schoolName ?? `#${selectedIds.school}`}
               </dd>
             </div>
@@ -248,7 +250,7 @@ export function Registers({
       {isError && <QueryError />}
 
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-        <Table>
+        <Table className="min-w-[820px]">
           <TableHeader>
             <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
               <TableHead className="w-8" />

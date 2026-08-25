@@ -20,7 +20,9 @@ interface AttendanceTableProps {
 export function AttendanceTable({ records, page, pageSize }: AttendanceTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-      <Table>
+      {/* min-w makes the wrapper's horizontal scroll actually engage — without
+          it the table is w-full and 10 columns crush together on mobile. */}
+      <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
             <TableHead className="w-16 text-center text-xs font-semibold text-sidebar">S/N</TableHead>
