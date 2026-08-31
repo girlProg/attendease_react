@@ -385,7 +385,7 @@ export const getTermAverages = (params: {
     term_2: number;
     term_3: number;
     average: number;
-    account_no?: string;
+    account_number?: string;
     bank_name?: string;
     bank_code?: string;
     caregiver_name?: string;

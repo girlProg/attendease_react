@@ -182,6 +182,22 @@ export function DisburseDialog({
             </div>
           )}
 
+          {!cohort && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              <AlertCircle className="size-4 shrink-0" />
+              Select a cohort on the page first — disbursement is scoped to one
+              cohort.
+            </div>
+          )}
+
+          {!year && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              <AlertCircle className="size-4 shrink-0" />
+              Select a year on the page first — disbursement is scoped to one
+              academic year.
+            </div>
+          )}
+
           {!amountValid && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />

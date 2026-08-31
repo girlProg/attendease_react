@@ -366,7 +366,7 @@ export function PaymentsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.current_class}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{filters.year}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{record.account_no ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{record.account_number || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.bank_name ?? "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.bank_code ?? "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_name ?? "—"}</TableCell>
