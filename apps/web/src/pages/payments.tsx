@@ -45,7 +45,10 @@ function paymentStatusBadge(payment?: {
   }
   switch (payment?.disbursement_status) {
     case "pending":
-      return { variant: "neutral", label: "PENDING" }
+      // DB "pending" = the transaction row was created but the upload never
+      // reached the bank (e.g. a config failure) — "PENDING" read as if the
+      // bank were processing it.
+      return { variant: "neutral", label: "NOT SENT" }
     case "submitted":
       return { variant: "info", label: "SUBMITTED" }
     case "processing":
