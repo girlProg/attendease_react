@@ -124,6 +124,10 @@ export function PaymentsPage() {
       )
       return inFlight ? 8000 : false
     },
+    // Keep refetching even when this tab is in the background (e.g. while the
+    // admin is open in another tab), so the badges are current on return —
+    // the app-wide default disables refetch-on-focus.
+    refetchIntervalInBackground: true,
   })
 
   // Manual "check now": force a bank status poll of all in-flight batches, then
