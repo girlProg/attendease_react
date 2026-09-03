@@ -362,6 +362,16 @@ export const deleteNoObjection = (params: {
     .delete<{ deleted: boolean }>("/no-objection/remove/", { params })
     .then((response) => response.data)
 
+// Card figures for the payments page, computed server-side over the WHOLE
+// filtered scope (the page is only a window onto it).
+export interface TermAveragesSummary {
+  students: number;
+  successful: number;
+  failed: number;
+  awaiting: number;
+  total_amount: string;
+}
+
 export const getTermAverages = (params: {
   year?: string;
   school?: number;
@@ -404,7 +414,7 @@ export const getTermAverages = (params: {
       bank_name: string;
       bank_account_number: string;
     }[];
-  }>>("/student/term-averages/", { params }).then((response) => response.data);
+  }> & { summary?: TermAveragesSummary }>("/student/term-averages/", { params }).then((response) => response.data);
 
 export const getAttendanceSummary = (schoolId: number, cohort?: string, year?: string) => {
   const params: Record<string, string> = {};

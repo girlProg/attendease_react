@@ -142,51 +142,64 @@ export function PaymentsPage() {
   const termSelected = !!filters.term
   const selectedTerm = filters.term ? parseInt(filters.term, 10) : null
 
-  // "Successful" means an actually-disbursed payment exists; a merely-pending
-  // payment (created by Generate Payments, not yet sent) still counts as awaiting.
+  // Card figures come from the server over the whole filtered scope — not from
+  // the loaded page — so they stay right across pagination and every filter.
+  const summary = data?.summary
+
+  // Clicking a card narrows the (loaded) rows to that outcome for the
+  // selected term. Same rules as the server: disbursed = successful; latest
+  // attempt failed = failed; anything else = awaiting.
+  const paymentForTerm = (record: (typeof records)[number]) =>
+    selectedTerm
+      ? record.payments?.find((payment) => payment.term === selectedTerm)
+      : record.payments?.find((payment) => payment.disbursed) ?? record.payments?.[0]
   const isDisbursed = (record: (typeof records)[number]) =>
     selectedTerm
       ? (record.payments?.some((payment) => payment.term === selectedTerm && payment.disbursed) ?? false)
       : (record.payments?.some((payment) => payment.disbursed) ?? false)
-  const isAwaiting = (record: (typeof records)[number]) => !isDisbursed(record)
-  const awaitingCount = records.filter(isAwaiting).length
+  const isFailed = (record: (typeof records)[number]) => {
+    if (isDisbursed(record)) return false
+    const status = paymentForTerm(record)?.disbursement_status
+    return status === "failed" || status === "failed_retryable"
+  }
+  const isAwaiting = (record: (typeof records)[number]) =>
+    !isDisbursed(record) && !isFailed(record)
 
-  // Clicking a card filters the (loaded) student list to just those rows.
   const [activeCard, setActiveCard] = useState<string | null>(null)
   const displayedRecords =
     activeCard === "successful"
-      ? records.filter((record) => !isAwaiting(record))
+      ? records.filter(isDisbursed)
       : activeCard === "awaiting"
         ? records.filter(isAwaiting)
         : activeCard === "failed"
-          ? []
+          ? records.filter(isFailed)
           : records
 
   const stats = [
     {
       key: "all",
       label: "Number of Students",
-      value: totalCount.toLocaleString(),
+      value: (summary?.students ?? totalCount).toLocaleString(),
       icon: Users,
       color: "bg-sidebar",
     },
     {
       key: "successful",
       label: "Successful Disbursements",
-      value: (records.length - awaitingCount).toLocaleString(),
+      value: (summary?.successful ?? 0).toLocaleString(),
       icon: CheckCircle2,
       color: "bg-[var(--stat-accent-2)]",
     },
     {
       key: "failed",
       label: "Failed Disbursements",
-      value: "0",
+      value: (summary?.failed ?? 0).toLocaleString(),
       icon: XCircle,
       color: "bg-[var(--stat-accent-1)]",
     },
     {
       label: "Total Amount Disbursed",
-      value: formatNaira(0),
+      value: formatNaira(Number(summary?.total_amount ?? 0)),
       icon: Banknote,
       color: "bg-[var(--stat-accent-2)]",
     },
