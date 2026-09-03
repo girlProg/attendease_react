@@ -43,7 +43,13 @@ function paymentStatusBadge(payment?: {
   disbursement_status?: string | null
   disbursement_bank_status?: string | null
 }): { variant: StatusVariant; label: string } {
-  if (payment?.disbursed || payment?.disbursement_status === "successful") {
+  // Bank-confirmed (Zenith reports "processed"/"successful"): green SUCCESS.
+  // A payment flagged disbursed with no transaction behind it is a legacy
+  // import — same state, same colour, but labelled by its provenance.
+  if (payment?.disbursement_status === "successful") {
+    return { variant: "success", label: "SUCCESS" }
+  }
+  if (payment?.disbursed) {
     return { variant: "success", label: "DISBURSED" }
   }
   const bankLabel = payment?.disbursement_bank_status?.trim().toUpperCase()
@@ -103,7 +109,7 @@ export function PaymentsPage() {
     }),
     placeholderData: keepPreviousData,
     // Live-refresh while any disbursement is still in-flight so the status
-    // badges advance on their own (SUBMITTED -> AWAITING APPROVAL -> DISBURSED)
+    // badges advance on their own (SUBMITTED -> AWAITING APPROVAL -> SUCCESS)
     // without a manual reload. Stops polling once everything is terminal.
     refetchInterval: (query) => {
       const rows = query.state.data?.results ?? []
@@ -140,8 +146,8 @@ export function PaymentsPage() {
   // payment (created by Generate Payments, not yet sent) still counts as awaiting.
   const isDisbursed = (record: (typeof records)[number]) =>
     selectedTerm
-      ? (record.payments?.some((p) => p.term === selectedTerm && p.disbursed) ?? false)
-      : (record.payments?.some((p) => p.disbursed) ?? false)
+      ? (record.payments?.some((payment) => payment.term === selectedTerm && payment.disbursed) ?? false)
+      : (record.payments?.some((payment) => payment.disbursed) ?? false)
   const isAwaiting = (record: (typeof records)[number]) => !isDisbursed(record)
   const awaitingCount = records.filter(isAwaiting).length
 
