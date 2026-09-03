@@ -19,7 +19,7 @@ import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
-import { StatusBadge } from "@/components/status-badge"
+import { StatusBadge, type StatusVariant } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
@@ -32,17 +32,21 @@ import { DisbursementSwitch } from "@/components/disbursement-switch"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
-// Map a payment to its status badge. `disbursed` (bank-confirmed) wins; otherwise
-// show the latest disbursement-transaction status *as-is* so each stage is
-// distinguishable (pending vs submitted vs processing vs unknown vs failed),
-// not all collapsed into one "pending".
+// Map a payment to its status badge. `disbursed` (bank-confirmed) wins;
+// otherwise the colour follows our canonical mapping of the latest
+// disbursement transaction, while the LABEL is the bank's own status word
+// verbatim (`disbursement_bank_status`, e.g. "awaiting approval") whenever we
+// have one — so the page always shows exactly what Zenith last said, even for
+// a status word we haven't mapped yet. Every state gets its own colour.
 function paymentStatusBadge(payment?: {
   disbursed: boolean
   disbursement_status?: string | null
-}): { variant: "success" | "warning" | "error" | "info" | "neutral"; label: string } {
+  disbursement_bank_status?: string | null
+}): { variant: StatusVariant; label: string } {
   if (payment?.disbursed || payment?.disbursement_status === "successful") {
     return { variant: "success", label: "DISBURSED" }
   }
+  const bankLabel = payment?.disbursement_bank_status?.trim().toUpperCase()
   switch (payment?.disbursement_status) {
     case "pending":
       // DB "pending" = the transaction row was created but the upload never
@@ -50,19 +54,19 @@ function paymentStatusBadge(payment?: {
       // bank were processing it.
       return { variant: "neutral", label: "NOT SENT" }
     case "submitted":
-      return { variant: "info", label: "SUBMITTED" }
+      return { variant: "submitted", label: bankLabel || "SUBMITTED" }
     case "processing":
       // Zenith's post-upload state is "awaiting approval" (mapped internally to
       // processing) — show the bank's own wording.
-      return { variant: "warning", label: "AWAITING APPROVAL" }
+      return { variant: "warning", label: bankLabel || "AWAITING APPROVAL" }
     case "unknown":
-      return { variant: "warning", label: "UNKNOWN" }
+      return { variant: "unknown", label: bankLabel || "UNKNOWN" }
     case "failed":
-      return { variant: "error", label: "FAILED" }
+      return { variant: "error", label: bankLabel || "FAILED" }
     case "failed_retryable":
-      return { variant: "error", label: "FAILED (RETRYABLE)" }
+      return { variant: "retry", label: bankLabel ? `${bankLabel} (RETRYABLE)` : "FAILED (RETRYABLE)" }
     default:
-      return { variant: "neutral", label: "NOT DISBURSED" }
+      return { variant: "muted", label: "NOT DISBURSED" }
   }
 }
 
