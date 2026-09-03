@@ -20,12 +20,18 @@ export type StatusVariant = keyof typeof variantClasses
 export function StatusBadge({
   variant,
   label,
+  title,
 }: {
   variant: StatusVariant
   label: string
+  // Hover text — e.g. the bank's rejection reason behind a FAILED badge.
+  title?: string
 }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${variantClasses[variant]}`}>
+    <span
+      title={title}
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${title ? "cursor-help" : ""} ${variantClasses[variant]}`}
+    >
       {label}
     </span>
   )

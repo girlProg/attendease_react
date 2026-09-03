@@ -394,7 +394,19 @@ export function PaymentsPage() {
                     <TableCell className="text-xs text-muted-foreground">{filters.year}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.account_number || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.bank_name ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{record.bank_code ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {record.bank_code ? (
+                        record.bank_code
+                      ) : record.bank_name ? (
+                        // A bank name we can't map to a Zenith code — this
+                        // student can't be paid until the name is corrected.
+                        <span className="font-semibold text-red-600" title={`"${record.bank_name}" is not a bank Zenith recognises — correct the bank name to pay this student`}>
+                          UNKNOWN BANK
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_name ?? "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_phone ?? "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.bank_account_name || "—"}</TableCell>
@@ -417,7 +429,13 @@ export function PaymentsPage() {
                               <TableCell className="text-center">
                                 {(() => {
                                   const badge = paymentStatusBadge(payment)
-                                  return <StatusBadge variant={badge.variant} label={badge.label} />
+                                  return (
+                                    <StatusBadge
+                                      variant={badge.variant}
+                                      label={badge.label}
+                                      title={payment?.disbursement_reason ?? undefined}
+                                    />
+                                  )
                                 })()}
                               </TableCell>
                             </>

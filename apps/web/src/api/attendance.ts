@@ -407,6 +407,9 @@ export const getTermAverages = (params: {
       disbursed: boolean;
       disbursement_status?: string | null;
       disbursement_bank_status?: string | null;
+      // Latest transaction's provider code + description, e.g. "30 Benef Acct
+      // is not Active" — the bank's own words for a reject.
+      disbursement_reason?: string | null;
       amount_received: string;
       batch_reference: string;
       bvn: string;
