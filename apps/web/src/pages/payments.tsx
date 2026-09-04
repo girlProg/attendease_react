@@ -122,7 +122,9 @@ export function PaymentsPage() {
             ),
         ),
       )
-      return inFlight ? 8000 : false
+      // 5s matches the server's early poll cadence, so a SUCCESS lands on
+      // the page within seconds of the bank confirming it.
+      return inFlight ? 5000 : false
     },
     // Keep refetching even when this tab is in the background (e.g. while the
     // admin is open in another tab), so the badges are current on return —
