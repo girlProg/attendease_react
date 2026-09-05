@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw, History } from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -19,7 +20,7 @@ import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
-import { StatusBadge, type StatusVariant } from "@/components/status-badge"
+import { StatusBadge } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { PaginationBar } from "@/components/pagination-bar"
@@ -30,55 +31,13 @@ import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
+import { paymentStatusBadge } from "@/lib/payment-status"
 import type { Payee } from "@/types"
-
-// Map a payment to its status badge. `disbursed` (bank-confirmed) wins;
-// otherwise the colour follows our canonical mapping of the latest
-// disbursement transaction, while the LABEL is the bank's own status word
-// verbatim (`disbursement_bank_status`, e.g. "awaiting approval") whenever we
-// have one — so the page always shows exactly what Zenith last said, even for
-// a status word we haven't mapped yet. Every state gets its own colour.
-function paymentStatusBadge(payment?: {
-  disbursed: boolean
-  disbursement_status?: string | null
-  disbursement_bank_status?: string | null
-}): { variant: StatusVariant; label: string } {
-  // Bank-confirmed (Zenith reports "processed"/"successful"): green SUCCESS.
-  // A payment flagged disbursed with no transaction behind it is a legacy
-  // import — same state, same colour, but labelled by its provenance.
-  if (payment?.disbursement_status === "successful") {
-    return { variant: "success", label: "SUCCESS" }
-  }
-  if (payment?.disbursed) {
-    return { variant: "success", label: "DISBURSED" }
-  }
-  const bankLabel = payment?.disbursement_bank_status?.trim().toUpperCase()
-  switch (payment?.disbursement_status) {
-    case "pending":
-      // DB "pending" = the transaction row was created but the upload never
-      // reached the bank (e.g. a config failure) — "PENDING" read as if the
-      // bank were processing it.
-      return { variant: "neutral", label: "NOT SENT" }
-    case "submitted":
-      return { variant: "submitted", label: bankLabel || "SUBMITTED" }
-    case "processing":
-      // Zenith's post-upload state is "awaiting approval" (mapped internally to
-      // processing) — show the bank's own wording.
-      return { variant: "warning", label: bankLabel || "AWAITING APPROVAL" }
-    case "unknown":
-      return { variant: "unknown", label: bankLabel || "UNKNOWN" }
-    case "failed":
-      return { variant: "error", label: bankLabel || "FAILED" }
-    case "failed_retryable":
-      return { variant: "retry", label: bankLabel ? `${bankLabel} (RETRYABLE)` : "FAILED (RETRYABLE)" }
-    default:
-      return { variant: "muted", label: "NOT DISBURSED" }
-  }
-}
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
-  const { isStaffuser } = useAuth()
+  const navigate = useNavigate()
+  const { isAdmin, isStaffuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -336,6 +295,33 @@ export function PaymentsPage() {
             year={filters.year}
             term={filters.term}
           />
+        )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            title="Who did what to these payments, and what the bank said"
+            onClick={() => {
+              // Carry the page's scope across so the trail opens on the same
+              // term/cohort/school the user is looking at.
+              const params = new URLSearchParams()
+              if (filters.year) params.set("year", filters.year)
+              if (filters.term) params.set("term", filters.term)
+              if (selectedIds.cohort) {
+                params.set("cohort", String(selectedIds.cohort))
+                const cohortName = cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name
+                if (cohortName) params.set("cohort_name", cohortName)
+              }
+              if (selectedIds.school) {
+                params.set("school", String(selectedIds.school))
+                if (filters.school) params.set("school_name", filters.school)
+              }
+              navigate({ pathname: "/payments/audit", search: params.toString() })
+            }}
+          >
+            <History className="size-4" />
+            Audit Trail
+          </Button>
         )}
       </div>
 

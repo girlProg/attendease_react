@@ -9,6 +9,7 @@ import { NewAttendancePage } from "@/pages/new-attendance"
 import { LoginPage } from "@/pages/login"
 import { BeneficiariesPage } from "@/pages/beneficiaries"
 import { PaymentsPage } from "@/pages/payments"
+import { PaymentAuditPage } from "@/pages/payment-audit"
 import { StudentsPage } from "@/pages/students"
 import { ProfilePage } from "@/pages/profile"
 import { ManageUsersPage } from "@/pages/manage-users"
@@ -39,6 +40,7 @@ export function App() {
         <Route element={<AdminRoute />}>
           <Route path="ask" element={<AskPage />} />
           <Route path="payments" element={<PaymentsPage />} />
+          <Route path="payments/audit" element={<PaymentAuditPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />
           <Route path="manage-users/:id" element={<EditUserPage />} />
