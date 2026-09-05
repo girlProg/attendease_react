@@ -10,6 +10,7 @@ import type {
   AttendanceRecord,
   AttendanceSummary,
   AttendanceOverview,
+  Payee,
 } from "@/types";
 
 
@@ -237,6 +238,10 @@ export const submitAttendanceSubmission = (payload: {
 
 export const getCohorts = () =>
   api.get<PaginatedResponse<Cohort>>("/cohort/", { params: { page_size: 100 } }).then((r) => r.data.results);
+
+// Admin-only: a cohort defines who gets enrolled and paid.
+export const createCohort = (data: { name: string; year: number; payee: Payee }) =>
+  api.post<Cohort>("/cohort/", data).then((response) => response.data);
 
 export const getLGAs = () =>
   api.get<PaginatedResponse<LGA>>("/lga/", { params: { page_size: 100 } }).then((r) => r.data.results);

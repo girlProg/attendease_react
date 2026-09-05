@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { PrimaryButton } from "@/components/primary-button"
-import { getCohorts } from "@/api/attendance"
+import { createCohort, getCohorts } from "@/api/attendance"
+import type { Payee } from "@/types"
 import {
   inspectUploadRecords,
   uploadRecords,
@@ -32,6 +33,19 @@ import {
 
 const PAYEE_DEFAULT = "__default__"
 const IGNORE_COLUMN = "__ignore__"
+const NEW_COHORT = "__new__"
+const ACCEPTED_FILES = ".csv,.xlsx"
+
+// DRF field errors ({name: ["…"], non_field_errors: ["…"]}) flattened to a line.
+function cohortErrorMessage(error: unknown): string {
+  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data
+  if (!data) return "Could not create the cohort."
+  const parts = Object.entries(data).map(([key, value]) => {
+    const text = Array.isArray(value) ? value.join(" ") : String(value)
+    return key === "non_field_errors" || key === "detail" ? text : `${key}: ${text}`
+  })
+  return parts.join(" ") || "Could not create the cohort."
+}
 
 function errorMessage(error: unknown): string {
   const data = (error as { response?: { data?: { error?: string; detail?: string } } })
@@ -62,12 +76,33 @@ export function UploadRecordsDialog() {
   const [updateExisting, setUpdateExisting] = useState(true)
   const [createNew, setCreateNew] = useState(false)
 
+  // Inline "new cohort" form (admin feature): shown when the cohort select is
+  // set to "Add a new cohort…".
+  const [newCohortName, setNewCohortName] = useState("")
+  const [newCohortYear, setNewCohortYear] = useState(String(new Date().getFullYear()))
+  const [newCohortPayee, setNewCohortPayee] = useState<Payee>("caregiver")
+
   // Step 2: the file's columns matched to fields ({column: field key}).
   const [inspection, setInspection] = useState<UploadInspection | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [defaultRowType, setDefaultRowType] = useState<UploadRowType>("returning")
 
   const { data: cohorts = [] } = useQuery({ queryKey: ["cohorts"], queryFn: getCohorts })
+
+  const addCohort = useMutation({
+    mutationFn: () =>
+      createCohort({ name: newCohortName.trim(), year: Number(newCohortYear), payee: newCohortPayee }),
+    onSuccess: (created) => {
+      // Both keys are in use across the app (filter bar vs. this dialog).
+      queryClient.invalidateQueries({ queryKey: ["cohorts"] })
+      queryClient.invalidateQueries({ queryKey: ["cohort"] })
+      setCohort(String(created.id))
+      setNewCohortName("")
+    },
+  })
+  const creatingCohort = cohort === NEW_COHORT
+  const canAddCohort =
+    creatingCohort && newCohortName.trim().length > 0 && /^\d{4}$/.test(newCohortYear) && !addCohort.isPending
 
   const inspect = useMutation({
     mutationFn: (selected: File) => inspectUploadRecords(selected),
@@ -100,7 +135,7 @@ export function UploadRecordsDialog() {
 
   const report = upload.data
   const onMappingStep = inspection !== null
-  const canInspect = Boolean(file && cohort) && !inspect.isPending
+  const canInspect = Boolean(file && cohort) && !creatingCohort && !inspect.isPending
   const canCommit = Boolean(report?.valid && !report.committed) && !upload.isPending
 
   const mappedKeys = useMemo(() => new Set(Object.values(mapping)), [mapping])
@@ -144,6 +179,9 @@ export function UploadRecordsDialog() {
     setPayee(PAYEE_DEFAULT)
     setUpdateExisting(true)
     setCreateNew(false)
+    setNewCohortName("")
+    setNewCohortPayee("caregiver")
+    addCohort.reset()
     setInspection(null)
     setMapping({})
     setDefaultRowType("returning")
@@ -199,7 +237,7 @@ export function UploadRecordsDialog() {
             >
               <Upload className="size-7 text-sidebar/50" />
               <p className="text-sm font-medium text-foreground">
-                {file ? file.name : "Click to select a CSV file"}
+                {file ? file.name : "Click to select a CSV or Excel (.xlsx) file"}
               </p>
               {file && (
                 <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
@@ -207,7 +245,7 @@ export function UploadRecordsDialog() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept={ACCEPTED_FILES}
                 className="hidden"
                 onChange={(event) => {
                   const selected = event.target.files?.[0]
@@ -232,6 +270,9 @@ export function UploadRecordsDialog() {
                         {item.name} ({item.year})
                       </SelectItem>
                     ))}
+                    <SelectItem value={NEW_COHORT} className="font-medium text-sidebar">
+                      + Add a new cohort…
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -250,6 +291,63 @@ export function UploadRecordsDialog() {
                 </Select>
               </div>
             </div>
+
+            {creatingCohort && (
+              <div className="space-y-3 rounded-lg border border-sidebar/30 bg-sidebar/5 p-3">
+                <p className="text-sm font-medium text-foreground">New cohort</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <input
+                      value={newCohortName}
+                      onChange={(event) => setNewCohortName(event.target.value)}
+                      placeholder="e.g. 3rd Cohort"
+                      className="h-10 w-full rounded-lg border border-border/60 bg-white px-3 text-sm focus:border-sidebar/50 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Year</label>
+                    <input
+                      value={newCohortYear}
+                      onChange={(event) => setNewCohortYear(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                      inputMode="numeric"
+                      placeholder="2026"
+                      className="h-10 w-full rounded-lg border border-border/60 bg-white px-3 text-sm focus:border-sidebar/50 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Who is paid</label>
+                    <Select value={newCohortPayee} onValueChange={(value) => value && setNewCohortPayee(value as Payee)}>
+                      <SelectTrigger className="h-10 w-full rounded-lg border-border/60 bg-white px-3 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="caregiver">Caregiver</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {addCohort.isError && (
+                  <p className="text-xs text-red-600">{cohortErrorMessage(addCohort.error)}</p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center rounded-full border border-border px-4 text-xs font-medium text-muted-foreground hover:bg-muted/50"
+                    onClick={() => {
+                      setCohort("")
+                      addCohort.reset()
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <PrimaryButton className="h-9 w-auto px-4 text-xs" disabled={!canAddCohort} onClick={() => addCohort.mutate()}>
+                    {addCohort.isPending ? "Creating…" : "Create cohort"}
+                  </PrimaryButton>
+                </div>
+              </div>
+            )}
 
             {/* Mode toggles */}
             <div className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3">
