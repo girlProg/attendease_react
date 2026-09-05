@@ -40,12 +40,17 @@ export interface UploadBatch {
   update_existing: boolean;
   create_new: boolean;
   filename: string;
+  // {file column: field key}; empty when the template's own headers were used.
+  column_mapping: Record<string, string>;
+  default_row_type: "returning" | "new";
   created_count: number;
   updated_count: number;
   status: "committed" | "reversed";
   reversed_at: string | null;
   created_at: string;
 }
+
+export type UploadRowType = "returning" | "new";
 
 export interface UploadRecordsParams {
   file: File;
@@ -54,7 +59,42 @@ export interface UploadRecordsParams {
   update_existing: boolean;
   create_new: boolean;
   commit: boolean;
+  // Explicit {file column: field key}. When given, only mapped columns are
+  // read, so a spreadsheet with any headers can be uploaded.
+  mapping?: Record<string, string>;
+  // What a row with no "Source" value is.
+  default_row_type?: UploadRowType;
 }
+
+// One field a file column can be mapped to (from the backend catalogue).
+export interface UploadField {
+  key: string;
+  label: string;
+  group: string;
+  description: string;
+  // "update" = needed to match returning beneficiaries, "create" = needed to
+  // enrol new students, "" = optional.
+  required_for: "update" | "create" | "";
+}
+
+export interface UploadInspection {
+  headers: string[];
+  sample: string[][];
+  row_count: number;
+  fields: UploadField[];
+  suggested_mapping: Record<string, string>;
+}
+
+export const inspectUploadRecords = async (file: File): Promise<UploadInspection> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post<UploadInspection>(
+    "/student/upload-records/inspect/",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data;
+};
 
 function isUploadReport(value: unknown): value is UploadReport {
   return Boolean(value) && typeof value === "object" && "valid" in (value as object);
@@ -70,6 +110,8 @@ export const uploadRecords = async (
   formData.append("update_existing", String(params.update_existing));
   formData.append("create_new", String(params.create_new));
   formData.append("commit", String(params.commit));
+  if (params.mapping) formData.append("mapping", JSON.stringify(params.mapping));
+  if (params.default_row_type) formData.append("default_row_type", params.default_row_type);
 
   try {
     const { data } = await api.post<UploadReport>(

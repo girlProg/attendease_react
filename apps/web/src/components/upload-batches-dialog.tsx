@@ -110,7 +110,23 @@ export function UploadBatchesDialog() {
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(batch.created_at).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-xs text-foreground">{batch.cohort_name}</TableCell>
+                    <TableCell className="text-xs text-foreground">
+                      {batch.cohort_name}
+                      {batch.filename && (
+                        <span
+                          className="block max-w-[14rem] truncate text-[11px] text-muted-foreground"
+                          title={
+                            Object.keys(batch.column_mapping ?? {}).length
+                              ? Object.entries(batch.column_mapping)
+                                  .map(([column, key]) => `${column} → ${key}`)
+                                  .join("\n")
+                              : "Template headers"
+                          }
+                        >
+                          {batch.filename}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{batch.user_email}</TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">{batch.created_count}</TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">{batch.updated_count}</TableCell>
