@@ -78,7 +78,7 @@ function paymentStatusBadge(payment?: {
 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
-  const { isSuperuser } = useAuth()
+  const { isStaffuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
 
   const [appliedSearch, setAppliedSearch] = useState("")
@@ -329,7 +329,7 @@ export function PaymentsPage() {
           <RefreshCw className={`size-4 ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
           {refreshStatuses.isPending ? "Checking…" : "Refresh Status"}
         </Button>
-        {isSuperuser && (
+        {isStaffuser && (
           <NoObjectionDialog
             cohort={selectedIds.cohort}
             cohortName={cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name}
