@@ -14,6 +14,7 @@ import {
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
@@ -46,7 +47,7 @@ export function ManageUsersPage() {
   const navigate = useNavigate()
   const { page, setPage, pageSize, handleRowsChange } = usePagination([], 10)
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["users", page, pageSize],
     queryFn: () => getUsers(page, pageSize),
     placeholderData: keepPreviousData,
@@ -99,7 +100,9 @@ export function ManageUsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={8} />
+            ) : records.length === 0 ? (
               <TableEmptyState colSpan={8} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="cursor-pointer border-border/40 hover:bg-muted/20" onClick={() => navigate(`/manage-users/${record.id}`)}>

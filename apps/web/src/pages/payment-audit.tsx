@@ -19,6 +19,7 @@ import { QueryError } from "@/components/query-error"
 import { SearchBar } from "@/components/search-bar"
 import { StatusBadge } from "@/components/status-badge"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
 import {
@@ -170,7 +171,7 @@ export function PaymentAuditPage() {
 
   const { page, setPage, pageSize, handleRowsChange } = usePagination([filters], 50)
 
-  const { data, isError, isFetching } = useQuery({
+  const { data, isError, isFetching, isLoading } = useQuery({
     queryKey: ["payment-audit", filters, page, pageSize],
     queryFn: () => getPaymentAuditEvents(filters, page, pageSize),
     placeholderData: keepPreviousData,
@@ -334,7 +335,9 @@ export function PaymentAuditPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={COLUMN_COUNT} />
+            ) : records.length === 0 ? (
               <TableEmptyState colSpan={COLUMN_COUNT} message="No audit events match these filters." />
             ) : (
               records.map((event) => {

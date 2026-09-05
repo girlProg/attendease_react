@@ -18,6 +18,7 @@ import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { SearchBar } from "@/components/search-bar"
 import { PaginationBar } from "@/components/pagination-bar"
 import { UploadRecordsDialog } from "@/components/upload-records-dialog"
@@ -35,7 +36,7 @@ export function StudentsPage() {
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["students-summary", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
       ...(filters.year && { year: filters.year }),
@@ -107,7 +108,9 @@ export function StudentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={11} />
+            ) : records.length === 0 ? (
               <TableEmptyState colSpan={11} />
             ) : (
               records.map((record, index) => {

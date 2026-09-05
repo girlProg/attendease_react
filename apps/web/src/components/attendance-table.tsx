@@ -9,15 +9,18 @@ import {
 import { PercentageBadge } from "@/components/percentage-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import type { AttendanceRecord } from "@/types"
 
 interface AttendanceTableProps {
   records: AttendanceRecord[]
   page: number
   pageSize: number
+  // First page still loading — show placeholder rows instead of "no data".
+  isLoading?: boolean
 }
 
-export function AttendanceTable({ records, page, pageSize }: AttendanceTableProps) {
+export function AttendanceTable({ records, page, pageSize, isLoading = false }: AttendanceTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
       {/* min-w makes the wrapper's horizontal scroll actually engage — without
@@ -38,7 +41,9 @@ export function AttendanceTable({ records, page, pageSize }: AttendanceTableProp
           </TableRow>
         </TableHeader>
         <TableBody>
-          {records.length === 0 ? (
+          {isLoading ? (
+            <TableSkeletonRows columns={10} />
+          ) : records.length === 0 ? (
             <TableEmptyState colSpan={10} />
           ) : (
             records.map((record, index) => (

@@ -14,6 +14,7 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { StatusBadge } from "@/components/status-badge"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { StatCardSkeleton, TableSkeletonRows } from "@/components/skeleton"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
@@ -111,7 +112,21 @@ export function TransitionRatePage() {
       )}
 
       {hasRequiredFilters && isLoading && (
-        <p className="py-12 text-center text-sm text-muted-foreground">Loading…</p>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
+            <Table>
+              <TableBody>
+                <TableSkeletonRows columns={5} />
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
 
       {isError && <QueryError />}

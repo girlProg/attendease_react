@@ -21,6 +21,7 @@ import {
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { StatValue, TableSkeletonRows } from "@/components/skeleton"
 import { getAttendanceOverview } from "@/api/attendance"
 import { formatNaira, roundUpPercent } from "@/lib/formatters"
 
@@ -43,7 +44,7 @@ export function Overview({
     ...(filters.term ? { term: filters.term } : {}),
   }
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["attendance-overview", params],
     queryFn: () => getAttendanceOverview(params),
   })
@@ -130,7 +131,9 @@ export function Overview({
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="truncate text-xl font-bold text-foreground">{stat.value}</p>
+              <p className="truncate text-xl font-bold text-foreground">
+                <StatValue loading={isLoading}>{stat.value}</StatValue>
+              </p>
               {stat.sub && (
                 <p className="truncate text-[11px] text-muted-foreground">{stat.sub}</p>
               )}
@@ -156,7 +159,9 @@ export function Overview({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!data?.by_class?.length ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={4} rows={5} />
+            ) : !data?.by_class?.length ? (
               <TableEmptyState colSpan={4} />
             ) : (
               data.by_class.map((row) => (

@@ -11,6 +11,7 @@ import {
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
 import { api } from "@/lib/api"
@@ -54,7 +55,7 @@ export function LogsPage() {
   useLogVisit("Logs", "Visited Logs")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([], 10)
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["logs", page, pageSize],
     queryFn: () => getLogs(page, pageSize),
     placeholderData: keepPreviousData,
@@ -91,7 +92,9 @@ export function LogsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={6} rows={pageSize} />
+            ) : records.length === 0 ? (
               <TableEmptyState colSpan={6} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="border-border/40">

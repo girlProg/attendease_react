@@ -13,6 +13,7 @@ import {
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { CsvPreviewDialog } from "@/components/csv-preview-dialog"
 import { usePagination } from "@/hooks/use-pagination"
 import {
@@ -51,7 +52,7 @@ export function UploadHistory({
   const { page, setPage, pageSize, handleRowsChange } = usePagination([historyFilters])
   const [preview, setPreview] = useState<{ id: number; title: string } | null>(null)
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["attendance-upload-history", page, pageSize, historyFilters],
     queryFn: () => getAttendanceUploadHistory(page, pageSize, historyFilters),
     placeholderData: keepPreviousData,
@@ -92,7 +93,9 @@ export function UploadHistory({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={11} />
+            ) : rows.length === 0 ? (
               <TableEmptyState colSpan={11} />
             ) : (
               rows.map((row) => (

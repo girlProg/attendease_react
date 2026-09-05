@@ -23,6 +23,7 @@ import { QueryError } from "@/components/query-error"
 import { StatusBadge } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { StatValue, TableSkeletonRows } from "@/components/skeleton"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
@@ -53,7 +54,7 @@ export function PaymentsPage() {
   const cohortPayee: Payee =
     cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.payee ?? "caregiver"
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["term-averages", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
       ...(filters.year && { year: filters.year }),
@@ -200,7 +201,9 @@ export function PaymentsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xl font-bold text-foreground">
+                  <StatValue loading={isLoading}>{stat.value}</StatValue>
+                </p>
               </div>
             </button>
           )
@@ -369,7 +372,9 @@ export function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedRecords.length === 0 ? (
+                {isLoading ? (
+                  <TableSkeletonRows columns={9} />
+                ) : displayedRecords.length === 0 ? (
                   <TableEmptyState colSpan={9} />
                 ) : displayedRecords.map((record, index) => (
                   <TableRow key={record.id} className="border-border/40">

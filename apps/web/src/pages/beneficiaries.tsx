@@ -19,6 +19,7 @@ import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
@@ -60,7 +61,7 @@ export function BeneficiariesPage() {
     })
   }
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["students", page, pageSize, appliedSearch, filters],
     queryFn: () => getStudents(page, pageSize, {
       ...filters,
@@ -181,7 +182,9 @@ export function BeneficiariesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={7} />
+            ) : records.length === 0 ? (
               <TableEmptyState colSpan={7} />
             ) : records.map((record, index) => (
               <TableRow key={record.id} className="border-border/40">

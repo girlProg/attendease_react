@@ -15,7 +15,6 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
 
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
 
-  if (isLoading && !data) return <p>Loading…</p>
   if (isError) return <p>{String(error)}</p>
 
   return (
@@ -32,6 +31,7 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
         records={data?.results ?? []}
         page={page}
         pageSize={pageSize}
+        isLoading={isLoading && !data}
       />
     </div>
   )

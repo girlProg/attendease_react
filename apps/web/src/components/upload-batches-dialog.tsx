@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { TableSkeletonRows } from "@/components/skeleton"
 import {
   getUploadBatches,
   reverseUploadBatch,
@@ -95,11 +96,7 @@ export function UploadBatchesDialog() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                    Loading…
-                  </TableCell>
-                </TableRow>
+                <TableSkeletonRows columns={8} rows={4} />
               ) : batches.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">

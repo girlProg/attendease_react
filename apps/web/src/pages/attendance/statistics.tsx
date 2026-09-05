@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { Skeleton, TableSkeletonRows } from "@/components/skeleton"
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
 import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
@@ -168,7 +169,16 @@ function SchoolSummaryRow({
     return (
       <TableRow className="border-border/40 align-top">
         <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
-        <TableCell colSpan={2} className="text-sm text-muted-foreground">Loading...</TableCell>
+        <TableCell>
+          <div className="space-y-1.5">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3.5 w-12" />
+          </div>
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-8 w-full max-w-md" />
+        </TableCell>
       </TableRow>
     )
   }
@@ -223,7 +233,13 @@ export function Statistics({
       </div>
 
       {isLoading ? (
-        <p className="py-12 text-center text-muted-foreground">Loading schools...</p>
+        <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
+          <Table className="min-w-[700px]">
+            <TableBody>
+              <TableSkeletonRows columns={3} rows={6} />
+            </TableBody>
+          </Table>
+        </div>
       ) : !schools?.length ? (
         <p className="py-12 text-center text-muted-foreground">No schools found for the selected LGA.</p>
       ) : (

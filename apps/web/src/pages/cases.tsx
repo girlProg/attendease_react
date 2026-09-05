@@ -17,6 +17,7 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
@@ -75,7 +76,7 @@ export function CaseManagementPage() {
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([view, filters])
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["cases", view, page, pageSize, filters, selectedIds],
     queryFn: () => getCases(page, pageSize, caseFilters),
     placeholderData: keepPreviousData,
@@ -174,7 +175,9 @@ export function CaseManagementPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={view === "flagged" ? 7 : 6} />
+            ) : rows.length === 0 ? (
               <TableEmptyState colSpan={view === "flagged" ? 7 : 6} />
             ) : (
               rows.map((row) => (

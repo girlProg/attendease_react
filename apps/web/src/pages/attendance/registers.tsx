@@ -35,6 +35,7 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { SearchBar } from "@/components/search-bar"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { RegisterSlideshow } from "@/components/register-slideshow"
 import { usePagination } from "@/hooks/use-pagination"
 import { useAuth } from "@/contexts/auth-context"
@@ -94,7 +95,7 @@ export function Registers({
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([registerFilters])
 
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["school-registers", page, pageSize, registerFilters],
     queryFn: () => getSchoolRegisters(page, pageSize, registerFilters),
     placeholderData: keepPreviousData,
@@ -320,7 +321,9 @@ export function Registers({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {isLoading ? (
+              <TableSkeletonRows columns={7} />
+            ) : rows.length === 0 ? (
               <TableEmptyState colSpan={7} />
             ) : (
               rows.map((row: SchoolRegisterRow) => (

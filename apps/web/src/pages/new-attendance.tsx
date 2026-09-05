@@ -18,6 +18,7 @@ import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { TableSkeletonRows } from "@/components/skeleton"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { useSchoolWeek } from "@/hooks/use-school-week"
@@ -50,7 +51,7 @@ export function NewAttendancePage() {
     graduated: "false",
   }
 
-  const { data: studentData } = useQuery({
+  const { data: studentData, isLoading: isStudentsLoading } = useQuery({
     queryKey: ["students", "new", page, pageSize, studentFilters],
     queryFn: () => getStudents(page, pageSize, studentFilters),
     placeholderData: keepPreviousData,
@@ -219,7 +220,9 @@ export function NewAttendancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(!studentData?.results || studentData.results.length === 0) ? (
+                {isStudentsLoading ? (
+                  <TableSkeletonRows columns={6 + activeDays.length} />
+                ) : (!studentData?.results || studentData.results.length === 0) ? (
                   <TableEmptyState colSpan={6 + activeDays.length} />
                 ) : studentData.results.map((student: Student, index: number) => {
                   const attendance = attendanceMap?.get(student.id)

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
 import { QueryError } from "@/components/query-error"
+import { StatValue } from "@/components/skeleton"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
@@ -40,7 +41,7 @@ export function DashboardPage() {
   if (selectedIds.cohort) queryParams.cohort = String(selectedIds.cohort)
   if (filters.year) queryParams.year = filters.year
 
-  const { data: summary, isError: isSummaryError } = useQuery({
+  const { data: summary, isError: isSummaryError, isLoading: isSummaryLoading } = useQuery({
     queryKey: ["dashboard-summary", queryParams],
     queryFn: () => getDashboardSummary(queryParams),
   })
@@ -101,7 +102,9 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-xl font-bold text-foreground">
+                <StatValue loading={isSummaryLoading}>{stat.value}</StatValue>
+              </p>
             </div>
           </div>
         ))}
