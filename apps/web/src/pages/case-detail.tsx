@@ -87,7 +87,7 @@ export function CaseDetailPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <StudentPhoto url={student.photo_url} name={student.name} />
+          <StudentPhoto url={student.photo_url} name={student.name} studentId={student.id} hasPhoto={student.has_photo} />
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold text-sidebar">{student.name}</span>

@@ -193,7 +193,7 @@ export function CaseManagementPage() {
                   )}
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <StudentPhoto url={row.photo_url} name={row.name} />
+                      <StudentPhoto url={row.photo_url} name={row.name} studentId={row.id} hasPhoto={row.has_photo} />
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-sidebar">{row.name}</span>
                         <span className="text-[10px] text-muted-foreground">

@@ -396,6 +396,7 @@ export const getTermAverages = (params: {
     school: string;
     cohort: string;
     photo_url: string;
+    has_photo?: boolean;
     term_1: number;
     term_2: number;
     term_3: number;

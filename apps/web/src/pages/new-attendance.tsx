@@ -233,7 +233,7 @@ export function NewAttendancePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <StudentPhoto url={student.photo_url} name={student.name} />
+                          <StudentPhoto url={student.photo_url} name={student.name} studentId={student.id} hasPhoto={student.has_photo} />
                           <span className="text-sm font-semibold text-foreground">{student.name}</span>
                         </div>
                       </TableCell>

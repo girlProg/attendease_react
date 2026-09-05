@@ -53,7 +53,7 @@ export function AttendanceTable({ records, page, pageSize, isLoading = false }: 
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <StudentPhoto url={record.student?.photo_url} name={record.student?.name} />
+                    <StudentPhoto url={record.student?.photo_url} name={record.student?.name} studentId={record.student?.id} hasPhoto={record.student?.has_photo} />
                     <span className="text-xs font-semibold text-foreground">{record.student?.name}</span>
                   </div>
                 </TableCell>

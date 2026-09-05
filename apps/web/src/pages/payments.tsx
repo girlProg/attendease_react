@@ -383,7 +383,7 @@ export function PaymentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <StudentPhoto url={record.photo_url} name={record.name} size="sm" />
+                        <StudentPhoto url={record.photo_url} name={record.name} size="sm" studentId={record.id} hasPhoto={record.has_photo} />
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
                       </div>
                     </TableCell>

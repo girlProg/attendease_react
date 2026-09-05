@@ -15,6 +15,7 @@ export interface CaseRow {
   caregiver_name: string;
   caregiver_phone: string;
   photo_url: string;
+  has_photo?: boolean;
   dropped_out: boolean;
   // Flagged section
   category?: "critical" | "at_risk";

@@ -37,6 +37,8 @@ export interface Student {
   school: { id: number; name: string };
   lga: string;
   photo_url: string;
+  // A local copy (and thumbnail) of the photo exists on the server.
+  has_photo?: boolean;
   caregiver_name: string;
   caregiver_phone: string;
   graduated?: boolean;
