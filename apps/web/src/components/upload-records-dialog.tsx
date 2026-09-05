@@ -86,6 +86,9 @@ export function UploadRecordsDialog() {
   const [inspection, setInspection] = useState<UploadInspection | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [defaultRowType, setDefaultRowType] = useState<UploadRowType>("returning")
+  // Which row of the sheet holds the column names; the server guesses, the
+  // user can correct it (files often carry a title row above the headers).
+  const [headerRow, setHeaderRow] = useState<number | null>(null)
 
   const { data: cohorts = [] } = useQuery({ queryKey: ["cohorts"], queryFn: getCohorts })
 
@@ -105,10 +108,13 @@ export function UploadRecordsDialog() {
     creatingCohort && newCohortName.trim().length > 0 && /^\d{4}$/.test(newCohortYear) && !addCohort.isPending
 
   const inspect = useMutation({
-    mutationFn: (selected: File) => inspectUploadRecords(selected),
+    mutationFn: ({ selected, row }: { selected: File; row?: number }) =>
+      inspectUploadRecords(selected, row),
     onSuccess: (result) => {
       setInspection(result)
       setMapping(result.suggested_mapping)
+      setHeaderRow(result.header_row)
+      resetReport()
     },
   })
 
@@ -123,6 +129,7 @@ export function UploadRecordsDialog() {
         commit,
         mapping,
         default_row_type: defaultRowType,
+        header_row: headerRow ?? undefined,
       }),
     onSuccess: (report: UploadReport) => {
       if (report.committed) {
@@ -185,6 +192,7 @@ export function UploadRecordsDialog() {
     setInspection(null)
     setMapping({})
     setDefaultRowType("returning")
+    setHeaderRow(null)
     inspect.reset()
     upload.reset()
   }
@@ -385,7 +393,7 @@ export function UploadRecordsDialog() {
               <PrimaryButton
                 className="h-10 w-auto px-6"
                 disabled={!canInspect}
-                onClick={() => file && inspect.mutate(file)}
+                onClick={() => file && inspect.mutate({ selected: file })}
               >
                 {inspect.isPending ? "Reading file…" : "Next: match columns"}
               </PrimaryButton>
@@ -413,6 +421,39 @@ export function UploadRecordsDialog() {
                 Reset to suggested
               </button>
             </div>
+
+            {/* Header row picker: which row of the sheet names the columns */}
+            {inspection.raw_preview.length > 1 && (
+              <div className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3 sm:flex-row sm:items-center">
+                <label className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Column names are in row
+                </label>
+                <Select
+                  value={String(headerRow ?? inspection.header_row)}
+                  onValueChange={(value) => {
+                    const row = Number(value)
+                    if (!value || row === headerRow || !file) return
+                    setHeaderRow(row)
+                    inspect.mutate({ selected: file, row })
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-lg border-border/60 bg-white px-3 text-xs sm:max-w-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {inspection.raw_preview.map((cells, index) => {
+                      const preview = cells.filter(Boolean).slice(0, 6).join(" · ")
+                      return (
+                        <SelectItem key={index} value={String(index + 1)}>
+                          Row {index + 1}: {preview || "(blank)"}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                {inspect.isPending && <span className="text-xs text-muted-foreground">Re-reading…</span>}
+              </div>
+            )}
 
             {/* Mapping table */}
             <div className="overflow-x-auto rounded-xl border border-border/60">

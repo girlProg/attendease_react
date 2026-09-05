@@ -64,6 +64,8 @@ export interface UploadRecordsParams {
   mapping?: Record<string, string>;
   // What a row with no "Source" value is.
   default_row_type?: UploadRowType;
+  // 1-based row holding the column names (auto-detected when omitted).
+  header_row?: number;
 }
 
 // One field a file column can be mapped to (from the backend catalogue).
@@ -81,13 +83,21 @@ export interface UploadInspection {
   headers: string[];
   sample: string[][];
   row_count: number;
+  // Which (1-based) row the headers were read from, and the first rows of the
+  // sheet as-is so the user can pick a different one.
+  header_row: number;
+  raw_preview: string[][];
   fields: UploadField[];
   suggested_mapping: Record<string, string>;
 }
 
-export const inspectUploadRecords = async (file: File): Promise<UploadInspection> => {
+export const inspectUploadRecords = async (
+  file: File,
+  headerRow?: number,
+): Promise<UploadInspection> => {
   const formData = new FormData();
   formData.append("file", file);
+  if (headerRow) formData.append("header_row", String(headerRow));
   const { data } = await api.post<UploadInspection>(
     "/student/upload-records/inspect/",
     formData,
@@ -112,6 +122,7 @@ export const uploadRecords = async (
   formData.append("commit", String(params.commit));
   if (params.mapping) formData.append("mapping", JSON.stringify(params.mapping));
   if (params.default_row_type) formData.append("default_row_type", params.default_row_type);
+  if (params.header_row) formData.append("header_row", String(params.header_row));
 
   try {
     const { data } = await api.post<UploadReport>(
