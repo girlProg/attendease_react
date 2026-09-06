@@ -384,6 +384,16 @@ export function PaymentsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <StudentPhoto url={record.photo_url} name={record.name} size="sm" studentId={record.id} hasPhoto={record.has_photo} />
+                        {record.open_case && (
+                          <button
+                            type="button"
+                            title="A case-management case is open for this student"
+                            onClick={() => navigate(`/cases/${record.id}`)}
+                            className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 hover:bg-amber-200"
+                          >
+                            CASE
+                          </button>
+                        )}
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
                       </div>
                     </TableCell>

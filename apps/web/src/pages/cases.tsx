@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Download, Phone } from "lucide-react"
+import { AlertTriangle, Download, Phone } from "lucide-react"
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
@@ -18,6 +18,7 @@ import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
+import { OutlookBadge } from "@/components/outlook-badge"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
@@ -39,8 +40,8 @@ const SECTIONS: { key: CaseStatus; label: string }[] = [
 ]
 
 const SECTION_HINT: Record<CaseStatus, string> = {
-  flagged: "Students below the qualifying line for their two most recent weeks. Critical = near-absent.",
-  open: "Cases currently being managed. Open a student to add notes or mark them treated.",
+  flagged: "Students below the qualifying line for their two most recent weeks. Critical = near-absent. Term outlook says whether this term's transfer can still be saved.",
+  open: "Cases currently being managed. Open a student to log follow-ups, assign an officer or mark them treated.",
   treated: "Resolved cases — the student resumed class. History is kept if they are flagged again.",
   closed: "Cases closed without treatment.",
   dropped: "Students marked dropped out — excluded from attendance averages and payments.",
@@ -98,8 +99,10 @@ export function CaseManagementPage() {
   })
 
   const rows = data?.results ?? []
+  const dataGaps = view === "flagged" ? (data?.data_gaps ?? []) : []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
   const busy = open.isPending || restore.isPending
+  const columnCount = view === "flagged" ? 8 : view === "open" ? 8 : 6
 
   return (
     <div className="space-y-6">
@@ -152,6 +155,29 @@ export function CaseManagementPage() {
 
       {isError && <QueryError />}
 
+      {/* School-weeks the detection skipped: nobody marked present, so almost
+          certainly a blank or unfinished upload rather than a whole school absent. */}
+      {dataGaps.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="size-4 shrink-0" />
+            {dataGaps.length} school-week{dataGaps.length === 1 ? "" : "s"} look unrecorded and were left out of the detection
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            Every student was at 0% for the week — a blank or unfinished attendance upload. Get the week re-captured; these are not cases.
+          </p>
+          <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
+            {dataGaps.slice(0, 30).map((gap) => (
+              <li key={`${gap.school_id}-${gap.year}-${gap.term}-${gap.week}`}>
+                <span className="font-medium">{gap.school}</span> ({gap.lga}) · {gap.label}
+                {gap.year ? ` ${gap.year}` : ""} · {gap.students} students
+              </li>
+            ))}
+            {dataGaps.length > 30 && <li>…and {dataGaps.length - 30} more.</li>}
+          </ul>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
         <Table>
           <TableHeader>
@@ -168,17 +194,23 @@ export function CaseManagementPage() {
                   Two most recent weeks
                 </TableHead>
               )}
+              {(view === "flagged" || view === "open") && (
+                <TableHead className="text-xs font-semibold text-sidebar">Term outlook</TableHead>
+              )}
               {(view === "open" || view === "treated" || view === "closed") && (
                 <TableHead className="text-xs font-semibold text-sidebar">Case</TableHead>
+              )}
+              {view === "open" && (
+                <TableHead className="text-xs font-semibold text-sidebar">Follow-up</TableHead>
               )}
               <TableHead className="text-right text-xs font-semibold text-sidebar">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeletonRows columns={view === "flagged" ? 7 : 6} />
+              <TableSkeletonRows columns={columnCount} />
             ) : rows.length === 0 ? (
-              <TableEmptyState colSpan={view === "flagged" ? 7 : 6} />
+              <TableEmptyState colSpan={columnCount} />
             ) : (
               rows.map((row) => (
                 <TableRow
@@ -220,11 +252,37 @@ export function CaseManagementPage() {
                       {row.recent_percent}%)
                     </TableCell>
                   )}
+                  {(view === "flagged" || view === "open") && (
+                    <TableCell>
+                      <OutlookBadge row={row} />
+                    </TableCell>
+                  )}
                   {(view === "open" || view === "treated" || view === "closed") && (
                     <TableCell className="text-xs text-muted-foreground">
                       {view === "open"
                         ? `Opened ${row.opened_at ? new Date(row.opened_at).toLocaleDateString() : "—"} · ${row.note_count ?? 0} note(s)`
                         : `Resolved ${row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : "—"}${row.resolved_by ? ` by ${row.resolved_by}` : ""}`}
+                      {row.assigned_to && (
+                        <span className="block text-[10px]">Assigned to {row.assigned_to}</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {view === "open" && (
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.last_follow_up ? (
+                        <>
+                          <span className="block text-foreground">
+                            {row.last_follow_up.method_label}
+                            {row.last_follow_up.reason_label ? ` · ${row.last_follow_up.reason_label}` : ""}
+                          </span>
+                          <span className="block text-[10px]">
+                            {new Date(row.last_follow_up.at).toLocaleDateString()}
+                            {row.next_action_date ? ` · next ${new Date(row.next_action_date).toLocaleDateString()}` : ""}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="italic">No follow-up yet</span>
+                      )}
                     </TableCell>
                   )}
                   <TableCell

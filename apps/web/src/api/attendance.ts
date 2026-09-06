@@ -397,6 +397,8 @@ export const getTermAverages = (params: {
     cohort: string;
     photo_url: string;
     has_photo?: boolean;
+    // A case-management case is open for this student.
+    open_case?: boolean;
     term_1: number;
     term_2: number;
     term_3: number;
