@@ -137,6 +137,8 @@ export interface TimelineEntry {
   author: string | null;
   at: string;
   case_id: number;
+  // Present on follow_up entries: the structured contact fields.
+  follow_up?: FollowUp;
 }
 
 export interface AttendanceHistoryEntry {
