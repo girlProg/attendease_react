@@ -23,7 +23,8 @@ import { QueryError } from "@/components/query-error"
 import { StatusBadge } from "@/components/status-badge"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
-import { StatValue, TableSkeletonRows } from "@/components/skeleton"
+import { TableSkeletonRows } from "@/components/skeleton"
+import { StatCard } from "@/components/stat-card"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
@@ -178,36 +179,23 @@ export function PaymentsPage() {
 
       {/* Summary Stats — clickable cards filter the list below */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const clickable = Boolean(stat.key)
-          const active = clickable && activeCard === stat.key
-          return (
-            <button
-              key={stat.label}
-              type="button"
-              disabled={!clickable}
-              onClick={() =>
-                clickable &&
-                setActiveCard((current) => (current === stat.key ? null : (stat.key as string)))
-              }
-              className={`flex items-center gap-4 rounded-2xl border bg-white p-5 text-left transition ${
-                active
-                  ? "border-sidebar ring-2 ring-sidebar/40"
-                  : "border-border/40"
-              } ${clickable ? "cursor-pointer hover:border-sidebar/60" : "cursor-default"}`}
-            >
-              <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}>
-                <stat.icon className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-bold text-foreground">
-                  <StatValue loading={isLoading}>{stat.value}</StatValue>
-                </p>
-              </div>
-            </button>
-          )
-        })}
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            {...stat}
+            loading={isLoading}
+            active={Boolean(stat.key) && activeCard === stat.key}
+            // Only the cards that stand for a filterable set are clickable.
+            onClick={
+              stat.key
+                ? () =>
+                    setActiveCard((current) =>
+                      current === stat.key ? null : (stat.key as string),
+                    )
+                : undefined
+            }
+          />
+        ))}
       </div>
 
       {activeCard && (

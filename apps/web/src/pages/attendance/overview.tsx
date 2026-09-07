@@ -21,7 +21,9 @@ import {
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
-import { StatValue, TableSkeletonRows } from "@/components/skeleton"
+import { TableSkeletonRows } from "@/components/skeleton"
+import { StatCard } from "@/components/stat-card"
+import { useAuth } from "@/contexts/auth-context"
 import { getAttendanceOverview } from "@/api/attendance"
 import { formatNaira, roundUpPercent } from "@/lib/formatters"
 
@@ -44,6 +46,8 @@ export function Overview({
     ...(filters.term ? { term: filters.term } : {}),
   }
 
+  const { isStaffuser } = useAuth()
+
   const { data, isError, isLoading } = useQuery({
     queryKey: ["attendance-overview", params],
     queryFn: () => getAttendanceOverview(params),
@@ -54,6 +58,7 @@ export function Overview({
   const recorded = data?.students_with_attendance ?? 0
   const graduated = data?.graduated_students ?? 0
   const schools = data?.total_schools ?? 0
+  const submitted = data?.submitted
 
   const stats = [
     {
@@ -114,33 +119,59 @@ export function Overview({
     },
   ]
 
+  const submittedRecorded = submitted?.students_with_attendance ?? 0
+  const submittedStats = [
+    {
+      label: "Attendance Recorded",
+      value: submittedRecorded.toLocaleString(),
+      sub: `${percentOf(submittedRecorded, recorded)}% of all recorded`,
+      icon: ClipboardCheck,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+    {
+      label: "Average Attendance",
+      value: `${submitted?.average_attendance ?? 0}%`,
+      sub: `across ${submittedRecorded.toLocaleString()} students`,
+      icon: Percent,
+      color: "bg-[var(--stat-accent-2)]",
+    },
+    {
+      label: "Qualifying Students",
+      value: (submitted?.qualifying_students ?? 0).toLocaleString(),
+      sub: `${submitted?.qualifying_percentage ?? 0}% of submitted`,
+      icon: UserCheck,
+      color: "bg-[var(--stat-accent-1)]",
+    },
+  ]
+
   return (
     <div className="space-y-4">
       {isError && <QueryError />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-4 rounded-2xl border border-border/40 bg-white p-5"
-          >
-            <div
-              className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}
-            >
-              <stat.icon className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="truncate text-xl font-bold text-foreground">
-                <StatValue loading={isLoading}>{stat.value}</StatValue>
-              </p>
-              {stat.sub && (
-                <p className="truncate text-[11px] text-muted-foreground">{stat.sub}</p>
-              )}
-            </div>
-          </div>
+          <StatCard key={stat.label} {...stat} loading={isLoading} />
         ))}
       </div>
+
+      {/* Staff only: the same three figures over the attendance that arrived in
+          an uploaded register, so collected data can be told from keyed-in. */}
+      {isStaffuser && submitted && (
+        <section className="space-y-3">
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-sm font-bold text-sidebar">Submitted attendance</h3>
+            <p className="text-[11px] text-muted-foreground">
+              From {submitted.submissions.toLocaleString()} uploaded register
+              {submitted.submissions === 1 ? "" : "s"} · staff only
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {submittedStats.map((stat) => (
+              <StatCard key={stat.label} {...stat} loading={isLoading} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
         <Table className="min-w-[520px]">

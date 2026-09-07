@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
 import { QueryError } from "@/components/query-error"
-import { StatValue } from "@/components/skeleton"
+import { StatCard } from "@/components/stat-card"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
@@ -93,20 +93,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-4 rounded-2xl border border-border/40 bg-white p-5"
-          >
-            <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${stat.color} text-white`}>
-              <stat.icon className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-xl font-bold text-foreground">
-                <StatValue loading={isSummaryLoading}>{stat.value}</StatValue>
-              </p>
-            </div>
-          </div>
+          <StatCard key={stat.label} {...stat} loading={isSummaryLoading} />
         ))}
       </div>
 

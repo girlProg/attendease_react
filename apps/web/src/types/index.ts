@@ -112,6 +112,17 @@ export interface AttendanceOverviewClass {
   qualifying_students: number;
 }
 
+// The same three attendance figures, over the rows that arrived in an uploaded
+// register rather than being keyed in, seeded or migrated. Staff only — the
+// backend omits the block for everyone else.
+export interface SubmittedAttendanceStats {
+  students_with_attendance: number;
+  average_attendance: number;
+  qualifying_students: number;
+  qualifying_percentage: number;
+  submissions: number;
+}
+
 export interface AttendanceOverview {
   total_beneficiaries: number;
   graduated_students: number;
@@ -125,6 +136,7 @@ export interface AttendanceOverview {
   qualifying_students: number;
   qualifying_percentage: number;
   by_class: AttendanceOverviewClass[];
+  submitted?: SubmittedAttendanceStats;
 }
 
 export interface AttendanceRecord {
