@@ -155,6 +155,11 @@ export function CaseDetailPage() {
             </p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               <Phone className="size-3.5" />({student.caregiver_phone}) {student.caregiver_name}
+              {student.caregiver_relationship && (
+                <span className="text-muted-foreground">
+                  · {student.caregiver_relationship}
+                </span>
+              )}
             </p>
             {student.beneficiary_id && (
               <p className="text-[10px] text-muted-foreground">ID: {student.beneficiary_id}</p>

@@ -24,24 +24,85 @@ export interface LGA {
 export interface School {
   id: number;
   name: string;
+  // The state's own school code, from the enrolment form.
+  code?: string;
+  school_type?: "primary" | "secondary" | "";
   student_count?: number;
   lga?: { id: number; name: string };
+}
+
+export interface Caregiver {
+  id: number;
+  name: string;
+  phone_number: string;
+  address: string;
+  gender?: string;
+  gender_label?: string;
+  date_of_birth?: string | null;
+  photo_url?: string;
+  // A local copy of the enrolment photo exists on the server.
+  has_photo?: boolean;
+  // Financial/identity fields are absent for viewer accounts.
+  bvn?: string;
+  nin?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  resolved_account_name?: string;
+}
+
+export interface Enrolment {
+  id: number;
+  beneficiary_id: string;
+  serial_number: number;
+  enrolment_class: string;
+  enumerator_name: string;
+  enumerator_phone: string;
+  submitted_at?: string | null;
+  form_started_at?: string | null;
+  form_ended_at?: string | null;
+  device_id?: string;
+  consent_form_serial?: string;
+  consent_form_photo_url?: string;
+  // Admins can fetch the signed form from /enrolments/{id}/consent-form/.
+  has_consent_form?: boolean;
+  gps_latitude?: string | null;
+  gps_longitude?: string | null;
+  gps_altitude?: string | null;
+  gps_precision?: string | null;
+  kobo_submission_id?: number | null;
+  kobo_uuid?: string;
+  verified: boolean;
+  verified_at?: string | null;
 }
 
 export interface Student {
   id: number;
   name: string;
+  admission_number?: string;
   current_class: string;
   class_name: string;
   cohort: Cohort;
-  school: { id: number; name: string };
+  school: School;
   lga: string;
   photo_url: string;
   // A local copy (and thumbnail) of the photo exists on the server.
   has_photo?: boolean;
   caregiver_name: string;
   caregiver_phone: string;
+  caregiver?: Caregiver;
+  enrolment?: Enrolment;
   graduated?: boolean;
+  // From the enrolment form. The identity numbers are absent for viewers.
+  date_of_birth?: string | null;
+  nin?: string;
+  bvn?: string;
+  nin_from_agile?: boolean | null;
+  disability_status?: string;
+  disability_status_label?: string;
+  disability_details?: string;
+  caregiver_relationship?: string;
+  caregiver_relationship_label?: string;
+  caregiver_relationship_other?: string;
 }
 
 export interface AttendanceOverviewClass {
@@ -91,10 +152,22 @@ export type DayName =
 
 // Per-deployment config from GET /api/config/. The school week is state-specific
 // (Kaduna Mon-Thu, Niger Mon-Fri) and must come from here, never hardcoded.
+export interface ChoiceOption {
+  value: string;
+  label: string;
+}
+
 export interface DeploymentConfig {
   active_days: DayName[];
   day_labels: Partial<Record<DayName, string>>;
   qualifying_attendance_average: number;
+  // The enrolment form's choice lists, so dropdowns never hardcode them.
+  choices?: {
+    disability_status: ChoiceOption[];
+    caregiver_relationship: ChoiceOption[];
+    caregiver_gender: ChoiceOption[];
+    school_type: ChoiceOption[];
+  };
 }
 
 export interface AttendanceSummaryWeek {

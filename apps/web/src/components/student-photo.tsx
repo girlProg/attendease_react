@@ -1,4 +1,4 @@
-import { useStudentThumbnail } from "@/hooks/use-student-thumbnail"
+import { useStudentThumbnail } from "@/hooks/use-protected-image"
 
 const sizeClasses = {
   sm: "size-6",

@@ -107,6 +107,10 @@ export const getAttendanceUploadHistory = (
     .then((r) => r.data);
 };
 
+/** One beneficiary with its nested caregiver and enrolment (the list is trimmed). */
+export const getStudent = (id: number) =>
+  api.get<Student>(`/student/${id}/`).then((r) => r.data);
+
 export const getStudents = (
   page = 1,
   pageSize = 100,

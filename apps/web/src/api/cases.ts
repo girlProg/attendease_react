@@ -14,6 +14,8 @@ export interface CaseRow {
   beneficiary_id: string;
   caregiver_name: string;
   caregiver_phone: string;
+  // How the caregiver is related to the child ("Mother", "Grandparent"…).
+  caregiver_relationship?: string;
   photo_url: string;
   has_photo?: boolean;
   dropped_out: boolean;
