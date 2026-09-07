@@ -17,6 +17,7 @@ import { FilterSelect } from "@/components/filter-select"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { SearchBar } from "@/components/search-bar"
+import { formatTimestamp } from "@/lib/formatters"
 import { StatusBadge } from "@/components/status-badge"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
@@ -44,17 +45,6 @@ const SOURCE_LABELS: Record<AuditSource, string> = {
 const SOURCES = Object.keys(SOURCE_LABELS) as AuditSource[]
 
 const COLUMN_COUNT = 9
-
-function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
-}
 
 // `<input type="date">` gives a local calendar day; send the bank-facing API
 // the full day's span in UTC so the filter matches what the user sees.

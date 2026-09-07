@@ -2,6 +2,8 @@ import { useState } from "react"
 import { History, AlertCircle, Undo2 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { formatDateTime } from "@/lib/formatters"
+
 import {
   Dialog,
   DialogTrigger,
@@ -108,7 +110,7 @@ export function UploadBatchesDialog() {
                   <TableRow key={batch.id} className="border-border/40">
                     <TableCell className="text-xs text-muted-foreground">{batch.id}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(batch.created_at).toLocaleString()}
+                      {formatDateTime(batch.created_at)}
                     </TableCell>
                     <TableCell className="text-xs text-foreground">
                       {batch.cohort_name}

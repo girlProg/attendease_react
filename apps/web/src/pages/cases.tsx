@@ -18,6 +18,7 @@ import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
+import { formatDate } from "@/lib/formatters"
 import { OutlookBadge } from "@/components/outlook-badge"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -260,8 +261,8 @@ export function CaseManagementPage() {
                   {(view === "open" || view === "treated" || view === "closed") && (
                     <TableCell className="text-xs text-muted-foreground">
                       {view === "open"
-                        ? `Opened ${row.opened_at ? new Date(row.opened_at).toLocaleDateString() : "—"} · ${row.note_count ?? 0} note(s)`
-                        : `Resolved ${row.resolved_at ? new Date(row.resolved_at).toLocaleDateString() : "—"}${row.resolved_by ? ` by ${row.resolved_by}` : ""}`}
+                        ? `Opened ${formatDate(row.opened_at)} · ${row.note_count ?? 0} note(s)`
+                        : `Resolved ${formatDate(row.resolved_at)}${row.resolved_by ? ` by ${row.resolved_by}` : ""}`}
                       {row.assigned_to && (
                         <span className="block text-[10px]">Assigned to {row.assigned_to}</span>
                       )}
@@ -276,7 +277,7 @@ export function CaseManagementPage() {
                             {row.last_follow_up.reason_label ? ` · ${row.last_follow_up.reason_label}` : ""}
                           </span>
                           <span className="block text-[10px]">
-                            {new Date(row.last_follow_up.at).toLocaleDateString()}
+                            {formatDate(row.last_follow_up.at)}
                             {row.next_action_date ? ` · next ${new Date(row.next_action_date).toLocaleDateString()}` : ""}
                           </span>
                         </>

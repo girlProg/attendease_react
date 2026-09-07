@@ -21,6 +21,8 @@ import {
 } from "@workspace/ui/components/select"
 import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
+import { Chip } from "@/components/chip"
+import { formatDate, formatDateTime } from "@/lib/formatters"
 import { OutlookBadge } from "@/components/outlook-badge"
 import {
   getCaseDetail,
@@ -40,17 +42,6 @@ import {
 
 const UNASSIGNED = "__none__"
 const NO_REASON = "__none__"
-
-function Badge({ tone, children }: { tone: "red" | "amber" | "green" | "gray" | "sky"; children: React.ReactNode }) {
-  const tones = {
-    red: "bg-red-100 text-red-700",
-    amber: "bg-amber-100 text-amber-700",
-    green: "bg-emerald-100 text-emerald-700",
-    gray: "bg-muted text-muted-foreground",
-    sky: "bg-sky-100 text-sky-700",
-  }
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tones[tone]}`}>{children}</span>
-}
 
 export function CaseDetailPage() {
   const { id } = useParams()
@@ -145,9 +136,9 @@ export function CaseDetailPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold text-sidebar">{student.name}</span>
-              {student.dropped_out && <Badge tone="red">Dropped out</Badge>}
-              {hasOpenCase && <Badge tone="amber">Open case</Badge>}
-              {student.graduated && <Badge tone="gray">Graduated</Badge>}
+              {student.dropped_out && <Chip tone="red">Dropped out</Chip>}
+              {hasOpenCase && <Chip tone="amber">Open case</Chip>}
+              {student.graduated && <Chip tone="gray">Graduated</Chip>}
             </div>
             <p className="text-xs text-muted-foreground">
               {student.current_class || "—"} · {student.school} · {student.lga}
@@ -359,14 +350,14 @@ export function CaseDetailPage() {
                     {entry.type === "follow_up" && entry.follow_up ? (
                       <>
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge tone="sky">{entry.follow_up.method_label}</Badge>
-                          <Badge tone={entry.follow_up.reached ? "green" : "gray"}>
+                          <Chip tone="sky">{entry.follow_up.method_label}</Chip>
+                          <Chip tone={entry.follow_up.reached ? "green" : "gray"}>
                             {entry.follow_up.reached ? "Caregiver reached" : "Not reached"}
-                          </Badge>
-                          {entry.follow_up.reason_label && <Badge tone="amber">{entry.follow_up.reason_label}</Badge>}
+                          </Chip>
+                          {entry.follow_up.reason_label && <Chip tone="amber">{entry.follow_up.reason_label}</Chip>}
                           {entry.follow_up.next_action_date && (
                             <span className="text-[10px] text-muted-foreground">
-                              next action {new Date(entry.follow_up.next_action_date).toLocaleDateString()}
+                              next action {formatDate(entry.follow_up.next_action_date)}
                             </span>
                           )}
                         </div>
@@ -378,7 +369,7 @@ export function CaseDetailPage() {
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground">
-                      {new Date(entry.at).toLocaleString()}
+                      {formatDateTime(entry.at)}
                       {entry.author ? ` · ${entry.author}` : ""}
                       {entry.type === "event" ? " · system" : ""}
                     </p>
@@ -397,9 +388,9 @@ export function CaseDetailPage() {
                 {cases.map((c) => (
                   <li key={c.id} className="text-xs text-muted-foreground">
                     <span className="font-medium capitalize text-foreground">{c.status}</span> —
-                    opened {new Date(c.opened_at).toLocaleDateString()}
+                    opened {formatDate(c.opened_at)}
                     {c.opened_by ? ` by ${c.opened_by}` : ""}
-                    {c.resolved_at ? `, resolved ${new Date(c.resolved_at).toLocaleDateString()}` : ""}
+                    {c.resolved_at ? `, resolved ${formatDate(c.resolved_at)}` : ""}
                   </li>
                 ))}
               </ul>

@@ -15,6 +15,7 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
 import { api } from "@/lib/api"
+import { formatLongDate, formatTime } from "@/lib/formatters"
 import type { PaginatedResponse } from "@/types"
 
 interface LogEntry {
@@ -31,25 +32,6 @@ const getLogs = (page: number, pageSize: number) =>
   api.get<PaginatedResponse<LogEntry>>("/activity-log/", {
     params: { page, page_size: pageSize },
   }).then((response) => response.data)
-
-function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
-
-function formatTime(dateString: string) {
-  const date = new Date(dateString)
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
-}
 
 export function LogsPage() {
   useLogVisit("Logs", "Visited Logs")
@@ -104,7 +86,7 @@ export function LogsPage() {
                 <TableCell className="text-xs font-semibold text-foreground">{record.first_name} {record.last_name}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.type}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.action}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{formatDate(record.created_at)}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{formatLongDate(record.created_at)}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatTime(record.created_at)}</TableCell>
               </TableRow>
             ))}

@@ -46,18 +46,10 @@ import {
   uploadSchoolRegister,
   type SchoolRegisterRow,
 } from "@/api/attendance"
+import { formatDateTime } from "@/lib/formatters"
 
 type SelectedIds = { school?: number; lga?: number; cohort?: number }
 
-function formatWhen(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
 
 function errorMessage(err: unknown, fallback: string): string {
   const data = (
@@ -344,7 +336,7 @@ export function Registers({
                     </span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{row.uploaded_by ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatWhen(row.updated_at)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(row.updated_at)}</TableCell>
                 </TableRow>
               ))
             )}

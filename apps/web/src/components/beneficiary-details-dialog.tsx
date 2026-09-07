@@ -10,49 +10,32 @@ import {
 } from "@workspace/ui/components/dialog"
 import { useAuth } from "@/contexts/auth-context"
 import { useProtectedImage } from "@/hooks/use-protected-image"
+import { DetailField, DetailSection } from "@/components/detail-list"
+import { ageInYears, formatDate } from "@/lib/formatters"
 import { getStudent } from "@/api/attendance"
 import type { Student } from "@/types"
 
-function formatDate(value?: string | null): string {
-  if (!value) return "—"
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+/** A choice and its "specify" text as one line: "Other — Albinism". */
+function withSpecified(label?: string, specified?: string) {
+  if (!label) return ""
+  return [label, specified].filter(Boolean).join(" — ")
 }
 
-function age(dateOfBirth?: string | null): string {
-  if (!dateOfBirth) return ""
-  const born = new Date(dateOfBirth)
-  if (Number.isNaN(born.getTime())) return ""
-  const now = new Date()
-  let years = now.getFullYear() - born.getFullYear()
-  const monthDiff = now.getMonth() - born.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < born.getDate())) years -= 1
-  return years >= 0 && years < 120 ? ` (${years})` : ""
+function disabilityText(student: Student) {
+  return withSpecified(student.disability_status_label, student.disability_details)
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="text-xs text-sidebar">{value || "—"}</dd>
-    </div>
+function relationshipText(student: Student) {
+  return withSpecified(
+    student.caregiver_relationship_label,
+    student.caregiver_relationship_other,
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <h3 className="text-xs font-bold text-sidebar">{title}</h3>
-      <dl className="grid grid-cols-2 gap-3 rounded-xl bg-muted/30 p-3">{children}</dl>
-    </section>
-  )
+/** A nullable boolean as a word; blank when the form never asked. */
+function yesNo(value?: boolean | null) {
+  if (value === null || value === undefined) return ""
+  return value ? "Yes" : "No"
 }
 
 function CaregiverPhoto({ caregiverId, hasPhoto }: { caregiverId?: number; hasPhoto?: boolean }) {
@@ -129,85 +112,63 @@ export function BeneficiaryDetailsDialog({
         </DialogDescription>
 
         <div className="mt-4 space-y-4 overflow-y-auto pr-1">
-          <Section title="Student">
-            <Field label="Admission number" value={record.admission_number} />
-            <Field label="Class" value={record.current_class || record.class_name} />
-            <Field
+          <DetailSection title="Student">
+            <DetailField label="Admission number" value={record.admission_number} />
+            <DetailField
+              label="Class"
+              value={record.current_class || record.class_name}
+            />
+            <DetailField
               label="Date of birth"
               value={
                 record.date_of_birth
-                  ? `${formatDate(record.date_of_birth)}${age(record.date_of_birth)}`
-                  : ""
-              }
-            />
-            <Field label="NIN" value={record.nin} />
-            <Field
-              label="Disability"
-              value={
-                record.disability_status_label
-                  ? [record.disability_status_label, record.disability_details]
+                  ? [formatDate(record.date_of_birth), ageInYears(record.date_of_birth)]
                       .filter(Boolean)
-                      .join(" — ")
+                      .join(" · age ")
                   : ""
               }
             />
-            <Field
-              label="NIN through AGILE"
-              value={
-                record.nin_from_agile === null || record.nin_from_agile === undefined
-                  ? ""
-                  : record.nin_from_agile
-                    ? "Yes"
-                    : "No"
-              }
-            />
-          </Section>
+            <DetailField label="NIN" value={record.nin} />
+            <DetailField label="Disability" value={disabilityText(record)} />
+            <DetailField label="NIN through AGILE" value={yesNo(record.nin_from_agile)} />
+          </DetailSection>
 
           <section className="space-y-2">
             <h3 className="text-xs font-bold text-sidebar">Caregiver</h3>
             <div className="flex gap-3 rounded-xl bg-muted/30 p-3">
               <CaregiverPhoto caregiverId={caregiver?.id} hasPhoto={caregiver?.has_photo} />
               <dl className="grid flex-1 grid-cols-2 gap-3">
-                <Field label="Name" value={caregiver?.name ?? record.caregiver_name} />
-                <Field
-                  label="Relationship"
-                  value={
-                    record.caregiver_relationship_label
-                      ? [
-                          record.caregiver_relationship_label,
-                          record.caregiver_relationship_other,
-                        ]
-                          .filter(Boolean)
-                          .join(" — ")
-                      : ""
-                  }
+                <DetailField
+                  label="Name"
+                  value={caregiver?.name ?? record.caregiver_name}
                 />
-                <Field
+                <DetailField label="Relationship" value={relationshipText(record)} />
+                <DetailField
                   label="Phone"
                   value={caregiver?.phone_number ?? record.caregiver_phone}
                 />
-                <Field label="Gender" value={caregiver?.gender_label} />
-                <Field
+                <DetailField label="Gender" value={caregiver?.gender_label} />
+                <DetailField
                   label="Date of birth"
                   value={formatDate(caregiver?.date_of_birth)}
                 />
-                <Field label="NIN" value={caregiver?.nin} />
-                <Field label="Address" value={caregiver?.address} />
+                <DetailField label="NIN" value={caregiver?.nin} />
+                <DetailField label="Address" value={caregiver?.address} />
               </dl>
             </div>
           </section>
 
-          <Section title="Enrolment">
-            <Field label="Enumerator" value={enrolment?.enumerator_name} />
-            <Field label="Enumerator phone" value={enrolment?.enumerator_phone} />
-            <Field label="Submitted" value={formatDate(enrolment?.submitted_at)} />
-            <Field label="Device" value={enrolment?.device_id} />
-            <Field label="School code" value={record.school?.code} />
-            <Field
+          <DetailSection title="Enrolment">
+            <DetailField label="Enumerator" value={enrolment?.enumerator_name} />
+            <DetailField label="Enumerator phone" value={enrolment?.enumerator_phone} />
+            <DetailField label="Submitted" value={formatDate(enrolment?.submitted_at)} />
+            <DetailField label="Device" value={enrolment?.device_id} />
+            <DetailField label="School code" value={record.school?.code} />
+            <DetailField
               label="Consent form serial"
               value={enrolment?.consent_form_serial}
             />
-          </Section>
+          </DetailSection>
 
           {(latitude || enrolment?.has_consent_form) && (
             <section className="flex flex-wrap items-center gap-4">
