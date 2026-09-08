@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Download, Phone } from "lucide-react"
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
@@ -19,7 +20,6 @@ import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
 import { Chip } from "@/components/chip"
 import { StudentPhoto } from "@/components/student-photo"
-import { BeneficiaryDetailsDialog } from "@/components/beneficiary-details-dialog"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { PaginationBar } from "@/components/pagination-bar"
@@ -27,7 +27,6 @@ import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getStudents, exportStudents, bulkChangeClass } from "@/api/attendance"
 import { getConfig } from "@/api/config"
-import type { Student } from "@/types"
 
 function classChangeError(error: unknown): string {
   const data = (error as { response?: { data?: { error?: string; detail?: string } } })
@@ -37,6 +36,7 @@ function classChangeError(error: unknown): string {
 
 export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isStaffuser } = useAuth()
   const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
@@ -44,7 +44,6 @@ export function BeneficiariesPage() {
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
   const [targetClass, setTargetClass] = useState<string | undefined>()
-  const [detailsFor, setDetailsFor] = useState<Student | null>(null)
   const [destinationClass, setDestinationClass] = useState<string | undefined>()
 
   const updateClass = useMutation({
@@ -230,7 +229,11 @@ export function BeneficiariesPage() {
             ) : records.length === 0 ? (
               <TableEmptyState colSpan={7} />
             ) : records.map((record, index) => (
-              <TableRow key={record.id} className="border-border/40">
+              <TableRow
+                key={record.id}
+                className="cursor-pointer border-border/40 hover:bg-muted/40"
+                onClick={() => navigate(`/beneficiaries/${record.id}`)}
+              >
                 <TableCell className="text-center text-xs text-muted-foreground">
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
@@ -266,11 +269,6 @@ export function BeneficiariesPage() {
         </Table>
       </div>
 
-      <BeneficiaryDetailsDialog
-        student={detailsFor}
-        open={detailsFor !== null}
-        onOpenChange={(next) => { if (!next) setDetailsFor(null) }}
-      />
     </div>
   )
 }

@@ -73,6 +73,10 @@ export interface Enrolment {
   kobo_uuid?: string;
   verified: boolean;
   verified_at?: string | null;
+  // The payee's account. Withheld from viewers by the API.
+  bank_name?: string;
+  bank_account_number?: string;
+  resolved_account_name?: string;
 }
 
 export interface Student {
@@ -92,6 +96,7 @@ export interface Student {
   caregiver?: Caregiver;
   enrolment?: Enrolment;
   graduated?: boolean;
+  dropped_out?: boolean;
   // From the enrolment form. The identity numbers are absent for viewers.
   date_of_birth?: string | null;
   nin?: string;
@@ -137,6 +142,18 @@ export interface AttendanceOverview {
   qualifying_percentage: number;
   by_class: AttendanceOverviewClass[];
   submitted?: SubmittedAttendanceStats;
+}
+
+export interface PaymentRecord {
+  id: number;
+  disbursed: boolean;
+  amount_received: string;
+  batch_reference: string;
+  term: number | null;
+  year: number | null;
+  bank_name?: string;
+  bank_account_number?: string;
+  created_at: string;
 }
 
 export interface AttendanceRecord {

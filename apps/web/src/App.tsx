@@ -8,6 +8,7 @@ import { CaseDetailPage } from "@/pages/case-detail"
 import { NewAttendancePage } from "@/pages/new-attendance"
 import { LoginPage } from "@/pages/login"
 import { BeneficiariesPage } from "@/pages/beneficiaries"
+import { StudentDetailPage } from "@/pages/student-detail"
 import { PaymentsPage } from "@/pages/payments"
 import { PaymentAuditPage } from "@/pages/payment-audit"
 import { StudentsPage } from "@/pages/students"
@@ -28,6 +29,7 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<DashboardPage />} />
         <Route path="beneficiaries" element={<BeneficiariesPage />} />
+        <Route path="beneficiaries/:id" element={<StudentDetailPage />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />

@@ -10,6 +10,7 @@ import type {
   AttendanceRecord,
   AttendanceSummary,
   AttendanceOverview,
+  PaymentRecord,
   Payee,
 } from "@/types";
 
@@ -110,6 +111,22 @@ export const getAttendanceUploadHistory = (
 /** One beneficiary with its nested caregiver and enrolment (the list is trimmed). */
 export const getStudent = (id: number) =>
   api.get<Student>(`/student/${id}/`).then((r) => r.data);
+
+/** Every attendance week recorded for one student, newest year/term first. */
+export const getStudentAttendance = (studentId: number) =>
+  api
+    .get<PaginatedResponse<AttendanceRecord>>("/attendance/", {
+      params: { student: studentId, page_size: 200 },
+    })
+    .then((response) => response.data.results);
+
+/** One student's payment history across every term and year. */
+export const getStudentPayments = (studentId: number) =>
+  api
+    .get<PaginatedResponse<PaymentRecord>>("/payment/", {
+      params: { student: studentId, page_size: 100 },
+    })
+    .then((response) => response.data.results);
 
 export const getStudents = (
   page = 1,
