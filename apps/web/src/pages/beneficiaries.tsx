@@ -152,17 +152,18 @@ export function BeneficiariesPage() {
         )}
       </div>
 
-      {/* Class Transfer */}
+      {/* Class Transfer. The "from" class is matched on the class at enrolment
+          (the "Class" column), not the current one — see the note below. */}
       <div className="flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-3 rounded-full border-2 border-dashed border-brand/60 bg-brand/10 px-6 py-3">
           <FilterSelect
-            placeholder="Select a target class"
+            placeholder="From class (at enrolment)"
             items={CLASS_OPTIONS}
             value={targetClass}
             onValueChange={(value) => setTargetClass(value ?? undefined)}
           />
           <FilterSelect
-            placeholder="Select a destination class"
+            placeholder="Move them to"
             items={DESTINATION_OPTIONS}
             value={destinationClass}
             onValueChange={(value) => setDestinationClass(value ?? undefined)}
@@ -180,9 +181,11 @@ export function BeneficiariesPage() {
             {updateClass.isPending ? "Updating…" : "Update All"}
           </Button>
         </div>
-        {!selectedIds.cohort && (
-          <p className="text-xs text-muted-foreground">Select a cohort first.</p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          {selectedIds.cohort
+            ? 'Matches the "Class" column — the class each student was enrolled into, which does not move when they are promoted.'
+            : "Select a cohort first."}
+        </p>
         {updateClass.isSuccess && (
           <p className="text-xs font-medium text-emerald-600">
             Updated {updateClass.data.updated} student(s).
