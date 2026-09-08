@@ -26,7 +26,6 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getStudents, exportStudents, bulkChangeClass } from "@/api/attendance"
-import { getConfig } from "@/api/config"
 
 function classChangeError(error: unknown): string {
   const data = (error as { response?: { data?: { error?: string; detail?: string } } })
@@ -65,33 +64,12 @@ export function BeneficiariesPage() {
     })
   }
 
-  const [disability, setDisability] = useState<string | undefined>()
-  const [relationship, setRelationship] = useState<string | undefined>()
-
-  // The enrolment form's option lists come from the server, so the dropdowns
-  // never drift from what the database actually stores.
-  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
-  const disabilityOptions = config?.choices?.disability_status ?? []
-  const relationshipOptions = config?.choices?.caregiver_relationship ?? []
-  const labelFor = (options: { value: string; label: string }[], value?: string) =>
-    options.find((option) => option.value === value)?.label ?? value ?? ""
-
   const { data, isError, isLoading } = useQuery({
-    queryKey: [
-      "students",
-      page,
-      pageSize,
-      appliedSearch,
-      filters,
-      disability,
-      relationship,
-    ],
+    queryKey: ["students", page, pageSize, appliedSearch, filters],
     queryFn: () => getStudents(page, pageSize, {
       ...filters,
       ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
       ...(appliedSearch && { name: appliedSearch }),
-      ...(disability ? { disability_status: disability } : {}),
-      ...(relationship ? { caregiver_relationship: relationship } : {}),
     }),
     placeholderData: keepPreviousData,
   })
@@ -128,20 +106,6 @@ export function BeneficiariesPage() {
           <Download className="size-4" />
           Download
         </Button>
-        <FilterSelect
-          placeholder="Disability"
-          items={disabilityOptions.map((option) => option.value)}
-          value={disability}
-          onValueChange={(value) => setDisability(value ?? undefined)}
-          formatItem={(value) => labelFor(disabilityOptions, value)}
-        />
-        <FilterSelect
-          placeholder="Relationship"
-          items={relationshipOptions.map((option) => option.value)}
-          value={relationship}
-          onValueChange={(value) => setRelationship(value ?? undefined)}
-          formatItem={(value) => labelFor(relationshipOptions, value)}
-        />
         {isStaffuser && (
           <SchoolMergeDialog
             lga={selectedIds.lga}
