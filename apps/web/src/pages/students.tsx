@@ -16,6 +16,7 @@ import {
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
+import { Chip } from "@/components/chip"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
@@ -127,16 +128,17 @@ export function StudentsPage() {
                       <div className="flex items-center gap-2">
                         <StudentPhoto url={record.photo_url} name={record.name} studentId={record.id} hasPhoto={record.has_photo} />
                         <span className="text-xs font-semibold text-foreground">{record.name}</span>
-                        {record.graduated && (
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            Graduated
-                          </span>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.id}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_name ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{record.current_class}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {record.graduated ? (
+                        <Chip tone="green">Graduated</Chip>
+                      ) : (
+                        record.current_class || "—"
+                      )}
+                    </TableCell>
                     <TableCell className="text-center"><PercentageBadge value={record.term_1} /></TableCell>
                     <TableCell className="text-center"><PercentageBadge value={record.term_2} /></TableCell>
                     <TableCell className="text-center"><PercentageBadge value={record.term_3} /></TableCell>

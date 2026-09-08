@@ -32,6 +32,11 @@ function relationshipText(student: Student) {
   )
 }
 
+/** The class a student sits in now, falling back to the one they enrolled into. */
+function classNow(student: Student) {
+  return student.current_class || student.class_name || ""
+}
+
 /** A nullable boolean as a word; blank when the form never asked. */
 function yesNo(value?: boolean | null) {
   if (value === null || value === undefined) return ""
@@ -116,7 +121,11 @@ export function BeneficiaryDetailsDialog({
             <DetailField label="Admission number" value={record.admission_number} />
             <DetailField
               label="Class"
-              value={record.current_class || record.class_name}
+              value={
+                record.graduated
+                  ? `Graduated${classNow(record) ? ` (from ${classNow(record)})` : ""}`
+                  : classNow(record)
+              }
             />
             <DetailField
               label="Date of birth"

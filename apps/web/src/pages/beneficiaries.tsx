@@ -17,6 +17,7 @@ import {
 import { FilterSelect } from "@/components/filter-select"
 import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
+import { Chip } from "@/components/chip"
 import { StudentPhoto } from "@/components/student-photo"
 import { BeneficiaryDetailsDialog } from "@/components/beneficiary-details-dialog"
 import { TableEmptyState } from "@/components/table-empty-state"
@@ -237,11 +238,6 @@ export function BeneficiariesPage() {
                   <div className="flex items-center gap-2">
                     <StudentPhoto url={record.photo_url} name={record.name} studentId={record.id} hasPhoto={record.has_photo} />
                     <span className="text-xs font-semibold text-sidebar">{record.name}</span>
-                    {record.graduated && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        Graduated
-                      </span>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.lga}</TableCell>
@@ -257,7 +253,13 @@ export function BeneficiariesPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-xs font-semibold text-brand">{record.class_name || "—"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{record.current_class || record.class_name || "—"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {record.graduated ? (
+                    <Chip tone="green">Graduated</Chip>
+                  ) : (
+                    record.current_class || record.class_name || "—"
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
