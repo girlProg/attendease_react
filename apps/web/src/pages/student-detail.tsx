@@ -1,5 +1,6 @@
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, ExternalLink, FileText, MapPin } from "lucide-react"
+import { ArrowLeft, ChevronRight, ExternalLink, FileText, MapPin } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import {
@@ -52,6 +53,36 @@ function yesNo(value?: boolean | null) {
 
 function classNow(student: Student) {
   return student.current_class || student.class_name || ""
+}
+
+/** Attendance weeks bucketed by academic year, newest first. */
+function groupByYear(weeks: AttendanceRecord[]) {
+  const buckets = new Map<string, AttendanceRecord[]>()
+  for (const week of weeks) {
+    const year = String(week.year ?? "—")
+    const bucket = buckets.get(year)
+    if (bucket) bucket.push(week)
+    else buckets.set(year, [week])
+  }
+  return [...buckets.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([year, yearWeeks]) => ({
+      year,
+      weeks: [...yearWeeks].sort(
+        (left, right) =>
+          Number(right.term) - Number(left.term) || Number(right.week) - Number(left.week),
+      ),
+      average: averageOf(yearWeeks),
+    }))
+}
+
+function averageOf(weeks: AttendanceRecord[]) {
+  if (weeks.length === 0) return 0
+  const total = weeks.reduce(
+    (sum, week) => sum + Number(week.attendance_average || 0),
+    0,
+  )
+  return total / weeks.length
 }
 
 function termLabel(record: { year: string | number; term: string | number }) {
@@ -120,6 +151,7 @@ export function StudentDetailPage() {
   const navigate = useNavigate()
   const { isViewer } = useAuth()
   const { activeDays, labelFor } = useSchoolWeek()
+  const [toggledYears, setToggledYears] = useState<Record<string, boolean>>({})
 
   const { data: student, isError, isLoading } = useQuery({
     queryKey: ["student", studentId],
@@ -170,6 +202,15 @@ export function StudentDetailPage() {
     (total, payment) => total + Number(payment.amount_received || 0),
     0,
   )
+
+  // One card per academic year, newest first, each with its own average.
+  const attendanceYears = groupByYear(attendance)
+  const newestYear = attendanceYears[0]?.year
+  // Only years the user has actually clicked are recorded; everything else
+  // follows the default of "newest open, the rest closed".
+  const isYearOpen = (year: string) => toggledYears[year] ?? year === newestYear
+  const toggleYear = (year: string) =>
+    setToggledYears((current) => ({ ...current, [year]: !isYearOpen(year) }))
 
   const summary = [
     {
@@ -273,14 +314,14 @@ export function StudentDetailPage() {
         </DetailSection>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-bold text-sidebar">Caregiver</h3>
-          <div className="flex gap-3 rounded-xl bg-muted/30 p-3">
+          <h3 className="text-sm font-bold text-sidebar">Caregiver</h3>
+          <div className="flex gap-4 rounded-2xl border border-border/40 bg-white p-5">
             <CaregiverPhoto
               caregiverId={caregiver?.id}
               hasPhoto={caregiver?.has_photo}
               name={caregiver?.name ?? student.caregiver_name}
             />
-            <dl className="grid flex-1 grid-cols-2 gap-3">
+            <dl className="grid flex-1 grid-cols-2 gap-4">
               <DetailField label="Name" value={caregiver?.name ?? student.caregiver_name} />
               <DetailField
                 label="Relationship"
@@ -348,59 +389,104 @@ export function StudentDetailPage() {
         </section>
       )}
 
-      {/* Attendance, week by week */}
+      {/* Attendance, one collapsible card per academic year */}
       <section className="space-y-2">
-        <h3 className="text-sm font-bold text-sidebar">Attendance</h3>
-        <div className="overflow-x-auto rounded-2xl border border-border/40 bg-white">
-          <Table className="min-w-[560px]">
-            <TableHeader>
-              <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
-                <TableHead className="text-xs font-semibold text-sidebar">Year</TableHead>
-                <TableHead className="text-xs font-semibold text-sidebar">Term</TableHead>
-                <TableHead className="text-xs font-semibold text-sidebar">Week</TableHead>
-                {activeDays.map((day) => (
-                  <TableHead
-                    key={day}
-                    className="text-center text-xs font-semibold text-sidebar"
-                  >
-                    {labelFor(day)}
-                  </TableHead>
-                ))}
-                <TableHead className="text-center text-xs font-semibold text-sidebar">
-                  Average
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendance.length === 0 ? (
-                <TableEmptyState
-                  colSpan={4 + activeDays.length}
-                  message="No attendance recorded for this student yet."
-                />
-              ) : (
-                attendance.map((week) => (
-                  <TableRow key={week.id} className="border-border/40">
-                    <TableCell className="text-xs text-muted-foreground">{week.year}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{week.term}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{week.week}</TableCell>
-                    {activeDays.map((day) => (
-                      <TableCell key={day} className="text-center text-xs">
-                        {week[day as DayName] ? (
-                          <span className="text-emerald-600">●</span>
-                        ) : (
-                          <span className="text-muted-foreground/40">○</span>
-                        )}
-                      </TableCell>
-                    ))}
-                    <TableCell className="text-center">
-                      <PercentageBadge value={Number(week.attendance_average || 0)} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h3 className="text-sm font-bold text-sidebar">Attendance</h3>
+          <p className="text-[11px] text-muted-foreground">
+            {weeksRecorded.toLocaleString()} week{weeksRecorded === 1 ? "" : "s"} across{" "}
+            {attendanceYears.length} year{attendanceYears.length === 1 ? "" : "s"}
+          </p>
         </div>
+
+        {attendanceYears.length === 0 ? (
+          <p className="rounded-2xl border border-border/40 bg-white p-5 text-sm text-muted-foreground">
+            No attendance recorded for this student yet.
+          </p>
+        ) : (
+          attendanceYears.map(({ year, weeks, average }) => {
+            const open = isYearOpen(year)
+            return (
+              <div
+                key={year}
+                className="overflow-hidden rounded-2xl border border-border/40 bg-white"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleYear(year)}
+                  aria-expanded={open}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-muted/40"
+                >
+                  <ChevronRight
+                    className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-bold text-sidebar">{year}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {weeks.length} week{weeks.length === 1 ? "" : "s"}
+                  </span>
+                  <span className="ml-auto">
+                    <PercentageBadge value={average} />
+                  </span>
+                </button>
+
+                {open && (
+                  <div className="overflow-x-auto border-t border-border/40">
+                    <Table className="min-w-[520px]">
+                      <TableHeader>
+                        <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
+                          <TableHead className="text-xs font-semibold text-sidebar">
+                            Term
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold text-sidebar">
+                            Week
+                          </TableHead>
+                          {activeDays.map((day) => (
+                            <TableHead
+                              key={day}
+                              className="text-center text-xs font-semibold text-sidebar"
+                            >
+                              {labelFor(day)}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-center text-xs font-semibold text-sidebar">
+                            Average
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {weeks.map((week) => (
+                          <TableRow key={week.id} className="border-border/40">
+                            <TableCell className="text-xs text-muted-foreground">
+                              {week.term}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {week.week}
+                            </TableCell>
+                            {activeDays.map((day) => (
+                              <TableCell key={day} className="text-center text-xs">
+                                {week[day as DayName] ? (
+                                  <span className="text-emerald-600">●</span>
+                                ) : (
+                                  <span className="text-muted-foreground/40">○</span>
+                                )}
+                              </TableCell>
+                            ))}
+                            <TableCell className="text-center">
+                              <PercentageBadge
+                                value={Number(week.attendance_average || 0)}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
       </section>
 
       {/* Payments */}
