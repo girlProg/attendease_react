@@ -79,7 +79,9 @@ export function ReportsPage() {
     },
   })
 
-  const reports = data?.results ?? []
+  // The endpoint is deliberately unpaginated, but guard the shape anyway: a
+  // paginated envelope here once turned the whole page into a white screen.
+  const reports = Array.isArray(data?.results) ? data.results : []
   const polarity = data?.polarity ?? {}
   const report: MonthlyReport | undefined =
     reports.find((entry) => entry.period === period) ?? reports[0]
