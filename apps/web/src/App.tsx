@@ -8,6 +8,7 @@ import { CaseDetailPage } from "@/pages/case-detail"
 import { NewAttendancePage } from "@/pages/new-attendance"
 import { LoginPage } from "@/pages/login"
 import { BeneficiariesPage } from "@/pages/beneficiaries"
+import { ReportsPage } from "@/pages/reports"
 import { StudentDetailPage } from "@/pages/student-detail"
 import { PaymentsPage } from "@/pages/payments"
 import { PaymentAuditPage } from "@/pages/payment-audit"
@@ -18,7 +19,6 @@ import { NewUserPage } from "@/pages/new-user"
 import { EditUserPage } from "@/pages/edit-user"
 import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
-import { TransitionRatePage } from "@/pages/transition-rate"
 import { AskPage } from "@/pages/ask"
 
 export function App() {
@@ -33,7 +33,7 @@ export function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="analytics" element={<TransitionRatePage />} />
+        <Route path="analytics" element={<ReportsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route element={<CaseManagerRoute />}>
           <Route path="cases" element={<CaseManagementPage />} />

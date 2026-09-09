@@ -190,6 +190,11 @@ export interface DeploymentConfig {
   active_days: DayName[];
   day_labels: Partial<Record<DayName, string>>;
   qualifying_attendance_average: number;
+  // Per-deployment feature switches. One build serves every state, so a page
+  // only some states have is advertised here rather than guessed from the URL.
+  features?: {
+    monthly_reports: boolean;
+  };
   // The enrolment form's choice lists, so dropdowns never hardcode them.
   choices?: {
     disability_status: ChoiceOption[];
