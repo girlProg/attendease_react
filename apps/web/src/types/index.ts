@@ -97,6 +97,9 @@ export interface Student {
   enrolment?: Enrolment;
   graduated?: boolean;
   dropped_out?: boolean;
+  // Another child took this beneficiary slot; see /student/{id}/history/.
+  replaced?: boolean;
+  replaced_at?: string | null;
   // From the enrolment form. The identity numbers are absent for viewers.
   date_of_birth?: string | null;
   nin?: string;
@@ -201,6 +204,7 @@ export interface DeploymentConfig {
     caregiver_relationship: ChoiceOption[];
     caregiver_gender: ChoiceOption[];
     school_type: ChoiceOption[];
+    replacement_reason: ChoiceOption[];
   };
 }
 

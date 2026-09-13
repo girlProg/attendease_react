@@ -221,7 +221,9 @@ export function BeneficiariesPage() {
                 </TableCell>
                 <TableCell className="text-xs font-semibold text-brand">{record.class_name || "—"}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {record.graduated ? (
+                  {record.replaced ? (
+                    <Chip tone="gray">Replaced</Chip>
+                  ) : record.graduated ? (
                     <Chip tone="green">Graduated</Chip>
                   ) : (
                     record.current_class || record.class_name || "—"

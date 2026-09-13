@@ -40,12 +40,15 @@ export function LabeledSelect({
   onValueChange,
   items,
   placeholder,
+  formatItem,
 }: {
   label: string
   value: string
   onValueChange: (value: string | null) => void
   items: string[]
   placeholder: string
+  // How an item reads in the list, when the stored value is a code.
+  formatItem?: (item: string) => string
 }) {
   return (
     <div className="space-y-1">
@@ -57,7 +60,7 @@ export function LabeledSelect({
         <SelectContent>
           {items.map((item) => (
             <SelectItem key={item} value={item}>
-              {item}
+              {formatItem ? formatItem(item) : item}
             </SelectItem>
           ))}
         </SelectContent>

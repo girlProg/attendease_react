@@ -26,9 +26,12 @@ import { useSchoolWeek } from "@/hooks/use-school-week"
 import {
   getStudent,
   getStudentAttendance,
+  getStudentHistory,
   getStudentPayments,
 } from "@/api/attendance"
 import { getCaseDetail } from "@/api/cases"
+import { ReplaceStudentDialog } from "@/components/replace-student-dialog"
+import type { HistoryEvent } from "@/api/attendance"
 import {
   ageInYears,
   formatDate,
@@ -126,6 +129,58 @@ function ConsentForm({ enrolmentId, hasForm }: { enrolmentId?: number; hasForm?:
   )
 }
 
+const HISTORY_TONES: Record<HistoryEvent["kind"], "green" | "amber" | "red" | "sky" | "gray"> = {
+  enrolled: "green",
+  verified: "sky",
+  replaced: "amber",
+  replaces: "sky",
+  dropped_out: "red",
+  case_opened: "amber",
+  case_resolved: "gray",
+}
+
+function HistoryRow({
+  event,
+  onOpenStudent,
+}: {
+  event: HistoryEvent
+  onOpenStudent: (id: number) => void
+}) {
+  return (
+    <li className="flex gap-3">
+      <div className="w-28 shrink-0 text-xs text-muted-foreground">{formatDate(event.at)}</div>
+      <div className="min-w-0 space-y-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip tone={HISTORY_TONES[event.kind]}>{event.kind.replace("_", " ")}</Chip>
+          <span className="text-sm font-medium text-foreground">
+            {event.student ? (
+              <>
+                {event.kind === "replaced" ? "Replaced by " : "Replaced "}
+                <button
+                  type="button"
+                  className="text-brand underline"
+                  onClick={() => onOpenStudent(event.student!.id)}
+                >
+                  {event.student.name}
+                </button>
+              </>
+            ) : (
+              event.title
+            )}
+          </span>
+        </div>
+        {(event.detail || event.by) && (
+          <p className="text-xs text-muted-foreground">
+            {event.detail}
+            {event.detail && event.by ? " · " : ""}
+            {event.by ? `recorded by ${event.by}` : ""}
+          </p>
+        )}
+      </div>
+    </li>
+  )
+}
+
 /** The student's photo, at the size the header wants. */
 function StudentPortrait({ student }: { student: Student }) {
   const enabled = Boolean(student.has_photo)
@@ -149,7 +204,7 @@ export function StudentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const studentId = Number(id)
   const navigate = useNavigate()
-  const { isViewer } = useAuth()
+  const { isViewer, isStaffuser } = useAuth()
   const { activeDays, labelFor } = useSchoolWeek()
   const [toggledYears, setToggledYears] = useState<Record<string, boolean>>({})
 
@@ -171,6 +226,12 @@ export function StudentDetailPage() {
     enabled: Number.isFinite(studentId),
   })
 
+  const { data: history = [] } = useQuery({
+    queryKey: ["student-history", studentId],
+    queryFn: () => getStudentHistory(studentId),
+    enabled: Number.isFinite(studentId),
+  })
+
   // A case exists only for students who have been flagged; a 404 here is the
   // normal answer, not a failure.
   const { data: caseDetail } = useQuery({
@@ -187,6 +248,8 @@ export function StudentDetailPage() {
 
   const caregiver = student.caregiver
   const enrolment = student.enrolment
+  const replacedOut = history.find((event) => event.kind === "replaced")
+  const replacedIn = history.find((event) => event.kind === "replaces")
   const latitude = enrolment?.gps_latitude
   const longitude = enrolment?.gps_longitude
 
@@ -254,6 +317,8 @@ export function StudentDetailPage() {
             <h2 className="text-lg font-bold text-foreground">{student.name}</h2>
             {student.graduated && <Chip tone="green">Graduated</Chip>}
             {student.dropped_out && <Chip tone="red">Dropped out</Chip>}
+            {student.replaced && <Chip tone="gray">Replaced</Chip>}
+            {replacedIn && <Chip tone="sky">Replacement</Chip>}
             {enrolment?.verified && <Chip tone="sky">Verified</Chip>}
             {caseDetail?.open_case_id && <Chip tone="amber">Open case</Chip>}
           </div>
@@ -267,16 +332,51 @@ export function StudentDetailPage() {
             into {student.class_name || "—"}
           </p>
         </div>
-        {caseDetail?.open_case_id && (
-          <Button
-            variant="outline"
-            className="h-10 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-            onClick={() => navigate(`/cases/${student.id}`)}
-          >
-            Open case
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {caseDetail?.open_case_id && (
+            <Button
+              variant="outline"
+              className="h-10 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+              onClick={() => navigate(`/cases/${student.id}`)}
+            >
+              Open case
+            </Button>
+          )}
+          {isStaffuser && !student.replaced && !student.graduated && (
+            <ReplaceStudentDialog student={student} />
+          )}
+        </div>
       </div>
+
+      {/* Replacement, in either direction, said plainly before anything else. */}
+      {replacedOut && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
+          <span className="font-semibold">Replaced</span> on {formatDate(replacedOut.at)} by{" "}
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() => navigate(`/beneficiaries/${replacedOut.student?.id}`)}
+          >
+            {replacedOut.student?.name}
+          </button>
+          <span className="text-amber-700">— {replacedOut.detail}</span>
+          {replacedOut.by && <span className="text-amber-700">· recorded by {replacedOut.by}</span>}
+        </div>
+      )}
+      {replacedIn && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm text-sky-800">
+          <span className="font-semibold">Took the place of</span>
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() => navigate(`/beneficiaries/${replacedIn.student?.id}`)}
+          >
+            {replacedIn.student?.name}
+          </button>
+          on {formatDate(replacedIn.at)}
+          <span className="text-sky-700">— {replacedIn.detail}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {summary.map((stat) => (
@@ -543,11 +643,11 @@ export function StudentDetailPage() {
         </div>
       </section>
 
-      {/* Case history, only where there is one */}
-      {caseDetail && caseDetail.cases.length > 0 && (
-        <section className="space-y-2">
-          <div className="flex items-baseline gap-3">
-            <h3 className="text-sm font-bold text-sidebar">Case history</h3>
+      {/* Everything that has happened to this student, oldest first */}
+      <section className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-sm font-bold text-sidebar">History</h3>
+          {caseDetail && caseDetail.cases.length > 0 && (
             <button
               type="button"
               onClick={() => navigate(`/cases/${student.id}`)}
@@ -555,20 +655,22 @@ export function StudentDetailPage() {
             >
               Open the full case
             </button>
-          </div>
-          <ul className="space-y-2 rounded-2xl border border-border/40 bg-white p-4">
-            {caseDetail.cases.map((entry) => (
-              <li key={entry.id} className="flex flex-wrap items-center gap-2 text-xs">
-                <Chip tone={entry.status === "open" ? "amber" : "gray"}>{entry.status}</Chip>
-                <span className="text-muted-foreground">
-                  opened {formatDate(entry.opened_at)}
-                  {entry.resolved_at ? `, resolved ${formatDate(entry.resolved_at)}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          )}
+        </div>
+        <ol className="space-y-3 rounded-2xl border border-border/40 bg-white p-5">
+          {history.length === 0 ? (
+            <li className="text-sm text-muted-foreground">Nothing recorded yet.</li>
+          ) : (
+            history.map((event, index) => (
+              <HistoryRow
+                key={`${event.kind}-${event.at}-${index}`}
+                event={event}
+                onOpenStudent={(id) => navigate(`/beneficiaries/${id}`)}
+              />
+            ))
+          )}
+        </ol>
+      </section>
     </div>
   )
 }

@@ -112,6 +112,59 @@ export const getAttendanceUploadHistory = (
 export const getStudent = (id: number) =>
   api.get<Student>(`/student/${id}/`).then((r) => r.data);
 
+export interface ReplacementRecord {
+  id: number;
+  outgoing: { id: number; name: string };
+  incoming: { id: number; name: string };
+  reason: string;
+  reason_label: string;
+  note: string;
+  replaced_at: string;
+  replaced_by: string | null;
+}
+
+export interface ReplaceStudentPayload {
+  name: string;
+  reason: string;
+  note?: string;
+  admission_number?: string;
+  current_class?: string;
+  date_of_birth?: string;
+  nin?: string;
+}
+
+/** Hand a student's beneficiary slot to another child. Staff only. */
+export const replaceStudent = (studentId: number, payload: ReplaceStudentPayload) =>
+  api
+    .post<{ replacement: ReplacementRecord; student: Student }>(
+      `/student/${studentId}/replace/`,
+      payload,
+    )
+    .then((response) => response.data);
+
+export interface HistoryEvent {
+  at: string;
+  kind:
+    | "enrolled"
+    | "verified"
+    | "replaced"
+    | "replaces"
+    | "dropped_out"
+    | "case_opened"
+    | "case_resolved";
+  title: string;
+  detail: string;
+  by?: string | null;
+  // The other student involved, for replacements.
+  student?: { id: number; name: string };
+}
+
+/** What has happened to one student, oldest first. */
+export const getStudentHistory = (studentId: number) =>
+  api
+    .get<{ events: HistoryEvent[] }>(`/student/${studentId}/history/`)
+    .then((response) => response.data.events);
+
 /** Every attendance week recorded for one student, newest year/term first. */
 export const getStudentAttendance = (studentId: number) =>
   api
