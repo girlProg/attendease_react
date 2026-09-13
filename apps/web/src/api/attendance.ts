@@ -131,6 +131,10 @@ export interface ReplaceStudentPayload {
   current_class?: string;
   date_of_birth?: string;
   nin?: string;
+  caregiver_relationship?: string;
+  caregiver_relationship_other?: string;
+  disability_status?: string;
+  disability_details?: string;
 }
 
 /** Hand a student's beneficiary slot to another child. Staff only. */
@@ -150,14 +154,53 @@ export interface HistoryEvent {
     | "replaced"
     | "replaces"
     | "dropped_out"
+    | "caregiver_replaced"
     | "case_opened"
     | "case_resolved";
   title: string;
   detail: string;
   by?: string | null;
-  // The other student involved, for replacements.
+  // The other student involved, for student replacements.
   student?: { id: number; name: string };
+  // The caregivers involved, for caregiver replacements.
+  caregiver?: { id: number; name: string };
+  previous_caregiver?: { id: number; name: string };
 }
+
+export interface ReplaceCaregiverPayload {
+  name: string;
+  reason: string;
+  note?: string;
+  phone_number?: string;
+  address?: string;
+  gender?: string;
+  date_of_birth?: string;
+  nin?: string;
+  bvn?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  relationship?: string;
+  relationship_other?: string;
+  whole_household?: boolean;
+}
+
+/** Give a student (or her whole household) a new caregiver. Staff only. */
+export const replaceCaregiver = (studentId: number, payload: ReplaceCaregiverPayload) =>
+  api
+    .post<{ students_affected: number; student: Student }>(
+      `/student/${studentId}/replace-caregiver/`,
+      payload,
+    )
+    .then((response) => response.data);
+
+/** How many students share a caregiver — tells the dialog whether to offer
+ *  the household-wide change. */
+export const getHouseholdSize = (caregiverId: number) =>
+  api
+    .get<PaginatedResponse<Student>>("/student/", {
+      params: { caregiver: caregiverId, page_size: 1 },
+    })
+    .then((response) => response.data.count);
 
 /** What has happened to one student, oldest first. */
 export const getStudentHistory = (studentId: number) =>

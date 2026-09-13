@@ -205,6 +205,7 @@ export interface DeploymentConfig {
     caregiver_gender: ChoiceOption[];
     school_type: ChoiceOption[];
     replacement_reason: ChoiceOption[];
+    caregiver_replacement_reason: ChoiceOption[];
   };
 }
 

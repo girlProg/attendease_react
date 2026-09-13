@@ -1,7 +1,6 @@
 import { useState } from "react"
-import { UserRoundPlus } from "lucide-react"
+import { UserRoundCog } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "react-router-dom"
 
 import {
   Dialog,
@@ -13,68 +12,80 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { LabeledInput, LabeledSelect } from "@/components/form-fields"
 import { getConfig } from "@/api/config"
-import { replaceStudent } from "@/api/attendance"
+import { getHouseholdSize, replaceCaregiver } from "@/api/attendance"
 import type { Student } from "@/types"
 
 function replaceError(error: unknown): string {
   const data = (error as { response?: { data?: { error?: string; detail?: string } } })
     ?.response?.data
-  return data?.error ?? data?.detail ?? "Could not replace the student. Please try again."
+  return data?.error ?? data?.detail ?? "Could not replace the caregiver. Please try again."
 }
 
 /**
- * Hand this student's beneficiary slot to another child.
+ * Give this student a new caregiver.
  *
- * The caregiver, enrolment (beneficiary id and account), school and cohort
- * all stay: only the child changes. The outgoing student keeps her
- * attendance and payments and stops counting; the new one starts fresh.
+ * The student keeps her place; a new caregiver record takes over and the old
+ * one is left as it was, so past payments still say who received them. Where
+ * the programme pays the caregiver, the new account becomes the payee's.
  */
-export function ReplaceStudentDialog({ student }: { student: Student }) {
-  const navigate = useNavigate()
+export function ReplaceCaregiverDialog({ student }: { student: Student }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
   const [reason, setReason] = useState("")
   const [note, setNote] = useState("")
-  const [admissionNumber, setAdmissionNumber] = useState("")
-  const [currentClass, setCurrentClass] = useState(student.current_class || student.class_name || "")
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [gender, setGender] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [nin, setNin] = useState("")
+  const [bvn, setBvn] = useState("")
+  const [bankName, setBankName] = useState("")
+  const [accountNumber, setAccountNumber] = useState("")
   const [relationship, setRelationship] = useState("")
   const [relationshipOther, setRelationshipOther] = useState("")
-  const [disability, setDisability] = useState("")
-  const [disabilityDetails, setDisabilityDetails] = useState("")
+  const [wholeHousehold, setWholeHousehold] = useState(true)
 
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
-  const reasons = config?.choices?.replacement_reason ?? []
+  const reasons = config?.choices?.caregiver_replacement_reason ?? []
   const relationships = config?.choices?.caregiver_relationship ?? []
-  const disabilities = config?.choices?.disability_status ?? []
+  const genders = config?.choices?.caregiver_gender ?? []
   const labelIn =
     (options: { value: string; label: string }[]) => (value: string) =>
       options.find((option) => option.value === value)?.label ?? value
-  const reasonLabel = labelIn(reasons)
+
+  const caregiverId = student.caregiver?.id
+  const { data: householdSize } = useQuery({
+    queryKey: ["household-size", caregiverId],
+    queryFn: () => getHouseholdSize(caregiverId!),
+    enabled: open && caregiverId !== undefined,
+  })
+  const others = Math.max((householdSize ?? 1) - 1, 0)
+  const paysCaregiver = student.cohort?.payee === "caregiver"
 
   const replace = useMutation({
     mutationFn: () =>
-      replaceStudent(student.id, {
+      replaceCaregiver(student.id, {
         name,
         reason,
         note,
-        admission_number: admissionNumber,
-        current_class: currentClass,
+        phone_number: phone,
+        address,
+        gender,
         date_of_birth: dateOfBirth || undefined,
         nin,
-        caregiver_relationship: relationship,
-        caregiver_relationship_other: relationshipOther,
-        disability_status: disability,
-        disability_details: disabilityDetails,
+        bvn,
+        bank_name: bankName,
+        bank_account_number: accountNumber,
+        relationship,
+        relationship_other: relationshipOther,
+        whole_household: others > 0 && wholeHousehold,
       }),
-    onSuccess: ({ student: incoming }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["students"] })
       queryClient.invalidateQueries({ queryKey: ["student", student.id] })
       queryClient.invalidateQueries({ queryKey: ["student-history", student.id] })
       setOpen(false)
-      navigate(`/beneficiaries/${incoming.id}`)
     },
   })
 
@@ -87,29 +98,31 @@ export function ReplaceStudentDialog({ student }: { student: Student }) {
         className="h-10 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
         onClick={() => setOpen(true)}
       >
-        <UserRoundPlus className="size-4" />
-        Replace student
+        <UserRoundCog className="size-4" />
+        Replace caregiver
       </Button>
 
       <DialogPopup className="flex max-h-[85vh] max-w-xl flex-col overflow-hidden">
-        <DialogTitle>Replace {student.name}</DialogTitle>
+        <DialogTitle>Replace {student.caregiver_name || "the caregiver"}</DialogTitle>
         <DialogDescription>
-          The household keeps its place in the programme: the caregiver
-          {student.caregiver_name ? ` (${student.caregiver_name})` : ""}, beneficiary ID
-          and bank account all stay. {student.name}&apos;s attendance and payments are
-          kept on her record; the new child starts from nothing.
+          {student.name} keeps her place in the programme. A new caregiver record
+          takes over; the old one stays on file so past payments still say who
+          received them.
+          {paysCaregiver
+            ? " This cohort pays the caregiver, so the new account below becomes the payee account."
+            : ""}
         </DialogDescription>
 
         <div className="mt-4 space-y-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <LabeledSelect
-                label="Reason for replacement"
+                label="Reason for the change"
                 value={reason}
                 onValueChange={(value) => setReason(value ?? "")}
                 items={reasons.map((option) => option.value)}
-                placeholder="Why is she leaving the programme?"
-                formatItem={reasonLabel}
+                placeholder="Why is the caregiver changing?"
+                formatItem={labelIn(reasons)}
               />
             </div>
             <div className="sm:col-span-2">
@@ -124,29 +137,32 @@ export function ReplaceStudentDialog({ student }: { student: Student }) {
             </div>
           </div>
 
+          {others > 0 && (
+            <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              <input
+                type="checkbox"
+                checked={wholeHousehold}
+                onChange={(event) => setWholeHousehold(event.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Also change the caregiver for the {others} other student
+                {others === 1 ? "" : "s"} in this household. Untick to change it for{" "}
+                {student.name} only.
+              </span>
+            </label>
+          )}
+
           <div className="space-y-3 rounded-xl border border-border/40 bg-muted/20 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              The new student
+              The new caregiver
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <LabeledInput label="Full name" value={name} onChange={setName} />
               </div>
-              <LabeledInput label="Class" value={currentClass} onChange={setCurrentClass} />
-              <LabeledInput
-                label="Admission number"
-                value={admissionNumber}
-                onChange={setAdmissionNumber}
-              />
-              <LabeledInput
-                label="Date of birth"
-                value={dateOfBirth}
-                onChange={setDateOfBirth}
-                type="date"
-              />
-              <LabeledInput label="NIN" value={nin} onChange={setNin} />
               <LabeledSelect
-                label={`Relationship to ${student.caregiver_name || "the caregiver"}`}
+                label={`Relationship to ${student.name}`}
                 value={relationship}
                 onValueChange={(value) => setRelationship(value ?? "")}
                 items={relationships.map((option) => option.value)}
@@ -160,23 +176,33 @@ export function ReplaceStudentDialog({ student }: { student: Student }) {
                   onChange={setRelationshipOther}
                 />
               ) : (
-                <div />
-              )}
-              <LabeledSelect
-                label="Disability"
-                value={disability}
-                onValueChange={(value) => setDisability(value ?? "")}
-                items={disabilities.map((option) => option.value)}
-                placeholder="Select"
-                formatItem={labelIn(disabilities)}
-              />
-              {disability && disability !== "none" && (
-                <LabeledInput
-                  label="Disability details"
-                  value={disabilityDetails}
-                  onChange={setDisabilityDetails}
+                <LabeledSelect
+                  label="Gender"
+                  value={gender}
+                  onValueChange={(value) => setGender(value ?? "")}
+                  items={genders.map((option) => option.value)}
+                  placeholder="Select"
+                  formatItem={labelIn(genders)}
                 />
               )}
+              <LabeledInput label="Phone" value={phone} onChange={setPhone} />
+              <LabeledInput
+                label="Date of birth"
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+                type="date"
+              />
+              <div className="sm:col-span-2">
+                <LabeledInput label="Address" value={address} onChange={setAddress} />
+              </div>
+              <LabeledInput label="NIN" value={nin} onChange={setNin} />
+              <LabeledInput label="BVN" value={bvn} onChange={setBvn} />
+              <LabeledInput label="Bank" value={bankName} onChange={setBankName} />
+              <LabeledInput
+                label="Account number"
+                value={accountNumber}
+                onChange={setAccountNumber}
+              />
             </div>
           </div>
 
@@ -194,7 +220,7 @@ export function ReplaceStudentDialog({ student }: { student: Student }) {
             disabled={!ready || replace.isPending}
             onClick={() => replace.mutate()}
           >
-            {replace.isPending ? "Replacing…" : "Replace student"}
+            {replace.isPending ? "Replacing…" : "Replace caregiver"}
           </Button>
         </div>
       </DialogPopup>

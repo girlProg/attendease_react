@@ -30,6 +30,7 @@ import {
   getStudentPayments,
 } from "@/api/attendance"
 import { getCaseDetail } from "@/api/cases"
+import { ReplaceCaregiverDialog } from "@/components/replace-caregiver-dialog"
 import { ReplaceStudentDialog } from "@/components/replace-student-dialog"
 import type { HistoryEvent } from "@/api/attendance"
 import {
@@ -135,6 +136,7 @@ const HISTORY_TONES: Record<HistoryEvent["kind"], "green" | "amber" | "red" | "s
   replaced: "amber",
   replaces: "sky",
   dropped_out: "red",
+  caregiver_replaced: "amber",
   case_opened: "amber",
   case_resolved: "gray",
 }
@@ -250,6 +252,10 @@ export function StudentDetailPage() {
   const enrolment = student.enrolment
   const replacedOut = history.find((event) => event.kind === "replaced")
   const replacedIn = history.find((event) => event.kind === "replaces")
+  // The most recent caregiver change, if any — history is oldest first.
+  const caregiverChange = [...history]
+    .reverse()
+    .find((event) => event.kind === "caregiver_replaced")
   const latitude = enrolment?.gps_latitude
   const longitude = enrolment?.gps_longitude
 
@@ -268,10 +274,8 @@ export function StudentDetailPage() {
 
   // One card per academic year, newest first, each with its own average.
   const attendanceYears = groupByYear(attendance)
-  const newestYear = attendanceYears[0]?.year
-  // Only years the user has actually clicked are recorded; everything else
-  // follows the default of "newest open, the rest closed".
-  const isYearOpen = (year: string) => toggledYears[year] ?? year === newestYear
+  // Every year starts folded; only the ones the user has clicked open.
+  const isYearOpen = (year: string) => toggledYears[year] ?? false
   const toggleYear = (year: string) =>
     setToggledYears((current) => ({ ...current, [year]: !isYearOpen(year) }))
 
@@ -343,7 +347,10 @@ export function StudentDetailPage() {
             </Button>
           )}
           {isStaffuser && !student.replaced && !student.graduated && (
-            <ReplaceStudentDialog student={student} />
+            <>
+              <ReplaceStudentDialog student={student} />
+              <ReplaceCaregiverDialog student={student} />
+            </>
           )}
         </div>
       </div>
@@ -414,7 +421,15 @@ export function StudentDetailPage() {
         </DetailSection>
 
         <section className="space-y-2">
-          <h3 className="text-sm font-bold text-sidebar">Caregiver</h3>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h3 className="text-sm font-bold text-sidebar">Caregiver</h3>
+            {caregiverChange && (
+              <p className="text-[11px] text-amber-700">
+                Since {formatDate(caregiverChange.at)} — replaced{" "}
+                {caregiverChange.previous_caregiver?.name} ({caregiverChange.detail})
+              </p>
+            )}
+          </div>
           <div className="flex gap-4 rounded-2xl border border-border/40 bg-white p-5">
             <CaregiverPhoto
               caregiverId={caregiver?.id}
