@@ -137,6 +137,21 @@ export interface ReplaceStudentPayload {
   disability_details?: string;
 }
 
+export interface StudentStatusSummary {
+  total: number;
+  active: number;
+  graduated: number;
+  dropped_out: number;
+  replaced: number;
+}
+
+/** How many students in a school (and cohort) still count, and why the rest
+ *  do not — so an empty attendance list can say which it is. */
+export const getStudentStatusSummary = (params: { school: number; cohort?: number }) =>
+  api
+    .get<StudentStatusSummary>("/student/status-summary/", { params })
+    .then((response) => response.data);
+
 /** Hand a student's beneficiary slot to another child. Staff only. */
 export const replaceStudent = (studentId: number, payload: ReplaceStudentPayload) =>
   api
@@ -239,6 +254,7 @@ export const getStudents = (
   if (filters.name) filterParams.name = filters.name;
   // "true"/"false" are both truthy strings — pass either through.
   if (filters.graduated) filterParams.graduated = filters.graduated;
+  if (filters.active) filterParams.active = filters.active;
 
   return api
     .get<PaginatedResponse<Student>>("/student/", {

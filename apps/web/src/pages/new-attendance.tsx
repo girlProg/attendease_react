@@ -17,7 +17,7 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { StudentPhoto } from "@/components/student-photo"
-import { TableEmptyState } from "@/components/table-empty-state"
+import { InactiveSchoolNotice } from "@/components/inactive-school-notice"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
@@ -47,8 +47,9 @@ export function NewAttendancePage() {
   const studentFilters = {
     ...filters,
     ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
-    // Graduated students no longer have attendance recorded.
-    graduated: "false",
+    // Only students who still count: graduated, replaced and dropped-out
+    // girls no longer have attendance recorded.
+    active: "true",
   }
 
   const { data: studentData, isLoading: isStudentsLoading } = useQuery({
@@ -223,7 +224,22 @@ export function NewAttendancePage() {
                 {isStudentsLoading ? (
                   <TableSkeletonRows columns={6 + activeDays.length} />
                 ) : (!studentData?.results || studentData.results.length === 0) ? (
-                  <TableEmptyState colSpan={6 + activeDays.length} />
+                  <TableRow>
+                    <TableCell
+                      colSpan={6 + activeDays.length}
+                      className="py-8 text-center text-sm text-muted-foreground"
+                    >
+                      {selectedIds.school ? (
+                        <InactiveSchoolNotice
+                          school={selectedIds.school}
+                          schoolName={filters.school}
+                          cohort={selectedIds.cohort}
+                        />
+                      ) : (
+                        "No data to display :/"
+                      )}
+                    </TableCell>
+                  </TableRow>
                 ) : studentData.results.map((student: Student, index: number) => {
                   const attendance = attendanceMap?.get(student.id)
                   return (

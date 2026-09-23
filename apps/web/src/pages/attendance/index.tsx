@@ -36,6 +36,7 @@ export function AttendancePage() {
   const realTimeFilters = {
     ...filters,
     ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+    ...(selectedIds.cohort ? { cohortId: String(selectedIds.cohort) } : {}),
   }
 
   // Which filters each tab needs. Kept as data so the filter bar is rendered
