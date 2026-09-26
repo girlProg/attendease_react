@@ -10,6 +10,7 @@ import {
 } from "@workspace/ui/components/table"
 import { Skeleton, TableSkeletonRows } from "@/components/skeleton"
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
+import { getConfig } from "@/api/config"
 import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
 import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
@@ -214,6 +215,10 @@ export function Statistics({
 }) {
   const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
 
+  // Whether this deployment counts only uploaded registers here (Niger does).
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig, staleTime: Infinity })
+  const submittedOnly = config?.features?.statistics_submitted_only ?? false
+
   const { data: schools, isLoading } = useQuery({
     queryKey: ["schools-for-stats", selectedIds.lga, selectedIds.cohort],
     // By ID — the name filters are icontains and leak other LGAs' schools.
@@ -225,7 +230,10 @@ export function Statistics({
       <div className="rounded-2xl border border-border/40 bg-white px-6 py-5">
         <h2 className="text-base font-bold text-foreground">Weekly capture rate</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Every cell is one week. Shade shows the share of enrolled students whose attendance was taken that week.
+          Every cell is one week. Shade shows the share of enrolled students whose attendance
+          {submittedOnly
+            ? " arrived in an uploaded register that week — seeded attendance is not counted."
+            : " was taken that week."}
         </p>
         <div className="mt-3">
           <Legend />
