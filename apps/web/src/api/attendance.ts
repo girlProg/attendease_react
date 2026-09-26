@@ -560,10 +560,18 @@ export const getTermAverages = (params: {
     }[];
   }> & { summary?: TermAveragesSummary }>("/student/term-averages/", { params }).then((response) => response.data);
 
-export const getAttendanceSummary = (schoolId: number, cohort?: string, year?: string) => {
+export const getAttendanceSummary = (
+  schoolId: number,
+  cohort?: string,
+  year?: string,
+  // Count only rows that arrived in an uploaded register — what the
+  // Statistics tab measures.
+  submittedOnly = false,
+) => {
   const params: Record<string, string> = {};
   if (cohort) params.cohort = cohort;
   if (year) params.year = year;
+  if (submittedOnly) params.submitted = "true";
   return api
     .get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`, { params })
     .then((r) => r.data);

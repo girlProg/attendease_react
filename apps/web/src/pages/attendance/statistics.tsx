@@ -161,8 +161,8 @@ function SchoolSummaryRow({
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["attendance-summary", schoolId, cohort],
-    queryFn: () => getAttendanceSummary(schoolId, cohort),
+    queryKey: ["attendance-summary", schoolId, cohort, "submitted"],
+    queryFn: () => getAttendanceSummary(schoolId, cohort, undefined, true),
   })
 
   if (isLoading || !summary) {
@@ -225,7 +225,9 @@ export function Statistics({
       <div className="rounded-2xl border border-border/40 bg-white px-6 py-5">
         <h2 className="text-base font-bold text-foreground">Weekly capture rate</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Every cell is one week. Shade shows the share of enrolled students whose attendance was taken that week.
+          Every cell is one week. Shade shows the share of enrolled students whose attendance
+          arrived in an uploaded register that week — attendance keyed in by hand or carried
+          over from the old system is not counted here.
         </p>
         <div className="mt-3">
           <Legend />
