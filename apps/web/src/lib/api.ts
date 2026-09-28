@@ -23,7 +23,12 @@ api.interceptors.response.use(
     //   window.location.href = "/login";
     //   return Promise.reject(error);
     // }
-    if (error.response?.status === 401 && !original._retry) {
+    // A 401 from the sign-in or refresh endpoint is the answer to a sign-in
+    // attempt, not an expired session: reloading to /login here wiped the
+    // error before anyone could read it, and hid a real login failure behind
+    // a flash of "invalid password" and a refresh.
+    const isAuthEndpoint = /\/auth\/token\/(refresh\/)?$/.test(original?.url ?? "");
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       original._retry = true;
       try {
         const refresh = localStorage.getItem("refresh");
