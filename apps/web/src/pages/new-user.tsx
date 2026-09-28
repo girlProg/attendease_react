@@ -105,7 +105,7 @@ export function NewUserPage() {
               first_name: firstName,
               last_name: lastName,
               phone_number: phoneNumber,
-              email,
+              email: email.trim().toLowerCase(),
               role: userType.toLowerCase(),
               lga_ids: selectedLgaId ? [selectedLgaId] : [],
               is_active: activated === "True",

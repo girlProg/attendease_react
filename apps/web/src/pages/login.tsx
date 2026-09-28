@@ -26,7 +26,7 @@ export function LoginPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    loginMutation.mutate({ email, password })
+    loginMutation.mutate({ email: email.trim(), password })
   }
 
   return (
@@ -110,7 +110,9 @@ export function LoginPage() {
               <p className="text-sm text-destructive">
                 {loginMutation.error?.message === "Request failed with status code 401"
                   ? "Invalid email or password"
-                  : "Something went wrong. Please try again."}
+                  : loginMutation.error?.message === "Request failed with status code 429"
+                    ? "Too many attempts — wait a minute and try again."
+                    : "Something went wrong. Please try again."}
               </p>
             )}
 
