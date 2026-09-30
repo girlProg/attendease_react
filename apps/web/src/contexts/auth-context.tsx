@@ -13,6 +13,8 @@ interface AuthContextValue {
   isViewer: boolean
   isSpiu: boolean
   canWrite: boolean
+  isCaseManager: boolean
+  canUploadRegisters: boolean
   isLoading: boolean
 }
 
@@ -25,6 +27,8 @@ const AuthContext = createContext<AuthContextValue>({
   isViewer: false,
   isSpiu: false,
   canWrite: false,
+  isCaseManager: false,
+  canUploadRegisters: false,
   isLoading: true,
 })
 
@@ -43,9 +47,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // management screens, so it must not surface general write actions.
   const isSpiu = role === "spiu"
   const canWrite = !isViewer && !isSpiu
+  // Both mirror the server: cases are open to admin, SPIU and any staff
+  // account; registers to any role that can write, plus staff of any role.
+  const isCaseManager = isAdmin || isSpiu || isStaffuser
+  const canUploadRegisters = canWrite || isStaffuser
 
   return (
-    <AuthContext.Provider value={{ profile, role, isAdmin, isSuperuser, isStaffuser, isViewer, isSpiu, canWrite, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        profile,
+        role,
+        isAdmin,
+        isSuperuser,
+        isStaffuser,
+        isViewer,
+        isSpiu,
+        canWrite,
+        isCaseManager,
+        canUploadRegisters,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

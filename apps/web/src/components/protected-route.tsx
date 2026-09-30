@@ -23,9 +23,9 @@ export function AdminRoute() {
 }
 
 export function CaseManagerRoute() {
-  const { isAdmin, isSpiu, isLoading } = useAuth()
+  const { isCaseManager, isLoading } = useAuth()
 
   if (isLoading) return null
-  if (!isAdmin && !isSpiu) return <Navigate to="/" replace />
+  if (!isCaseManager) return <Navigate to="/" replace />
   return <Outlet />
 }

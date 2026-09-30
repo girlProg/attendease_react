@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin, isViewer, isSpiu } = useAuth()
+  const { isAdmin, isViewer, isSpiu, isCaseManager } = useAuth()
   // Feature switches are per deployment (one build serves every state), so a
   // page the state has not enabled must not appear in its sidebar.
   const { data: config } = useQuery({
@@ -78,7 +78,7 @@ export function AppSidebar() {
     // SPIU is a case-management operator: only Case Management + Profile.
     if (isSpiu) return item.caseManager || item.path === "/profile"
     if (item.strictAdmin) return isAdmin
-    if (item.caseManager) return isAdmin
+    if (item.caseManager) return isCaseManager
     return !item.adminOnly || isAdmin || isViewer
   })
   const isFloating = appConfig.sidebar.style === "floating"

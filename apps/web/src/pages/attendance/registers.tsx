@@ -65,7 +65,8 @@ function errorMessage(err: unknown, fallback: string): string {
  * register for the selected school + year + term, and clicking a row pages
  * through those photos as a slideshow.
  *
- * Uploading is staff-only (`is_staff`), matching the server.
+ * Anyone whose role can write may upload, and so may any staff account,
+ * matching the server. The coverage panel stays a staff view.
  */
 export function Registers({
   filters = {},
@@ -74,7 +75,7 @@ export function Registers({
   filters?: Record<string, string>
   selectedIds?: SelectedIds
 }) {
-  const { isStaffuser } = useAuth()
+  const { isStaffuser, canUploadRegisters } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -111,7 +112,7 @@ export function Registers({
   const viewingRegister = rows.find((row) => row.id === viewing) ?? null
 
   const canUpload =
-    isStaffuser &&
+    canUploadRegisters &&
     Boolean(selectedIds.school) &&
     Boolean(filters.year) &&
     Boolean(filters.term)
@@ -179,7 +180,7 @@ export function Registers({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar placeholder="Find register by school name" onSearch={setSearch} />
-        {isStaffuser && (
+        {canUploadRegisters && (
           <>
             <input
               ref={fileInputRef}
@@ -207,7 +208,7 @@ export function Registers({
         )}
       </div>
 
-      {isStaffuser && !canUpload && (
+      {canUploadRegisters && !canUpload && (
         <p className="flex items-start gap-1 text-xs text-muted-foreground sm:justify-end">
           <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
           Select a school, year and term above to upload register photos.
@@ -347,7 +348,7 @@ export function Registers({
       {viewingRegister && (
         <RegisterSlideshow
           register={viewingRegister}
-          canWrite={isStaffuser}
+          canWrite={canUploadRegisters}
           onDeletePage={(pageId) =>
             removePage.mutate({ registerId: viewingRegister.id, pageId })
           }
