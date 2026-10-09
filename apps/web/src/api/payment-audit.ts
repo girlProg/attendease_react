@@ -12,6 +12,10 @@ export type AuditEventType =
   | "payment_marked_paid"
   | "duplicate_payment_blocked"
   | "poll_cap_reached"
+  | "poll_response"
+  | "poll_failed"
+  | "poll_skipped"
+  | "poll_logging_toggled"
   | "refresh_requested"
   | "poll_pending_requested"
   | "disbursement_switch_toggled"
@@ -32,6 +36,10 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   payment_marked_paid: "Payment marked as paid",
   duplicate_payment_blocked: "Duplicate payment blocked",
   poll_cap_reached: "Status polling gave up",
+  poll_response: "Status check: bank answer",
+  poll_failed: "Status check failed",
+  poll_skipped: "Status checks skipped",
+  poll_logging_toggled: "Status-check logging switched",
   refresh_requested: "Status refresh requested",
   poll_pending_requested: "Refresh of all in-flight batches",
   disbursement_switch_toggled: "Disbursements switched",

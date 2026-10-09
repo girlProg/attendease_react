@@ -46,20 +46,24 @@ export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =
 
 export interface DisbursementSettings {
   enabled: boolean
+  // Diagnostic: every bank status check is written to the audit trail.
+  poll_logging: boolean
   updated_at: string | null
   updated_by: string | null
 }
 
-/** Read the global disbursement on/off switch (admins). */
+/** Read the disbursement and status-check logging switches (admins). */
 export const getDisbursementSettings = () =>
   api
     .get<DisbursementSettings>("/disbursement-settings/")
     .then((response) => response.data)
 
-/** Flip the global disbursement switch (superusers only). */
-export const setDisbursementSettings = (enabled: boolean) =>
+/** Flip either switch (superusers only); send just the one that changes. */
+export const setDisbursementSettings = (
+  changes: Partial<Pick<DisbursementSettings, "enabled" | "poll_logging">>,
+) =>
   api
-    .put<DisbursementSettings>("/disbursement-settings/", { enabled })
+    .put<DisbursementSettings>("/disbursement-settings/", changes)
     .then((response) => response.data)
 
 export interface GeneratePaymentsResult {
