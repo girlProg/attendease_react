@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw, History } from "lucide-react"
+import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw, History, Info } from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -56,9 +56,10 @@ export function PaymentsPage() {
     cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.payee ?? "caregiver"
 
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["term-averages", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
+    queryKey: ["term-averages", filters.year, selectedIds.lga, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
       ...(filters.year && { year: filters.year }),
+      ...(selectedIds.lga && { lga: selectedIds.lga }),
       ...(selectedIds.school && { school: selectedIds.school }),
       ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
       ...(filters.term && { term: filters.term }),
@@ -112,6 +113,28 @@ export function PaymentsPage() {
   // Card figures come from the server over the whole filtered scope — not from
   // the loaded page — so they stay right across pagination and every filter.
   const summary = data?.summary
+  const scope = summary?.scope
+  // Why the list is short or empty, in the server's own counts.
+  const scopeNotes: string[] = []
+  if (scope?.source === "no_objection") {
+    scopeNotes.push(
+      "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
+    )
+  }
+  if (scope && scope.hidden_no_account > 0) {
+    scopeNotes.push(
+      `${scope.hidden_no_account.toLocaleString()} eligible student${scope.hidden_no_account === 1 ? " is" : "s are"} not shown: no 10-digit account at a recognised bank.`,
+    )
+  }
+  const emptyMessage = !scope
+    ? undefined
+    : scope.eligible === 0
+      ? scope.source === "no_objection"
+        ? "None of the students in this selection are on the No Objection list."
+        : "No student in this selection meets the attendance threshold for this year and term."
+      : scope.hidden_no_account === scope.eligible
+        ? "Every eligible student in this selection is missing a usable bank account."
+        : undefined
 
   // Clicking a card narrows the (loaded) rows to that outcome for the
   // selected term. Same rules as the server: disbursed = successful; latest
@@ -177,6 +200,17 @@ export function PaymentsPage() {
       {/* Filters */}
       <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
 
+      {scopeNotes.length > 0 && (
+        <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          {scopeNotes.map((note) => (
+            <p key={note} className="flex items-start gap-2">
+              <Info className="mt-0.5 size-4 shrink-0" />
+              {note}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Summary Stats — clickable cards filter the list below */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
@@ -237,6 +271,7 @@ export function PaymentsPage() {
             year={filters.year}
             term={filters.term}
             school={selectedIds.school}
+            lga={selectedIds.lga}
             name={appliedSearch || undefined}
             amount={amountPerStudent}
             defaultPayee={cohortPayee}
@@ -252,6 +287,7 @@ export function PaymentsPage() {
           onClick={() =>
             exportPayments({
               ...(filters.year && { year: filters.year }),
+              ...(selectedIds.lga && { lga: selectedIds.lga }),
               ...(selectedIds.school && { school: selectedIds.school }),
               ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
               ...(filters.term && { term: filters.term }),
@@ -363,7 +399,7 @@ export function PaymentsPage() {
                 {isLoading ? (
                   <TableSkeletonRows columns={9} />
                 ) : displayedRecords.length === 0 ? (
-                  <TableEmptyState colSpan={9} />
+                  <TableEmptyState colSpan={9} message={emptyMessage} />
                 ) : displayedRecords.map((record, index) => (
                   <TableRow key={record.id} className="border-border/40">
                     <TableCell className="text-center text-xs text-muted-foreground">

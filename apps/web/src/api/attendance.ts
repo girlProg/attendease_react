@@ -508,12 +508,22 @@ export interface TermAveragesSummary {
   failed: number;
   awaiting: number;
   total_amount: string;
+  // How the payments list was decided (only with qualifying=true): a No
+  // Objection list or the attendance rule, how many that made eligible, and
+  // how many of those are hidden for want of a usable bank account.
+  scope?: {
+    source: "no_objection" | "qualifying";
+    eligible: number;
+    hidden_no_account: number;
+  };
 }
 
 export const getTermAverages = (params: {
   year?: string;
   school?: number;
   cohort?: number;
+  // LGA by id — the name filter is a substring match.
+  lga?: number;
   term?: string;
   name?: string;
   graduated?: string;

@@ -49,6 +49,7 @@ export function DisburseDialog({
   year,
   term,
   school,
+  lga,
   name,
   amount,
   defaultPayee,
@@ -61,6 +62,7 @@ export function DisburseDialog({
   year?: string
   term?: string
   school?: number
+  lga?: number
   name?: string
   amount: string
   defaultPayee: Payee
@@ -85,12 +87,13 @@ export function DisburseDialog({
     year: year as string,
     term: term as string,
     ...(school ? { school } : {}),
+    ...(lga ? { lga } : {}),
     ...(name ? { name } : {}),
   }
 
   // Dry-run preview: how many payments would be created for the scope.
   const preview = useQuery({
-    queryKey: ["disburse-preview", cohort, year, term, school, name],
+    queryKey: ["disburse-preview", cohort, year, term, school, lga, name],
     queryFn: () => generatePayments(scope),
     enabled: open && ready,
   })
@@ -103,6 +106,7 @@ export function DisburseDialog({
       const list = await getTermAverages({
         ...(year ? { year } : {}),
         ...(school ? { school } : {}),
+        ...(lga ? { lga } : {}),
         ...(cohort ? { cohort } : {}),
         ...(term ? { term } : {}),
         ...(name ? { name } : {}),

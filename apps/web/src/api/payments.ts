@@ -101,6 +101,7 @@ export const generatePayments = ({
   year: string | number
   term: string | number
   school?: number | string
+  lga?: number
   name?: string
   commit?: boolean
 }) =>
