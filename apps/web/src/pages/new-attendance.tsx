@@ -19,15 +19,18 @@ import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { StudentPhoto } from "@/components/student-photo"
 import { InactiveSchoolNotice } from "@/components/inactive-school-notice"
 import { TableSkeletonRows } from "@/components/skeleton"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { useSchoolWeek } from "@/hooks/use-school-week"
 import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, downloadLgaTemplates, submitAttendanceSubmission } from "@/api/attendance"
 import type { Student, AttendanceRecord } from "@/types"
 
+const NEW_ATTENDANCE_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school", "week"]
+
 export function NewAttendancePage() {
   const queryClient = useQueryClient()
-  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, scope, options } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(NEW_ATTENDANCE_FILTERS)
   const { activeDays, labelFor } = useSchoolWeek()
 
   const { page, setPage, pageSize, handleRowsChange } = usePagination([filters])
@@ -45,18 +48,22 @@ export function NewAttendancePage() {
   }, [filters])
 
   const studentFilters = {
-    ...filters,
-    ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+    cohort: scopeParams.cohort,
+    lga: scopeParams.lga,
+    school: scopeParams.school,
     // Only students who still count: graduated, replaced and dropped-out
     // girls no longer have attendance recorded.
     active: "true",
   }
 
-  const { data: studentData, isLoading: isStudentsLoading } = useQuery({
+  const studentQuery = useQuery({
     queryKey: ["students", "new", page, pageSize, studentFilters],
     queryFn: () => getStudents(page, pageSize, studentFilters),
+    enabled: scopeReady,
     placeholderData: keepPreviousData,
   })
+  const studentData = studentQuery.data
+  const isStudentsLoading = studentQuery.isLoading || !scopeReady
 
   const studentIds = useMemo(
     () => studentData?.results.map((student) => student.id) ?? [],
@@ -64,8 +71,8 @@ export function NewAttendancePage() {
   )
 
   const { data: attendanceMap } = useQuery({
-    queryKey: ["attendance-map", "new", studentIds, filters.year, filters.term, filters.week],
-    queryFn: () => getAttendanceByStudentIds(studentIds, filters),
+    queryKey: ["attendance-map", "new", studentIds, scopeParams.year, scopeParams.term, scopeParams.week],
+    queryFn: () => getAttendanceByStudentIds(studentIds, scopeParams),
     enabled: studentIds.length > 0,
   })
 
@@ -120,7 +127,7 @@ export function NewAttendancePage() {
   })
 
   function handleSave() {
-    if (!selectedIds.school || !selectedIds.cohort || !filters.year || !filters.term || !filters.week) return
+    if (!scopeReady || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week) return
     const students = studentData?.results ?? []
 
     const records = students.map((student) => {
@@ -141,33 +148,33 @@ export function NewAttendancePage() {
     })
 
     saveAttendance({
-      school_id: selectedIds.school,
-      cohort_id: selectedIds.cohort,
-      year: Number(filters.year),
-      term: Number(filters.term),
-      week: Number(filters.week),
+      school_id: scopeParams.school,
+      cohort_id: scopeParams.cohort,
+      year: Number(scopeParams.year),
+      term: Number(scopeParams.term),
+      week: Number(scopeParams.week),
       records,
     })
   }
 
   return (
     <div className="space-y-6">
-      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} />
+      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} keys={NEW_ATTENDANCE_FILTERS} />
 
       {/* Action buttons */}
       <div className="flex flex-col justify-end gap-3 sm:flex-row">
         <CsvUploadDialog />
         <Button
           className="h-11 gap-2 rounded-full bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:opacity-50"
-          disabled={!selectedIds.school || !selectedIds.cohort}
+          disabled={!scopeParams.school || !scopeParams.cohort || !scopeParams.term || !scopeParams.week || !scopeParams.year}
           onClick={() => {
-            if (selectedIds.school && selectedIds.cohort) {
+            if (scopeParams.school && scopeParams.cohort && scopeParams.term && scopeParams.week && scopeParams.year) {
               downloadExcelTemplate({
-                school: selectedIds.school,
-                cohort: selectedIds.cohort,
-                term: filters.term,
-                week: filters.week,
-                year: filters.year,
+                school: scopeParams.school,
+                cohort: scopeParams.cohort,
+                term: scopeParams.term,
+                week: scopeParams.week,
+                year: scopeParams.year,
               })
             }
           }}
@@ -177,15 +184,15 @@ export function NewAttendancePage() {
         </Button>
         <Button
           className="h-11 gap-2 rounded-full bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:opacity-50"
-          disabled={!selectedIds.lga || !selectedIds.cohort || !filters.term || !filters.week || !filters.year}
+          disabled={!scopeParams.lga || !scopeParams.cohort || !scopeParams.term || !scopeParams.week || !scopeParams.year}
           onClick={() => {
-            if (selectedIds.lga && selectedIds.cohort && filters.term && filters.week && filters.year) {
+            if (scopeParams.lga && scopeParams.cohort && scopeParams.term && scopeParams.week && scopeParams.year) {
               downloadLgaTemplates({
-                lga: selectedIds.lga,
-                cohort: selectedIds.cohort,
-                term: filters.term,
-                week: filters.week,
-                year: filters.year,
+                lga: scopeParams.lga,
+                cohort: scopeParams.cohort,
+                term: scopeParams.term,
+                week: scopeParams.week,
+                year: scopeParams.year,
               })
             }
           }}
@@ -229,11 +236,11 @@ export function NewAttendancePage() {
                       colSpan={6 + activeDays.length}
                       className="py-8 text-center text-sm text-muted-foreground"
                     >
-                      {selectedIds.school ? (
+                      {scopeParams.school ? (
                         <InactiveSchoolNotice
-                          school={selectedIds.school}
+                          school={scopeParams.school}
                           schoolName={filters.school}
-                          cohort={selectedIds.cohort}
+                          cohort={scopeParams.cohort}
                         />
                       ) : (
                         "No data to display :/"
@@ -323,7 +330,7 @@ export function NewAttendancePage() {
         </PrimaryButton>
         <PrimaryButton
           className="w-auto px-8"
-          disabled={isSaving || !selectedIds.school || !selectedIds.cohort || !filters.year || !filters.term || !filters.week}
+          disabled={isSaving || !scopeReady || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week}
           onClick={handleSave}
         >
           {isSaving ? "Saving…" : "Save Attendance"}

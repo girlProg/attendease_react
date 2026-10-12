@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { FilterSelect } from "@/components/filter-select"
+import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
 import { Chip } from "@/components/chip"
@@ -23,7 +24,7 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { PaginationBar } from "@/components/pagination-bar"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getStudents, exportStudents, bulkChangeClass } from "@/api/attendance"
 
@@ -33,12 +34,15 @@ function classChangeError(error: unknown): string {
   return data?.error ?? data?.detail ?? "Could not update the class. Please try again."
 }
 
+const BENEFICIARY_FILTERS: readonly FilterKey[] = ["cohort", "lga"]
+
 export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isStaffuser } = useAuth()
-  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, scope, options } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(BENEFICIARY_FILTERS)
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
@@ -56,43 +60,41 @@ export function BeneficiariesPage() {
   })
 
   function handleUpdateAll() {
-    if (!selectedIds.cohort || !targetClass || !destinationClass) return
+    if (!scopeReady || !scopeParams.cohort || !targetClass || !destinationClass) return
     updateClass.mutate({
-      cohort: selectedIds.cohort,
+      cohort: scopeParams.cohort,
+      // The LGA shown above narrows the change, as it narrows the list.
+      ...(scopeParams.lga ? { lga: scopeParams.lga } : {}),
       target_class: targetClass,
       destination_class: destinationClass,
     })
   }
 
-  const { data, isError, isLoading } = useQuery({
-    queryKey: ["students", page, pageSize, appliedSearch, filters],
+  const { data, isError, isLoading: isFetchingFirst } = useQuery({
+    queryKey: ["students", page, pageSize, appliedSearch, scopeParams],
     queryFn: () => getStudents(page, pageSize, {
-      ...filters,
-      ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
+      cohort: scopeParams.cohort,
+      lga: scopeParams.lga,
       ...(appliedSearch && { name: appliedSearch }),
     }),
+    enabled: scopeReady,
     placeholderData: keepPreviousData,
   })
+  const isLoading = isFetchingFirst || !scopeReady
 
   const records = data?.results ?? []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
 
   return (
     <div className="space-y-6">
-      {/* Cohort Filter */}
-      <div className="w-64">
-        <FilterSelect
-          placeholder="Cohort"
-          items={options.cohorts}
-          value={filters.cohort ?? undefined}
-          onValueChange={(value) => { if (value !== null) setFilter("cohort", value) }}
-          formatItem={(value) => {
-            const num = parseInt(value, 10)
-            const suffix = num === 1 ? "st" : num === 2 ? "nd" : num === 3 ? "rd" : "th"
-            return `${num}${suffix} Cohort`
-          }}
-        />
-      </div>
+      {/* Filters — cohort and LGA; both narrow the list, the export, school
+          merges and the class change below. */}
+      <AttendanceFilterBar
+        filters={filters}
+        setFilter={setFilter}
+        options={options}
+        keys={BENEFICIARY_FILTERS}
+      />
 
       {/* Search + Download */}
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -100,17 +102,20 @@ export function BeneficiariesPage() {
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          onClick={() => selectedIds.cohort && exportStudents(selectedIds.cohort)}
-          disabled={!selectedIds.cohort}
+          onClick={() =>
+            scopeParams.cohort &&
+            exportStudents({ cohort: scopeParams.cohort, lga: scopeParams.lga })
+          }
+          disabled={!scopeReady || !scopeParams.cohort}
         >
           <Download className="size-4" />
           Download
         </Button>
         {isStaffuser && (
           <SchoolMergeDialog
-            lga={selectedIds.lga}
+            lga={scopeParams.lga}
             lgaName={filters.lga}
-            cohort={selectedIds.cohort}
+            cohort={scopeParams.cohort}
             cohortName={filters.cohort}
           />
         )}
@@ -135,7 +140,8 @@ export function BeneficiariesPage() {
           <Button
             className="h-11 rounded-full bg-brand px-6 text-white hover:bg-brand/90 disabled:opacity-50"
             disabled={
-              !selectedIds.cohort ||
+              !scopeReady ||
+              !scopeParams.cohort ||
               !targetClass ||
               !destinationClass ||
               updateClass.isPending
@@ -146,8 +152,8 @@ export function BeneficiariesPage() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          {selectedIds.cohort
-            ? 'Matches the "Class" column — the class each student was enrolled into, which does not move when they are promoted.'
+          {scopeParams.cohort
+            ? `Matches the "Class" column — the class each student was enrolled into, which does not move when they are promoted. Applies to ${filters.lga ? `${filters.lga} only` : "the whole cohort"}.`
             : "Select a cohort first."}
         </p>
         {updateClass.isSuccess && (

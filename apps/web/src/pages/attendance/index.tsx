@@ -6,7 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { SearchBar } from "@/components/search-bar"
 import { useAuth } from "@/contexts/auth-context"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 
 import { Overview } from "./overview"
@@ -23,31 +23,28 @@ const tabs = [
   "Statistics",
 ] as const
 
+// Which filters each tab shows — and therefore applies. Kept as data so the
+// bar is rendered once, in one place (the tabs must sit immediately after it
+// in every tab, or the strip jumps vertically as you switch between them), and
+// so a tab's requests are built from exactly the filters it shows.
+const TAB_FILTERS: Record<(typeof tabs)[number], readonly FilterKey[]> = {
+  Overview: ["cohort", "term", "year", "lga", "school"],
+  "Upload History": ["cohort", "term", "year", "lga", "school", "week"],
+  Registers: ["cohort", "term", "year", "lga", "school"],
+  "Real-Time": ["cohort", "term", "year", "lga", "school", "week"],
+  Statistics: ["cohort", "lga"],
+}
+
 export function AttendancePage() {
-  const [activeTab, setActiveTab] = useState<string>("Overview")
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Overview")
   const [appliedSearch, setAppliedSearch] = useState("")
   const navigate = useNavigate()
 
   useLogVisit("Attendance", "Visited Attendance")
   const { canWrite } = useAuth()
-  const { filters, setFilter, options, selectedIds } = useAttendanceFilters()
-
-  // Filter attendance by the exact school ID, not its (icontains) name.
-  const realTimeFilters = {
-    ...filters,
-    ...(selectedIds.school ? { schoolId: String(selectedIds.school) } : {}),
-    ...(selectedIds.cohort ? { cohortId: String(selectedIds.cohort) } : {}),
-  }
-
-  // Which filters each tab needs. Kept as data so the filter bar is rendered
-  // once, in one place — the tabs must sit immediately after it in every tab,
-  // or the strip jumps vertically as you switch between them.
-  const excludedFilters: Record<string, string[]> =
-    {
-      Statistics: ["term", "year", "school", "week"],
-      Overview: ["week"],
-      Registers: ["week"],
-    }
+  const { filters, setFilter, options, scope } = useAttendanceFilters()
+  const tabFilters = TAB_FILTERS[activeTab]
+  const { params: scopeParams, ready: scopeReady } = scope(tabFilters)
 
   const newAttendanceButton = canWrite && (
     <Button
@@ -67,7 +64,7 @@ export function AttendancePage() {
         filters={filters}
         setFilter={setFilter}
         options={options}
-        exclude={excludedFilters[activeTab] ?? []}
+        keys={tabFilters}
       />
 
       {/* Tabs — directly after the filters in every tab so the strip never
@@ -106,11 +103,22 @@ export function AttendancePage() {
       )}
 
       {/* Tab content */}
-      {activeTab === "Overview" && <Overview filters={filters} selectedIds={selectedIds} />}
-      {activeTab === "Real-Time" && <RealTime search={appliedSearch} filters={realTimeFilters} />}
-      {activeTab === "Upload History" && <UploadHistory filters={filters} selectedIds={selectedIds} />}
-      {activeTab === "Registers" && <Registers filters={filters} selectedIds={selectedIds} />}
-      {activeTab === "Statistics" && <Statistics filters={filters} selectedIds={selectedIds} />}
+      {activeTab === "Overview" && <Overview scope={scopeParams} ready={scopeReady} />}
+      {activeTab === "Real-Time" && (
+        <RealTime
+          search={appliedSearch}
+          scope={scopeParams}
+          ready={scopeReady}
+          schoolName={filters.school}
+        />
+      )}
+      {activeTab === "Upload History" && <UploadHistory scope={scopeParams} ready={scopeReady} />}
+      {activeTab === "Registers" && (
+        <Registers scope={scopeParams} ready={scopeReady} schoolName={filters.school} />
+      )}
+      {activeTab === "Statistics" && (
+        <Statistics scope={scopeParams} ready={scopeReady} cohortName={filters.cohort} />
+      )}
     </div>
   )
 }

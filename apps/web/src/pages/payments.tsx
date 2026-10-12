@@ -26,7 +26,7 @@ import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { StatCard } from "@/components/stat-card"
 import { PaginationBar } from "@/components/pagination-bar"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { pollPendingDisbursements } from "@/api/payments"
@@ -36,11 +36,14 @@ import { formatNaira, getTermLabel } from "@/lib/formatters"
 import { paymentStatusBadge } from "@/lib/payment-status"
 import type { Payee } from "@/types"
 
+const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
+
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
   const navigate = useNavigate()
   const { isAdmin, isStaffuser } = useAuth()
-  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, scope, options } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(PAYMENT_FILTERS)
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const [amountPerStudent, setAmountPerStudent] = useState("")
@@ -53,22 +56,19 @@ export function PaymentsPage() {
   // Default payee for the selected cohort (Niger=student, Kaduna=caregiver); the
   // Disburse dialog lets you override it per disbursement.
   const cohortPayee: Payee =
-    cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.payee ?? "caregiver"
+    cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.payee ?? "caregiver"
 
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["term-averages", filters.year, selectedIds.lga, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
+    queryKey: ["term-averages", scopeParams, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
-      ...(filters.year && { year: filters.year }),
-      ...(selectedIds.lga && { lga: selectedIds.lga }),
-      ...(selectedIds.school && { school: selectedIds.school }),
-      ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
-      ...(filters.term && { term: filters.term }),
+      ...scopeParams,
       ...(appliedSearch && { name: appliedSearch }),
       graduated: "false",  // graduated students are not paid
       qualifying: "true",  // only students who qualify in the filtered scope
       page,
       page_size: pageSize,
     }),
+    enabled: scopeReady,
     placeholderData: keepPreviousData,
     // Live-refresh while any disbursement is still in-flight so the status
     // badges advance on their own (SUBMITTED -> AWAITING APPROVAL -> SUCCESS)
@@ -113,26 +113,26 @@ export function PaymentsPage() {
   // Card figures come from the server over the whole filtered scope — not from
   // the loaded page — so they stay right across pagination and every filter.
   const summary = data?.summary
-  const scope = summary?.scope
+  const listScope = summary?.scope
   // Why the list is short or empty, in the server's own counts.
   const scopeNotes: string[] = []
-  if (scope?.source === "no_objection") {
+  if (listScope?.source === "no_objection") {
     scopeNotes.push(
       "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
     )
   }
-  if (scope && scope.hidden_no_account > 0) {
+  if (listScope && listScope.hidden_no_account > 0) {
     scopeNotes.push(
-      `${scope.hidden_no_account.toLocaleString()} eligible student${scope.hidden_no_account === 1 ? " is" : "s are"} not shown: no 10-digit account at a recognised bank.`,
+      `${listScope.hidden_no_account.toLocaleString()} eligible student${listScope.hidden_no_account === 1 ? " is" : "s are"} not shown: no 10-digit account at a recognised bank.`,
     )
   }
-  const emptyMessage = !scope
+  const emptyMessage = !listScope
     ? undefined
-    : scope.eligible === 0
-      ? scope.source === "no_objection"
+    : listScope.eligible === 0
+      ? listScope.source === "no_objection"
         ? "None of the students in this selection are on the No Objection list."
         : "No student in this selection meets the attendance threshold for this year and term."
-      : scope.hidden_no_account === scope.eligible
+      : listScope.hidden_no_account === listScope.eligible
         ? "Every eligible student in this selection is missing a usable bank account."
         : undefined
 
@@ -198,7 +198,7 @@ export function PaymentsPage() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
+      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} keys={PAYMENT_FILTERS} />
 
       {scopeNotes.length > 0 && (
         <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
@@ -267,11 +267,12 @@ export function PaymentsPage() {
             className="h-11 w-64 rounded-full border-sidebar/30 !bg-white pr-32 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
           />
           <DisburseDialog
-            cohort={selectedIds.cohort}
-            year={filters.year}
-            term={filters.term}
-            school={selectedIds.school}
-            lga={selectedIds.lga}
+            cohort={scopeParams.cohort}
+            year={scopeParams.year}
+            term={scopeParams.term}
+            school={scopeParams.school}
+            lga={scopeParams.lga}
+            scopeReady={scopeReady}
             name={appliedSearch || undefined}
             amount={amountPerStudent}
             defaultPayee={cohortPayee}
@@ -286,11 +287,7 @@ export function PaymentsPage() {
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
           onClick={() =>
             exportPayments({
-              ...(filters.year && { year: filters.year }),
-              ...(selectedIds.lga && { lga: selectedIds.lga }),
-              ...(selectedIds.school && { school: selectedIds.school }),
-              ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
-              ...(filters.term && { term: filters.term }),
+              ...scopeParams,
               ...(appliedSearch && { name: appliedSearch }),
               graduated: "false",
               qualifying: "true",
@@ -317,10 +314,10 @@ export function PaymentsPage() {
         </Button>
         {isStaffuser && (
           <NoObjectionDialog
-            cohort={selectedIds.cohort}
-            cohortName={cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name}
-            year={filters.year}
-            term={filters.term}
+            cohort={scopeParams.cohort}
+            cohortName={cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name}
+            year={scopeParams.year}
+            term={scopeParams.term}
           />
         )}
         {isAdmin && (
@@ -332,15 +329,15 @@ export function PaymentsPage() {
               // Carry the page's scope across so the trail opens on the same
               // term/cohort/school the user is looking at.
               const params = new URLSearchParams()
-              if (filters.year) params.set("year", filters.year)
-              if (filters.term) params.set("term", filters.term)
-              if (selectedIds.cohort) {
-                params.set("cohort", String(selectedIds.cohort))
-                const cohortName = cohorts?.find((cohort) => cohort.id === selectedIds.cohort)?.name
+              if (scopeParams.year) params.set("year", scopeParams.year)
+              if (scopeParams.term) params.set("term", scopeParams.term)
+              if (scopeParams.cohort) {
+                params.set("cohort", String(scopeParams.cohort))
+                const cohortName = cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name
                 if (cohortName) params.set("cohort_name", cohortName)
               }
-              if (selectedIds.school) {
-                params.set("school", String(selectedIds.school))
+              if (scopeParams.school) {
+                params.set("school", String(scopeParams.school))
                 if (filters.school) params.set("school_name", filters.school)
               }
               navigate({ pathname: "/payments/audit", search: params.toString() })

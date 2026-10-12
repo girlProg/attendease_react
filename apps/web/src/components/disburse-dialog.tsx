@@ -50,6 +50,7 @@ export function DisburseDialog({
   term,
   school,
   lga,
+  scopeReady = true,
   name,
   amount,
   defaultPayee,
@@ -63,6 +64,9 @@ export function DisburseDialog({
   term?: string
   school?: number
   lga?: number
+  // False while the page's chosen cohort/LGA/school are still resolving to
+  // IDs — disbursing then would target a wider scope than the one on screen.
+  scopeReady?: boolean
   name?: string
   amount: string
   defaultPayee: Payee
@@ -80,7 +84,7 @@ export function DisburseDialog({
 
   const amountNum = parseFloat(amount)
   const amountValid = Number.isFinite(amountNum) && amountNum > 0
-  const ready = termSelected && amountValid && Boolean(cohort && year && term)
+  const ready = scopeReady && termSelected && amountValid && Boolean(cohort && year && term)
 
   const scope = {
     cohort: cohort as number,

@@ -39,6 +39,7 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { RegisterSlideshow } from "@/components/register-slideshow"
 import { usePagination } from "@/hooks/use-pagination"
 import { useAuth } from "@/contexts/auth-context"
+import type { FilterScope } from "@/hooks/use-attendance-filters"
 import {
   deleteRegisterPage,
   getRegisterCoverage,
@@ -48,7 +49,6 @@ import {
 } from "@/api/attendance"
 import { formatDateTime } from "@/lib/formatters"
 
-type SelectedIds = { school?: number; lga?: number; cohort?: number }
 
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -69,30 +69,37 @@ function errorMessage(err: unknown, fallback: string): string {
  * matching the server. The coverage panel stays a staff view.
  */
 export function Registers({
-  filters = {},
-  selectedIds = {},
+  scope,
+  ready,
+  schoolName,
 }: {
-  filters?: Record<string, string>
-  selectedIds?: SelectedIds
+  scope: FilterScope
+  ready: boolean
+  schoolName?: string
 }) {
   const { isStaffuser, canUploadRegisters } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState("")
+  // The tab's filters exactly as the bar shows them, plus the search box.
   const registerFilters = {
-    school: selectedIds.school,
-    year: filters.year,
-    term: filters.term,
+    cohort: scope.cohort,
+    lga: scope.lga,
+    school: scope.school,
+    year: scope.year,
+    term: scope.term,
     search,
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([registerFilters])
 
-  const { data, isError, isLoading } = useQuery({
+  const { data, isError, isLoading: isFetchingFirst } = useQuery({
     queryKey: ["school-registers", page, pageSize, registerFilters],
     queryFn: () => getSchoolRegisters(page, pageSize, registerFilters),
+    enabled: ready,
     placeholderData: keepPreviousData,
   })
+  const isLoading = isFetchingFirst || !ready
 
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)
@@ -113,9 +120,9 @@ export function Registers({
 
   const canUpload =
     canUploadRegisters &&
-    Boolean(selectedIds.school) &&
-    Boolean(filters.year) &&
-    Boolean(filters.term)
+    Boolean(scope.school) &&
+    Boolean(scope.year) &&
+    Boolean(scope.term)
 
   // Does the school this upload is bound for already have a register this term?
   // Matched by ID — names repeat across cohorts.
@@ -123,8 +130,8 @@ export function Registers({
     ? (rows.find(
         (row) =>
           row.school_id === pending.schoolId &&
-          row.year === Number(filters.year) &&
-          row.term === Number(filters.term),
+          row.year === Number(scope.year) &&
+          row.term === Number(scope.term),
       ) ?? null)
     : null
 
@@ -132,8 +139,8 @@ export function Registers({
     mutationFn: ({ files, schoolId }: { files: File[]; schoolId: number }) =>
       uploadSchoolRegister(
         schoolId,
-        filters.year as string,
-        filters.term as string,
+        scope.year as string,
+        scope.term as string,
         files,
       ),
     onSuccess: () => {
@@ -195,8 +202,8 @@ export function Registers({
               disabled={!canUpload || upload.isPending}
               onClick={() =>
                 pickFilesFor(
-                  selectedIds.school as number,
-                  filters.school ?? `#${selectedIds.school}`,
+                  scope.school as number,
+                  schoolName ?? `#${scope.school}`,
                 )
               }
               className="h-11 w-full shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
@@ -220,8 +227,8 @@ export function Registers({
 
       {isStaffuser && (
         <CoveragePanel
-          filters={filters}
-          selectedIds={selectedIds}
+          scope={scope}
+          scopeReady={ready}
           onUploadFor={pickFilesFor}
         />
       )}
@@ -244,7 +251,7 @@ export function Registers({
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Year / Term</dt>
               <dd className="font-medium text-foreground">
-                {filters.year} — Term {filters.term}
+                {scope.year} — Term {scope.term}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -365,36 +372,30 @@ export function Registers({
  * the table.
  */
 function CoveragePanel({
-  filters,
-  selectedIds,
+  scope,
+  scopeReady,
   onUploadFor,
 }: {
-  filters: Record<string, string>
-  selectedIds: SelectedIds
+  scope: FilterScope
+  scopeReady: boolean
   onUploadFor: (schoolId: number, schoolName: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const ready = Boolean(filters.year) && Boolean(filters.term)
+  const termChosen = Boolean(scope.year) && Boolean(scope.term)
 
   const { data, isError } = useQuery({
-    queryKey: [
-      "register-coverage",
-      filters.year,
-      filters.term,
-      selectedIds.lga,
-      selectedIds.cohort,
-    ],
+    queryKey: ["register-coverage", scope.year, scope.term, scope.lga, scope.cohort],
     queryFn: () =>
       getRegisterCoverage({
-        year: filters.year as string,
-        term: filters.term as string,
-        lga: selectedIds.lga ? String(selectedIds.lga) : undefined,
-        cohort: selectedIds.cohort ? String(selectedIds.cohort) : undefined,
+        year: scope.year as string,
+        term: scope.term as string,
+        lga: scope.lga ? String(scope.lga) : undefined,
+        cohort: scope.cohort ? String(scope.cohort) : undefined,
       }),
-    enabled: ready,
+    enabled: termChosen && scopeReady,
   })
 
-  if (!ready) {
+  if (!termChosen) {
     return (
       <div className="rounded-2xl border border-border/40 bg-white px-5 py-4 text-xs text-muted-foreground">
         Select a year and term above to see which schools are missing a register.

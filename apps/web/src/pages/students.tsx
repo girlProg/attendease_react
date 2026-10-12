@@ -24,30 +24,31 @@ import { SearchBar } from "@/components/search-bar"
 import { PaginationBar } from "@/components/pagination-bar"
 import { UploadRecordsDialog } from "@/components/upload-records-dialog"
 import { UploadBatchesDialog } from "@/components/upload-batches-dialog"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages } from "@/api/attendance"
 import { formatNaira } from "@/lib/formatters"
 
+const STUDENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
+
 export function StudentsPage() {
   useLogVisit("Students", "Visited Students")
   const { canWrite, isAdmin } = useAuth()
-  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, scope, options } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(STUDENT_FILTERS)
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
 
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["students-summary", filters.year, selectedIds.school, selectedIds.cohort, filters.term, appliedSearch, page, pageSize],
+    queryKey: ["students-summary", scopeParams, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
-      ...(filters.year && { year: filters.year }),
-      ...(selectedIds.school && { school: selectedIds.school }),
-      ...(selectedIds.cohort && { cohort: selectedIds.cohort }),
-      ...(filters.term && { term: filters.term }),
+      ...scopeParams,
       ...(appliedSearch && { name: appliedSearch }),
       page,
       page_size: pageSize,
     }),
+    enabled: scopeReady,
     placeholderData: keepPreviousData,
   })
 
@@ -57,7 +58,7 @@ export function StudentsPage() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} exclude={["week"]} />
+      <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} keys={STUDENT_FILTERS} />
 
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">

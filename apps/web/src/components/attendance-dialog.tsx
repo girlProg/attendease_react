@@ -21,6 +21,8 @@ export interface AttendanceDialogCell {
   week: number
   totalEnrolled?: number
   cohort?: string
+  // The cohort shown on the page, by ID — attendance is filtered by it.
+  cohortId?: number
 }
 
 export function AttendanceDialog({
@@ -31,11 +33,11 @@ export function AttendanceDialog({
   onClose: () => void
 }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["attendance-popup", cell.schoolId, cell.cohort, cell.year, cell.term, cell.week],
+    queryKey: ["attendance-popup", cell.schoolId, cell.cohortId, cell.year, cell.term, cell.week],
     queryFn: () =>
       getAttendance(1, 1000, "", {
-        schoolId: String(cell.schoolId),
-        ...(cell.cohort ? { cohort: cell.cohort } : {}),
+        school: cell.schoolId,
+        ...(cell.cohortId ? { cohort: cell.cohortId } : {}),
         year: String(cell.year),
         term: String(cell.term),
         week: String(cell.week),

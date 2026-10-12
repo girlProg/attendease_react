@@ -5,7 +5,7 @@ import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
 import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { formatNaira } from "@/lib/formatters"
@@ -33,23 +33,32 @@ const getDashboardSummary = (params: Record<string, string>) =>
 const getLgaSummary = (params: Record<string, string>) =>
   api.get<LgaSummary[]>("/dashboard/lga-summary/", { params }).then((response) => response.data)
 
+const DASHBOARD_FILTERS: readonly FilterKey[] = ["cohort", "year"]
+
 export function DashboardPage() {
   useLogVisit("Dashboard", "Visited Dashboard")
-  const { filters, setFilter, selectedIds, options } = useAttendanceFilters()
+  const { filters, setFilter, scope, options } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(DASHBOARD_FILTERS)
 
   const queryParams: Record<string, string> = {}
-  if (selectedIds.cohort) queryParams.cohort = String(selectedIds.cohort)
-  if (filters.year) queryParams.year = filters.year
+  if (scopeParams.cohort) queryParams.cohort = String(scopeParams.cohort)
+  if (scopeParams.year) queryParams.year = scopeParams.year
 
-  const { data: summary, isError: isSummaryError, isLoading: isSummaryLoading } = useQuery({
+  const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", queryParams],
     queryFn: () => getDashboardSummary(queryParams),
+    enabled: scopeReady,
   })
+  const { data: summary, isError: isSummaryError } = summaryQuery
+  const isSummaryLoading = summaryQuery.isLoading || !scopeReady
 
-  const { data: lgaData, isLoading: isLgaLoading, isError: isLgaError } = useQuery({
+  const lgaQuery = useQuery({
     queryKey: ["dashboard-lga-summary", queryParams],
     queryFn: () => getLgaSummary(queryParams),
+    enabled: scopeReady,
   })
+  const { data: lgaData, isError: isLgaError } = lgaQuery
+  const isLgaLoading = lgaQuery.isLoading || !scopeReady
 
   const lgaList = lgaData ?? []
 
@@ -86,7 +95,7 @@ export function DashboardPage() {
         filters={filters}
         setFilter={setFilter}
         options={options}
-        exclude={["term", "lga", "school", "week"]}
+        keys={DASHBOARD_FILTERS}
       />
 
       {(isSummaryError || isLgaError) && <QueryError />}

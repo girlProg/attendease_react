@@ -1,9 +1,13 @@
 import { FilterSelect } from "@/components/filter-select"
 import { ordinal, formatAcademicYear } from "@/lib/formatters"
-import type { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import type { FilterKey, useAttendanceFilters } from "@/hooks/use-attendance-filters"
 
 type FilterBarProps = Pick<ReturnType<typeof useAttendanceFilters>, "filters" | "setFilter" | "options"> & {
-  exclude?: string[]
+  /**
+   * The filters this page shows — the same list it passes to `scope()` for its
+   * requests, so a shown filter always applies and a hidden one never does.
+   */
+  keys: readonly FilterKey[]
 }
 
 const allFilters = [
@@ -24,8 +28,8 @@ const optionsMap: Record<string, keyof FilterBarProps["options"]> = {
   week: "weeks",
 }
 
-export function AttendanceFilterBar({ filters, setFilter, options, exclude = [] }: FilterBarProps) {
-  const visible = allFilters.filter((filter) => !exclude.includes(filter.key))
+export function AttendanceFilterBar({ filters, setFilter, options, keys }: FilterBarProps) {
+  const visible = allFilters.filter((filter) => keys.includes(filter.key))
   const cols = visible.length <= 2 ? "grid-cols-2" : visible.length <= 4 ? "grid-cols-2 md:grid-cols-4" : visible.length <= 5 ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-6"
 
   return (

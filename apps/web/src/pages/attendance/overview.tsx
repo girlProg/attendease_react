@@ -25,33 +25,27 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { StatCard } from "@/components/stat-card"
 import { useAuth } from "@/contexts/auth-context"
 import { getAttendanceOverview } from "@/api/attendance"
+import type { FilterScope } from "@/hooks/use-attendance-filters"
 import { formatNaira, roundUpPercent } from "@/lib/formatters"
 
 function percentOf(part: number, whole: number): number {
   return whole > 0 ? roundUpPercent((part / whole) * 100) : 0
 }
 
-export function Overview({
-  filters,
-  selectedIds,
-}: {
-  filters: Record<string, string>
-  selectedIds: { cohort?: number; lga?: number; school?: number }
-}) {
-  const params = {
-    ...(selectedIds.cohort ? { cohort: selectedIds.cohort } : {}),
-    ...(selectedIds.lga ? { lga: selectedIds.lga } : {}),
-    ...(selectedIds.school ? { school: selectedIds.school } : {}),
-    ...(filters.year ? { year: filters.year } : {}),
-    ...(filters.term ? { term: filters.term } : {}),
-  }
+export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean }) {
+  // The tab's filters exactly as the bar shows them (see useAttendanceFilters).
+  const params = scope
 
   const { isStaffuser } = useAuth()
 
-  const { data, isError, isLoading } = useQuery({
+  const { data, isError, isLoading: isFetchingFirst } = useQuery({
     queryKey: ["attendance-overview", params],
     queryFn: () => getAttendanceOverview(params),
+    enabled: ready,
   })
+  // Not fetched yet because a chosen filter is still resolving: show the
+  // skeleton, never zeros that a moment later turn into the real figures.
+  const isLoading = isFetchingFirst || !ready
 
   const beneficiaries = data?.total_beneficiaries ?? 0
   const active = data?.active_students ?? 0

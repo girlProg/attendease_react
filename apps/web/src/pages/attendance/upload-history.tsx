@@ -20,8 +20,7 @@ import {
   downloadAttendanceFile,
   getAttendanceUploadHistory,
 } from "@/api/attendance"
-
-type SelectedIds = { cohort?: number; lga?: number; school?: number }
+import type { FilterScope } from "@/hooks/use-attendance-filters"
 
 function formatWhen(iso: string) {
   const date = new Date(iso)
@@ -34,29 +33,17 @@ function formatWhen(iso: string) {
   })
 }
 
-export function UploadHistory({
-  filters = {},
-  selectedIds = {},
-}: {
-  filters?: Record<string, string>
-  selectedIds?: SelectedIds
-}) {
-  const historyFilters = {
-    cohort: selectedIds.cohort,
-    lga: selectedIds.lga,
-    school: selectedIds.school,
-    year: filters.year,
-    term: filters.term,
-    week: filters.week,
-  }
-  const { page, setPage, pageSize, handleRowsChange } = usePagination([historyFilters])
+export function UploadHistory({ scope, ready }: { scope: FilterScope; ready: boolean }) {
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([scope])
   const [preview, setPreview] = useState<{ id: number; title: string } | null>(null)
 
-  const { data, isError, isLoading } = useQuery({
-    queryKey: ["attendance-upload-history", page, pageSize, historyFilters],
-    queryFn: () => getAttendanceUploadHistory(page, pageSize, historyFilters),
+  const { data, isError, isLoading: isFetchingFirst } = useQuery({
+    queryKey: ["attendance-upload-history", page, pageSize, scope],
+    queryFn: () => getAttendanceUploadHistory(page, pageSize, scope),
+    enabled: ready,
     placeholderData: keepPreviousData,
   })
+  const isLoading = isFetchingFirst || !ready
 
   const rows = data?.results ?? []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0

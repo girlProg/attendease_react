@@ -1,5 +1,6 @@
 import { api } from "../lib/api";
 import { downloadBlobFromResponse } from "../lib/blob-download";
+import type { FilterScope } from "@/hooks/use-attendance-filters";
 import type {
   PaginatedResponse,
   Cohort,
@@ -19,18 +20,17 @@ export const getAttendance = (
   page = 1,
   pageSize = 100,
   search = "",
-  filters: Record<string, string> = {},
+  scope: FilterScope = {},
 ) => {
-  const filterParams: Record<string, string> = {};
+  // Cohort, LGA and school by ID — the name filters are substring matches.
+  const filterParams: Record<string, string | number> = {};
   if (search) filterParams.student__name = search;
-  if (filters.cohort) filterParams.student__cohort__name = filters.cohort;
-  if (filters.term) filterParams.term = filters.term;
-  if (filters.year) filterParams.year = filters.year;
-  if (filters.lga) filterParams.student__school__lga__name = filters.lga;
-  // Prefer the exact school ID; name (icontains) can match same-prefixed schools.
-  if (filters.schoolId) filterParams.student__school = filters.schoolId;
-  else if (filters.school) filterParams.student__school__name = filters.school;
-  if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
+  if (scope.cohort) filterParams.cohort = scope.cohort;
+  if (scope.lga) filterParams.lga = scope.lga;
+  if (scope.school) filterParams.student__school = scope.school;
+  if (scope.year) filterParams.year = scope.year;
+  if (scope.term) filterParams.term = scope.term;
+  if (scope.week) filterParams.week = scope.week;
 
   return api
     .get<PaginatedResponse<AttendanceRecord>>("/attendance/", {
@@ -242,19 +242,18 @@ export const getStudentPayments = (studentId: number) =>
 export const getStudents = (
   page = 1,
   pageSize = 100,
-  filters: Record<string, string> = {},
+  query: FilterScope & { name?: string; graduated?: string; active?: string } = {},
 ) => {
-  const filterParams: Record<string, string> = {};
-  if (filters.cohort) filterParams.cohort__name = filters.cohort;
-  if (filters.lga) filterParams.school__lga__name = filters.lga;
-  // Prefer the exact school ID so the list matches the CSV template exactly.
-  // Falling back to name (icontains) would leak in same-prefixed schools.
-  if (filters.schoolId) filterParams.school = filters.schoolId;
-  else if (filters.school) filterParams.school__name = filters.school;
-  if (filters.name) filterParams.name = filters.name;
+  // Cohort, LGA and school by ID, so the list matches the CSV template exactly
+  // — the name filters are substring matches and leak similar names.
+  const filterParams: Record<string, string | number> = {};
+  if (query.cohort) filterParams.cohort = query.cohort;
+  if (query.lga) filterParams.lga = query.lga;
+  if (query.school) filterParams.school = query.school;
+  if (query.name) filterParams.name = query.name;
   // "true"/"false" are both truthy strings — pass either through.
-  if (filters.graduated) filterParams.graduated = filters.graduated;
-  if (filters.active) filterParams.active = filters.active;
+  if (query.graduated) filterParams.graduated = query.graduated;
+  if (query.active) filterParams.active = query.active;
 
   return api
     .get<PaginatedResponse<Student>>("/student/", {
@@ -265,14 +264,14 @@ export const getStudents = (
 
 export const getAttendanceByStudentIds = async (
   studentIds: number[],
-  filters: Record<string, string> = {},
+  scope: FilterScope = {},
 ) => {
   if (studentIds.length === 0) return new Map<number, AttendanceRecord>();
 
   const filterParams: Record<string, string> = {};
-  if (filters.year) filterParams.year = filters.year;
-  if (filters.term) filterParams.term = filters.term;
-  if (filters.week && filters.week !== "All Weeks") filterParams.week = filters.week;
+  if (scope.year) filterParams.year = scope.year;
+  if (scope.term) filterParams.term = scope.term;
+  if (scope.week) filterParams.week = scope.week;
 
   const { data } = await api.get<PaginatedResponse<AttendanceRecord>>("/attendance/", {
     params: {
@@ -419,10 +418,10 @@ export const mergeSchools = (input: { into_id: number; from_ids: number[]; force
 export const getAttendanceYears = () =>
   api.get<string[]>("/attendance/years/").then((response) => response.data);
 
-export const exportStudents = (cohortId: number) => {
+export const exportStudents = (scope: { cohort: number; lga?: number }) => {
   return api
     .get("/student/export/", {
-      params: { cohort: cohortId },
+      params: { cohort: scope.cohort, ...(scope.lga ? { lga: scope.lga } : {}) },
       responseType: "blob",
     })
     .then((response) => downloadBlobFromResponse(response, "students_export.xlsx"));
@@ -592,6 +591,8 @@ export const getAttendanceOverview = (params: {
 
 export const bulkChangeClass = (payload: {
   cohort: number;
+  // Optional: change this LGA only (the page's LGA filter, when chosen).
+  lga?: number;
   target_class: string;
   destination_class: string;
 }) =>
@@ -628,6 +629,8 @@ export const getSchoolRegisters = (
   page = 1,
   pageSize = 50,
   filters: {
+    cohort?: number;
+    lga?: number;
     school?: number;
     year?: string;
     term?: string;
@@ -635,6 +638,8 @@ export const getSchoolRegisters = (
   } = {},
 ) => {
   const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (filters.cohort) params.cohort = filters.cohort;
+  if (filters.lga) params.lga = filters.lga;
   if (filters.school) params.school = filters.school;
   if (filters.year) params.year = filters.year;
   if (filters.term) params.term = filters.term;

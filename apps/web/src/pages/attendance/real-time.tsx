@@ -4,13 +4,25 @@ import { InactiveSchoolNotice } from "@/components/inactive-school-notice"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { getAttendance } from "@/api/attendance"
 import { usePagination } from "@/hooks/use-pagination"
+import type { FilterScope } from "@/hooks/use-attendance-filters"
 
-export function RealTime({ search = "", filters = {} }: { search?: string; filters?: Record<string, string> }) {
-  const { page, setPage, pageSize, handleRowsChange } = usePagination([search, filters])
+export function RealTime({
+  search = "",
+  scope,
+  ready,
+  schoolName,
+}: {
+  search?: string
+  scope: FilterScope
+  ready: boolean
+  schoolName?: string
+}) {
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([search, scope])
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["attendance", page, pageSize, search, filters],
-    queryFn: () => getAttendance(page, pageSize, search, filters),
+    queryKey: ["attendance", page, pageSize, search, scope],
+    queryFn: () => getAttendance(page, pageSize, search, scope),
+    enabled: ready,
     placeholderData: keepPreviousData,
   })
 
@@ -28,12 +40,12 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
         onRowsChange={handleRowsChange}
       />
 
-      {data && data.results.length === 0 && filters.schoolId && (
+      {data && data.results.length === 0 && scope.school && (
         <div className="rounded-2xl border border-border/40 bg-white px-5 py-4 text-center">
           <InactiveSchoolNotice
-            school={Number(filters.schoolId)}
-            schoolName={filters.school}
-            cohort={filters.cohortId ? Number(filters.cohortId) : undefined}
+            school={scope.school}
+            schoolName={schoolName}
+            cohort={scope.cohort}
           />
         </div>
       )}
@@ -42,7 +54,7 @@ export function RealTime({ search = "", filters = {} }: { search?: string; filte
         records={data?.results ?? []}
         page={page}
         pageSize={pageSize}
-        isLoading={isLoading && !data}
+        isLoading={(isLoading && !data) || !ready}
       />
     </div>
   )

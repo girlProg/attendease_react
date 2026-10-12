@@ -15,6 +15,7 @@ import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
 import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
 import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
+import type { FilterScope } from "@/hooks/use-attendance-filters"
 
 function normalizeCoverage(coverage: number): number {
   return coverage <= 1 ? coverage * 100 : coverage
@@ -207,11 +208,14 @@ function SchoolSummaryRow({
 }
 
 export function Statistics({
-  filters,
-  selectedIds = {},
+  scope,
+  ready,
+  cohortName,
 }: {
-  filters: Record<string, string>
-  selectedIds?: { lga?: number; cohort?: number }
+  scope: FilterScope
+  ready: boolean
+  // The capture summary endpoint matches the cohort by its (exact) name.
+  cohortName?: string
 }) {
   const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
 
@@ -219,11 +223,14 @@ export function Statistics({
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig, staleTime: Infinity })
   const submittedOnly = config?.features?.statistics_submitted_only ?? false
 
-  const { data: schools, isLoading } = useQuery({
-    queryKey: ["schools-for-stats", selectedIds.lga, selectedIds.cohort],
+  const { data: schools, isLoading: isFetchingFirst } = useQuery({
+    queryKey: ["schools-for-stats", scope.lga, scope.cohort],
     // By ID — the name filters are icontains and leak other LGAs' schools.
-    queryFn: () => getSchools(selectedIds.lga, selectedIds.cohort),
+    queryFn: () => getSchools(scope.lga, scope.cohort),
+    enabled: ready,
   })
+  const isLoading = isFetchingFirst || !ready
+  const summaryCohort = scope.cohort ? cohortName : undefined
 
   return (
     <div className="space-y-4">
@@ -266,8 +273,8 @@ export function Statistics({
                   key={school.id}
                   schoolId={school.id}
                   index={index}
-                  cohort={filters.cohort}
-                  onCellClick={setSelectedCell}
+                  cohort={summaryCohort}
+                  onCellClick={(cell) => setSelectedCell({ ...cell, cohortId: scope.cohort })}
                 />
               ))}
             </TableBody>

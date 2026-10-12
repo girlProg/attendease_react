@@ -20,7 +20,7 @@ import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { formatDate } from "@/lib/formatters"
 import { OutlookBadge } from "@/components/outlook-badge"
-import { useAttendanceFilters } from "@/hooks/use-attendance-filters"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
 import {
@@ -61,26 +61,26 @@ function CategoryBadge({ row }: { row: CaseRow }) {
   )
 }
 
+const CASE_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
+
 export function CaseManagementPage() {
   useLogVisit("Case Management", "Visited Case Management")
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { filters, setFilter, options, selectedIds } = useAttendanceFilters()
+  const { filters, setFilter, options, scope } = useAttendanceFilters()
+  const { params: scopeParams, ready: scopeReady } = scope(CASE_FILTERS)
   const [view, setView] = useState<CaseStatus>("flagged")
 
   const caseFilters = {
-    cohort: selectedIds.cohort,
-    lga: selectedIds.lga,
-    school: selectedIds.school,
-    term: filters.term,
-    year: filters.year,
+    ...scopeParams,
     status: view,
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([view, filters])
 
-  const { data, isError, isLoading } = useQuery({
-    queryKey: ["cases", view, page, pageSize, filters, selectedIds],
+  const { data, isError, isLoading: isFetchingFirst } = useQuery({
+    queryKey: ["cases", view, page, pageSize, scopeParams],
     queryFn: () => getCases(page, pageSize, caseFilters),
+    enabled: scopeReady,
     placeholderData: keepPreviousData,
   })
 
@@ -99,6 +99,7 @@ export function CaseManagementPage() {
     onSuccess: invalidate,
   })
 
+  const isLoading = isFetchingFirst || !scopeReady
   const rows = data?.results ?? []
   const dataGaps = view === "flagged" ? (data?.data_gaps ?? []) : []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
@@ -111,7 +112,7 @@ export function CaseManagementPage() {
         filters={filters}
         setFilter={setFilter}
         options={options}
-        exclude={["week"]}
+        keys={CASE_FILTERS}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
