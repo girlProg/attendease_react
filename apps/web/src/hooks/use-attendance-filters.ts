@@ -11,8 +11,13 @@ const WEEKS = [
 export function useAttendanceFilters() {
   const [filters, setFilters] = useState<Record<string, string>>(() => {
     try {
-      const saved = sessionStorage.getItem("attendance-filters")
-      return saved ? JSON.parse(saved) : {}
+      const raw = sessionStorage.getItem("attendance-filters")
+      const saved: Record<string, string> = raw ? JSON.parse(raw) : {}
+      // A school is chosen within an LGA. One saved without its LGA is
+      // invisible (the school box is disabled until an LGA is picked) yet would
+      // still filter every page to that one school — drop it.
+      if (!saved.lga) delete saved.school
+      return saved
     } catch {
       return {}
     }
@@ -63,7 +68,12 @@ export function useAttendanceFilters() {
     filters.week
   )
 
-  const selectedSchoolId = schoolList?.find((school) => school.name === filters.school)?.id
+  // Only a school picked inside a resolved LGA counts, so a filter the user
+  // can't see or change never narrows the data.
+  const selectedSchoolId =
+    filters.lga && selectedLgaId !== undefined
+      ? schoolList?.find((school) => school.name === filters.school)?.id
+      : undefined
 
   return {
     filters,
