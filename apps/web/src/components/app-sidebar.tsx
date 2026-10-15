@@ -7,6 +7,7 @@ import {
   CreditCard,
   Home,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   User,
   Users,
@@ -39,6 +40,8 @@ interface NavItem {
   adminOnly?: boolean
   strictAdmin?: boolean
   caseManager?: boolean
+  // Django is_staff accounts only, whatever their role.
+  staffOnly?: boolean
   feature?: FeatureKey
 }
 
@@ -60,11 +63,12 @@ const navItems: NavItem[] = [
   { label: "Profile", path: "/profile", icon: User },
   { label: "Manage Users", path: "/manage-users", icon: Settings, adminOnly: true },
   { label: "Logs", path: "/logs", icon: CalendarDays, adminOnly: true },
+  { label: "Settings", path: "/settings", icon: SlidersHorizontal, staffOnly: true },
 ]
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin, isViewer, isSpiu, isCaseManager } = useAuth()
+  const { isAdmin, isViewer, isSpiu, isCaseManager, isStaffuser } = useAuth()
   // Feature switches are per deployment (one build serves every state), so a
   // page the state has not enabled must not appear in its sidebar.
   const { data: config } = useQuery({
@@ -75,6 +79,7 @@ export function AppSidebar() {
 
   const visibleItems = navItems.filter((item) => {
     if (item.feature && !config?.features?.[item.feature]) return false
+    if (item.staffOnly) return isStaffuser
     // SPIU is a case-management operator: only Case Management + Profile.
     if (isSpiu) return item.caseManager || item.path === "/profile"
     if (item.strictAdmin) return isAdmin

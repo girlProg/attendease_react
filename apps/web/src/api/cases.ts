@@ -148,7 +148,10 @@ export interface AttendanceHistoryEntry {
   term: number;
   week: number;
   label: string;
-  percent: number;
+  // Counted against the days the school was open (public holidays taken out);
+  // null for a week the school was closed, which does not count.
+  percent: number | null;
+  closed?: boolean;
   reason: string;
   remark: string;
   recorded_at: string;

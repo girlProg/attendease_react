@@ -29,3 +29,12 @@ export function CaseManagerRoute() {
   if (!isCaseManager) return <Navigate to="/" replace />
   return <Outlet />
 }
+
+/** Staff accounts only (Django is_staff), whatever their role. */
+export function StaffRoute() {
+  const { isStaffuser, isLoading } = useAuth()
+
+  if (isLoading) return null
+  if (!isStaffuser) return <Navigate to="/" replace />
+  return <Outlet />
+}

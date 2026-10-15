@@ -53,9 +53,14 @@ export function LabeledSelect({
   return (
     <div className="space-y-1">
       <label className="text-xs text-muted-foreground">{label}</label>
-      <Select value={value || undefined} onValueChange={onValueChange}>
+      {/* Always controlled: null is "nothing chosen", so the Select never
+          switches from uncontrolled to controlled when a value arrives. */}
+      <Select value={value || null} onValueChange={onValueChange}>
         <SelectTrigger className="h-11 w-full rounded-lg border-border/60 !bg-white px-3">
-          <SelectValue placeholder={placeholder} />
+          {/* Show the chosen item as the list does — its label, not its code. */}
+          <SelectValue placeholder={placeholder}>
+            {value && formatItem ? formatItem(value) : undefined}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {items.map((item) => (

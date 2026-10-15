@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom"
 
 import { Layout } from "@/components/layout"
-import { ProtectedRoute, AdminRoute, CaseManagerRoute } from "@/components/protected-route"
+import { ProtectedRoute, AdminRoute, CaseManagerRoute, StaffRoute } from "@/components/protected-route"
 import { AttendancePage } from "@/pages/attendance"
 import { CaseManagementPage } from "@/pages/cases"
 import { CaseDetailPage } from "@/pages/case-detail"
@@ -20,6 +20,7 @@ import { EditUserPage } from "@/pages/edit-user"
 import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
 import { AskPage } from "@/pages/ask"
+import { SettingsPage } from "@/pages/settings"
 
 export function App() {
   return (
@@ -35,6 +36,9 @@ export function App() {
         <Route path="students" element={<StudentsPage />} />
         <Route path="analytics" element={<ReportsPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route element={<StaffRoute />}>
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
         <Route element={<CaseManagerRoute />}>
           <Route path="cases" element={<CaseManagementPage />} />
           <Route path="cases/:id" element={<CaseDetailPage />} />

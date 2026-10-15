@@ -423,13 +423,22 @@ export function CaseDetailPage() {
                     <TableRow key={index} className="border-border/40">
                       <TableCell className="text-xs text-muted-foreground">{a.year ?? "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{a.label}</TableCell>
-                      <TableCell
-                        className={`text-center text-xs font-semibold ${
-                          a.percent < 30 ? "text-red-600" : a.percent < 70 ? "text-amber-600" : "text-emerald-600"
-                        }`}
-                      >
-                        {a.percent}%
-                      </TableCell>
+                      {a.percent === null ? (
+                        <TableCell
+                          className="text-center text-xs font-semibold text-muted-foreground"
+                          title="The school was closed this week — it does not count"
+                        >
+                          Closed
+                        </TableCell>
+                      ) : (
+                        <TableCell
+                          className={`text-center text-xs font-semibold ${
+                            a.percent < 30 ? "text-red-600" : a.percent < 70 ? "text-amber-600" : "text-emerald-600"
+                          }`}
+                        >
+                          {a.percent}%
+                        </TableCell>
+                      )}
                       <TableCell className="text-xs text-muted-foreground">{a.reason || "—"}</TableCell>
                     </TableRow>
                   ))

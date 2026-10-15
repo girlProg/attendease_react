@@ -13,6 +13,7 @@ const titles: Record<string, string> = {
   "/profile": "Profile",
   "/manage-users": "Manage Users",
   "/logs": "Logs",
+  "/settings": "Term Settings",
 }
 
 export function usePageTitle() {
