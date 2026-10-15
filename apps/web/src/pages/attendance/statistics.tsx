@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Table,
   TableBody,
@@ -10,11 +10,12 @@ import {
 } from "@workspace/ui/components/table"
 import { Skeleton, TableSkeletonRows } from "@/components/skeleton"
 import { getSchools, getAttendanceSummary } from "@/api/attendance"
-import { getConfig } from "@/api/config"
+import { api } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 import { AttendanceDialog } from "@/components/attendance-dialog"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
 import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
-import type { AttendanceSummary, AttendanceSummaryTerm } from "@/types"
+import type { AttendanceSummary, AttendanceSummaryTerm, UserProfile } from "@/types"
 import type { FilterScope } from "@/hooks/use-attendance-filters"
 
 function normalizeCoverage(coverage: number): number {
@@ -133,6 +134,53 @@ function SchoolHeatmap({
   )
 }
 
+const COUNTING_OPTIONS = [
+  { uploadedOnly: false, label: "All attendance" },
+  { uploadedOnly: true, label: "Uploaded registers only" },
+]
+
+/** Staff only: this user's own choice of what the tab counts; saved on their account. */
+function CountingToggle({ uploadedOnly }: { uploadedOnly: boolean }) {
+  const queryClient = useQueryClient()
+  const save = useMutation({
+    mutationFn: (value: boolean) =>
+      api
+        .put<UserProfile>("/auth/profile/", { statistics_uploaded_only: value })
+        .then((response) => response.data),
+    onSuccess: (profile) => {
+      queryClient.setQueryData(["profile"], profile)
+      queryClient.invalidateQueries({ queryKey: ["attendance-summary"] })
+    },
+  })
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground">Count</span>
+      <div className="inline-flex rounded-lg border border-border/60 p-0.5">
+        {COUNTING_OPTIONS.map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            disabled={save.isPending}
+            aria-pressed={uploadedOnly === option.uploadedOnly}
+            onClick={() => uploadedOnly !== option.uploadedOnly && save.mutate(option.uploadedOnly)}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              uploadedOnly === option.uploadedOnly
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <span className="text-[11px] text-muted-foreground">
+        {save.isError ? "Couldn't save — try again." : "Only changes your own view."}
+      </span>
+    </div>
+  )
+}
+
 function Legend() {
   return (
     <div className="flex items-center gap-2">
@@ -155,15 +203,18 @@ function SchoolSummaryRow({
   schoolId,
   index,
   cohort,
+  uploadedOnly,
   onCellClick,
 }: {
   schoolId: number
   index: number
   cohort?: string
+  // The server applies the viewer's own choice; keyed here so a switch refetches.
+  uploadedOnly: boolean
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["attendance-summary", schoolId, cohort],
+    queryKey: ["attendance-summary", schoolId, cohort, uploadedOnly],
     queryFn: () => getAttendanceSummary(schoolId, cohort),
   })
 
@@ -219,9 +270,10 @@ export function Statistics({
 }) {
   const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
 
-  // Whether this deployment counts only uploaded registers here (Niger does).
-  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig, staleTime: Infinity })
-  const submittedOnly = config?.features?.statistics_submitted_only ?? false
+  // Staff choose for themselves whether seeded attendance counts here; for
+  // everyone else every row counts (the server ignores the choice for them).
+  const { profile, isStaffuser } = useAuth()
+  const uploadedOnly = isStaffuser && (profile?.statistics_uploaded_only ?? false)
 
   const { data: schools, isLoading: isFetchingFirst } = useQuery({
     queryKey: ["schools-for-stats", scope.lga, scope.cohort],
@@ -238,10 +290,11 @@ export function Statistics({
         <h2 className="text-base font-bold text-foreground">Weekly capture rate</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Every cell is one week. Shade shows the share of enrolled students whose attendance
-          {submittedOnly
+          {uploadedOnly
             ? " arrived in an uploaded register that week — seeded attendance is not counted."
             : " was taken that week."}
         </p>
+        {isStaffuser && <CountingToggle uploadedOnly={uploadedOnly} />}
         <div className="mt-3">
           <Legend />
         </div>
@@ -274,6 +327,7 @@ export function Statistics({
                   schoolId={school.id}
                   index={index}
                   cohort={summaryCohort}
+                  uploadedOnly={uploadedOnly}
                   onCellClick={(cell) => setSelectedCell({ ...cell, cohortId: scope.cohort })}
                 />
               ))}

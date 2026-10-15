@@ -204,8 +204,6 @@ export interface DeploymentConfig {
   // only some states have is advertised here rather than guessed from the URL.
   features?: {
     monthly_reports: boolean;
-    // The Statistics tab counts only attendance from uploaded registers.
-    statistics_submitted_only?: boolean;
   };
   // The enrolment form's choice lists, so dropdowns never hardcode them.
   choices?: {
@@ -254,6 +252,8 @@ export interface UserProfile {
   is_superuser?: boolean;
   is_staff?: boolean;
   lgas?: string[];
+  // Staff only: the Statistics tab counts only uploaded registers for them.
+  statistics_uploaded_only?: boolean;
 }
 
 export interface AppUser {
