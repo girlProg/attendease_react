@@ -1,7 +1,7 @@
 import { formatShortDate, useWeekDates } from "@/hooks/use-week-dates"
 import { StudentLink } from "@/components/student-link"
-import { useState, useEffect, useMemo } from "react"
-import { FileArchive, FileSpreadsheet } from "lucide-react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import { Camera, FileArchive, FileSpreadsheet } from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
@@ -20,11 +20,22 @@ import { PrimaryButton } from "@/components/primary-button"
 import { CsvUploadDialog } from "@/components/csv-upload-dialog"
 import { StudentPhoto } from "@/components/student-photo"
 import { InactiveSchoolNotice } from "@/components/inactive-school-notice"
+import { RegisterPhotoTips, RegisterRequestDialog, SmallPhotoWarning } from "@/components/register-photo"
+import { REGISTER_ACCEPT, useSmallPhotos } from "@/hooks/use-small-photos"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { useSchoolWeek } from "@/hooks/use-school-week"
-import { getStudents, getAttendanceByStudentIds, downloadExcelTemplate, downloadLgaTemplates, submitAttendanceSubmission } from "@/api/attendance"
+import {
+  getStudents,
+  getAttendanceByStudentIds,
+  downloadExcelTemplate,
+  downloadLgaTemplates,
+  getSchoolRegisters,
+  submitAttendanceSubmission,
+  uploadSchoolRegister,
+} from "@/api/attendance"
+import { getTermLabel } from "@/lib/formatters"
 import type { Student, AttendanceRecord } from "@/types"
 
 const NEW_ATTENDANCE_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school", "week"]
@@ -43,11 +54,38 @@ export function NewAttendancePage() {
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
 
+  // The school register this week was recorded in: optional, sent after the
+  // attendance saves. One register per school per term — an upload replaces
+  // the photos already saved for that term.
+  const [registerFiles, setRegisterFiles] = useState<File[]>([])
+  const registerInputRef = useRef<HTMLInputElement>(null)
+  const smallRegisterPhotos = useSmallPhotos(registerFiles)
+  // The week just saved without a register, while we ask for one.
+  const [registerRequest, setRegisterRequest] = useState<{
+    schoolId: number
+    year: number
+    term: number
+    week: number
+  } | null>(null)
+  const [registerError, setRegisterError] = useState<string | null>(null)
+
   useEffect(() => {
     setDayOverrides({})
     setReasonOverrides({})
     setRemarkOverrides({})
+    setRegisterFiles([])
   }, [filters])
+
+  const registerFilters = {
+    school: scopeParams.school,
+    year: scopeParams.year,
+    term: scopeParams.term,
+  }
+  const { data: currentRegister } = useQuery({
+    queryKey: ["school-registers", "new-attendance", registerFilters],
+    queryFn: () => getSchoolRegisters(1, 1, registerFilters).then((data) => data.results[0] ?? null),
+    enabled: scopeReady && Boolean(scopeParams.school && scopeParams.year && scopeParams.term),
+  })
 
   const studentFilters = {
     cohort: scopeParams.cohort,
@@ -108,9 +146,42 @@ export function NewAttendancePage() {
     return Boolean(attendance[dayField as keyof AttendanceRecord])
   }
 
+  const { mutate: uploadRegister, isPending: isUploadingRegister } = useMutation({
+    mutationFn: ({ week, files }: { week: { schoolId: number; year: number; term: number }; files: File[] }) =>
+      uploadSchoolRegister(week.schoolId, week.year, week.term, files),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["school-registers"] })
+      queryClient.invalidateQueries({ queryKey: ["register-coverage"] })
+      setRegisterFiles([])
+      setRegisterRequest(null)
+      setRegisterError(null)
+      setSuccessMessage("Attendance and register photo saved.")
+      setTimeout(() => setSuccessMessage(""), 5000)
+    },
+    onError: (error) => {
+      const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data
+      const first = data ? Object.values(data)[0] : null
+      const reason = Array.isArray(first) ? first[0] : typeof first === "string" ? first : null
+      const message =
+        typeof reason === "string" ? reason : "The register photo didn't upload. Please try again."
+      if (registerRequest) {
+        setRegisterError(message)
+      } else {
+        setErrorMessage(`Attendance saved, but ${message.charAt(0).toLowerCase()}${message.slice(1)}`)
+      }
+    },
+  })
+
   const { mutate: saveAttendance, isPending: isSaving } = useMutation({
     mutationFn: submitAttendanceSubmission,
-    onSuccess: () => {
+    onSuccess: (_data, saved) => {
+      const week = { schoolId: saved.school_id, year: saved.year, term: saved.term, week: saved.week }
+      if (registerFiles.length > 0) {
+        uploadRegister({ week, files: registerFiles })
+      } else {
+        setRegisterError(null)
+        setRegisterRequest(week)
+      }
       queryClient.invalidateQueries({ queryKey: ["attendance"] })
       queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
       queryClient.invalidateQueries({ queryKey: ["attendance-summary"] })
@@ -350,6 +421,65 @@ export function NewAttendancePage() {
         </p>
       )}
 
+      {scopeParams.school && scopeParams.year && scopeParams.term && (
+        <section className="space-y-3 rounded-2xl border border-border/40 bg-white p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-foreground">
+                Register photo <span className="font-normal text-muted-foreground">(optional)</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                A photo of the school register this week was recorded in, with this week filled
+                in. It replaces the register photos saved for the{" "}
+                {getTermLabel(scopeParams.term).toLowerCase()}.
+                {currentRegister
+                  ? ` Current: ${currentRegister.page_count} photo(s), uploaded ${formatShortDate(new Date(currentRegister.updated_at))}.`
+                  : " None uploaded for this term yet."}
+              </p>
+            </div>
+            <input
+              ref={registerInputRef}
+              type="file"
+              multiple
+              accept={REGISTER_ACCEPT}
+              className="hidden"
+              onChange={(event) => {
+                setRegisterFiles(Array.from(event.target.files ?? []))
+                event.target.value = ""
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 shrink-0 gap-2 rounded-full"
+              onClick={() => registerInputRef.current?.click()}
+            >
+              <Camera className="size-4" />
+              {registerFiles.length === 0
+                ? "Choose photo(s)"
+                : registerFiles.length === 1
+                  ? registerFiles[0].name
+                  : `${registerFiles.length} photos chosen`}
+            </Button>
+          </div>
+          <RegisterPhotoTips />
+          <SmallPhotoWarning files={smallRegisterPhotos} />
+        </section>
+      )}
+
+      <RegisterRequestDialog
+        key={registerRequest ? `${registerRequest.schoolId}-${registerRequest.year}-${registerRequest.term}-${registerRequest.week}` : "none"}
+        open={registerRequest !== null}
+        week={registerRequest ? `week ${registerRequest.week}, ${getTermLabel(registerRequest.term)}` : ""}
+        isUploading={isUploadingRegister}
+        error={registerError}
+        onUpload={(files) => registerRequest && uploadRegister({ week: registerRequest, files })}
+        onSkip={() => {
+          setRegisterRequest(null)
+          setRegisterError(null)
+        }}
+      />
+
       <div className="flex justify-center gap-3 pt-4">
         <PrimaryButton
           className="w-auto bg-destructive px-8 hover:bg-destructive/90"
@@ -362,7 +492,7 @@ export function NewAttendancePage() {
           disabled={isSaving || !scopeReady || weekNotBegun || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week}
           onClick={handleSave}
         >
-          {isSaving ? "Saving…" : "Save Attendance"}
+          {isSaving ? "Saving…" : isUploadingRegister ? "Uploading register…" : "Save Attendance"}
         </PrimaryButton>
       </div>
     </div>

@@ -48,6 +48,11 @@ import {
   type SchoolRegisterRow,
 } from "@/api/attendance"
 import { formatDateTime } from "@/lib/formatters"
+import { RegisterPhotoTips, SmallPhotoWarning } from "@/components/register-photo"
+import { REGISTER_ACCEPT, useSmallPhotos } from "@/hooks/use-small-photos"
+
+// Stable empty list, so the photo-size check doesn't re-run every render.
+const NO_FILES: File[] = []
 
 
 
@@ -61,9 +66,9 @@ function errorMessage(err: unknown, fallback: string): string {
 
 /**
  * Termly school attendance registers. A register is the physical book,
- * photographed page by page — so an upload is a *set* of photos added to the
- * register for the selected school + year + term, and clicking a row pages
- * through those photos as a slideshow.
+ * photographed page by page — so an upload is a *set* of photos that replaces
+ * the register for the selected school + year + term (the same book, a week
+ * further on), and clicking a row pages through those photos as a slideshow.
  *
  * Anyone whose role can write may upload, and so may any staff account,
  * matching the server. The coverage panel stays a staff view.
@@ -112,6 +117,7 @@ export function Registers({
     schoolId: number
     schoolName: string
   } | null>(null)
+  const smallPendingPhotos = useSmallPhotos(pending?.files ?? NO_FILES)
 
   const rows = data?.results ?? []
   const totalPages = data ? Math.ceil(data.count / pageSize) : 0
@@ -193,7 +199,7 @@ export function Registers({
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
+              accept={REGISTER_ACCEPT}
               className="hidden"
               onChange={handleFiles}
             />
@@ -264,10 +270,14 @@ export function Registers({
           {existing && (
             <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
               This register already has {existing.page_count} photo(s). These{" "}
-              {pending?.files.length ?? 0} will be <strong>added</strong> to it —
-              nothing existing is replaced.
+              {pending?.files.length ?? 0} will <strong>replace</strong> them — the old
+              photos are deleted.
             </p>
           )}
+          <div className="mt-3 space-y-2">
+            <RegisterPhotoTips />
+            <SmallPhotoWarning files={smallPendingPhotos} />
+          </div>
           <ul className="mt-3 max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs text-muted-foreground">
             {pending?.files.map((file) => (
               <li key={file.name} className="break-all">

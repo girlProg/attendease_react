@@ -621,8 +621,9 @@ export interface SchoolRegisterRow {
 }
 
 // Termly school attendance registers, held as a set of scanned photos. One
-// register per (school, year, term); uploading ADDS pages rather than replacing
-// them. The server enforces LGA scoping and file type/size limits.
+// register per (school, year, term); an upload REPLACES its photos (the same
+// book, a week further on). The server enforces LGA scoping and file type/size
+// limits.
 export const getSchoolRegisters = (
   page = 1,
   pageSize = 50,
