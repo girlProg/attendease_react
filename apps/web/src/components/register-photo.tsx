@@ -39,14 +39,15 @@ export function RegisterPhotoTips() {
  */
 export function RegisterRequestDialog({
   open,
-  week,
+  subject,
   isUploading,
   error,
   onUpload,
   onSkip,
 }: {
   open: boolean
-  week: string
+  // What the register is for, e.g. "week 3, 1st Term".
+  subject: string
   isUploading: boolean
   error: string | null
   onUpload: (files: File[]) => void
@@ -59,7 +60,7 @@ export function RegisterRequestDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && !isUploading && onSkip()}>
       <DialogPopup className="max-h-[90vh] max-w-xl overflow-y-auto">
-        <DialogTitle>Upload the register for {week}</DialogTitle>
+        <DialogTitle>Upload the register for {subject}</DialogTitle>
         <DialogDescription>
           Attendance is saved. Please also upload a photo of the school register you recorded it
           in, with this week filled in. It replaces the register photos already saved for this

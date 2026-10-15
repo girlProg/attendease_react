@@ -338,6 +338,16 @@ export interface AttendanceUploadReport {
     week: number;
   } | null;
   error_type?: string;
+  // Committed uploads: each school-term recorded, to ask for its register.
+  register_requests?: RegisterRequest[];
+}
+
+export interface RegisterRequest {
+  school: number;
+  school_name: string;
+  year: number;
+  term: number;
+  weeks: number[];
 }
 
 // commit=false is the "Check file" preview: validates every row and reports

@@ -470,7 +470,7 @@ export function NewAttendancePage() {
       <RegisterRequestDialog
         key={registerRequest ? `${registerRequest.schoolId}-${registerRequest.year}-${registerRequest.term}-${registerRequest.week}` : "none"}
         open={registerRequest !== null}
-        week={registerRequest ? `week ${registerRequest.week}, ${getTermLabel(registerRequest.term)}` : ""}
+        subject={registerRequest ? `week ${registerRequest.week}, ${getTermLabel(registerRequest.term)}` : ""}
         isUploading={isUploadingRegister}
         error={registerError}
         onUpload={(files) => registerRequest && uploadRegister({ week: registerRequest, files })}

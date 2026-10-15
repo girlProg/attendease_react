@@ -11,11 +11,15 @@ import {
   DialogClose,
 } from "@workspace/ui/components/dialog"
 import { PrimaryButton } from "@/components/primary-button"
+import { RegisterRequestDialog } from "@/components/register-photo"
 import {
   uploadAttendanceCsv,
+  uploadSchoolRegister,
   downloadExcelTemplate,
   type AttendanceUploadReport,
+  type RegisterRequest,
 } from "@/api/attendance"
+import { getTermLabel } from "@/lib/formatters"
 
 // Pull the backend's typed error (wrong_format etc.) out of an axios failure.
 function uploadErrorMessage(error: unknown): string {
@@ -32,12 +36,45 @@ export function CsvUploadDialog() {
   const [file, setFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
+  // Registers still to ask for after a committed upload (one per school-term
+  // it recorded), asked one at a time; optional, like on New Attendance.
+  const [registerQueue, setRegisterQueue] = useState<RegisterRequest[]>([])
+  const [registerTotal, setRegisterTotal] = useState(0)
+  const [registerError, setRegisterError] = useState<string | null>(null)
+  const currentRegister = registerQueue[0] ?? null
+
+  function nextRegister() {
+    setRegisterError(null)
+    setRegisterQueue((queue) => queue.slice(1))
+  }
+
+  const registerUpload = useMutation({
+    mutationFn: ({ request, files }: { request: RegisterRequest; files: File[] }) =>
+      uploadSchoolRegister(request.school, request.year, request.term, files),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["school-registers"] })
+      queryClient.invalidateQueries({ queryKey: ["register-coverage"] })
+      nextRegister()
+    },
+    onError: (error) => {
+      const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data
+      const first = data ? Object.values(data)[0] : null
+      const reason = Array.isArray(first) ? first[0] : typeof first === "string" ? first : null
+      setRegisterError(
+        typeof reason === "string" ? reason : "The register photo didn't upload. Please try again.",
+      )
+    },
+  })
 
   const mutation = useMutation({
     mutationFn: ({ file, commit }: { file: File; commit: boolean }) =>
       uploadAttendanceCsv(file, commit),
     onSuccess: (report) => {
       if (!report.committed) return // a "Check file" preview writes nothing
+      const requests = report.register_requests ?? []
+      setRegisterQueue(requests)
+      setRegisterTotal(requests.length)
+      setRegisterError(null)
       queryClient.invalidateQueries({ queryKey: ["attendance-map"] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
       queryClient.invalidateQueries({ queryKey: ["attendance"] })
@@ -57,6 +94,7 @@ export function CsvUploadDialog() {
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
     if (!nextOpen) {
+      setRegisterQueue([])
       setFile(null)
       mutation.reset()
     }
@@ -236,7 +274,23 @@ export function CsvUploadDialog() {
             </PrimaryButton>
           </div>
         </div>
+
+        <RegisterRequestDialog
+          key={currentRegister ? `${currentRegister.school}-${currentRegister.year}-${currentRegister.term}` : "none"}
+          open={currentRegister !== null}
+          subject={currentRegister ? registerSubject(currentRegister, registerTotal - registerQueue.length + 1, registerTotal) : ""}
+          isUploading={registerUpload.isPending}
+          error={registerError}
+          onUpload={(files) => currentRegister && registerUpload.mutate({ request: currentRegister, files })}
+          onSkip={nextRegister}
+        />
       </DialogPopup>
     </Dialog>
   )
+}
+
+function registerSubject(request: RegisterRequest, position: number, total: number) {
+  const weeks = request.weeks.length === 1 ? `week ${request.weeks[0]}` : `weeks ${request.weeks.join(", ")}`
+  const step = total > 1 ? ` (${position} of ${total})` : ""
+  return `${request.school_name}, ${weeks}, ${getTermLabel(request.term)}${step}`
 }
