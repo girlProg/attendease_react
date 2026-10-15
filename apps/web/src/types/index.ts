@@ -172,7 +172,14 @@ export interface AttendanceRecord {
   friday?: boolean;
   reason: string | null;
   remark: string | null;
+  // The register as captured: days present out of the week's school days.
   attendance_average: number;
+  // How the week counts towards qualification (see the Settings page): over
+  // the days the school was open, null when the school was closed that week.
+  counted_average?: string | null;
+  // School days the week lost to public holidays (or before the term began).
+  holiday_days?: number;
+  school_closed?: boolean;
 }
 
 export type DayName =

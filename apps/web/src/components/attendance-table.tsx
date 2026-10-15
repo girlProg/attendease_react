@@ -1,3 +1,5 @@
+import { StudentLink } from "@/components/student-link"
+import { CountedWeek, WeekLabel } from "@/components/week-cell"
 import {
   Table,
   TableBody,
@@ -54,16 +56,18 @@ export function AttendanceTable({ records, page, pageSize, isLoading = false }: 
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <StudentPhoto url={record.student?.photo_url} name={record.student?.name} studentId={record.student?.id} hasPhoto={record.student?.has_photo} />
-                    <span className="text-xs font-semibold text-foreground">{record.student?.name}</span>
+                    <StudentLink studentId={record.student?.id} className="text-xs font-semibold text-foreground">{record.student?.name}</StudentLink>
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.student?.id}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.student?.current_class}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.term} Term</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{record.year}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">Week {record.week}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  <WeekLabel year={record.year} term={record.term} week={record.week} />
+                </TableCell>
                 <TableCell className="text-center">
-                  <PercentageBadge value={record.attendance_average} />
+                  <CountedWeek record={record} render={(percent) => <PercentageBadge value={percent} />} />
                 </TableCell>
                 <TableCell className="text-center text-xs text-muted-foreground">{record.reason ?? "—"}</TableCell>
                 <TableCell className="text-center text-xs text-muted-foreground">{record.remark ?? "—"}</TableCell>

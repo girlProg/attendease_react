@@ -1,3 +1,5 @@
+import { WeekLabel } from "@/components/week-cell"
+import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Phone } from "lucide-react"
@@ -135,7 +137,7 @@ export function CaseDetailPage() {
           <StudentPhoto url={student.photo_url} name={student.name} studentId={student.id} hasPhoto={student.has_photo} />
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-base font-semibold text-sidebar">{student.name}</span>
+              <StudentLink studentId={student.id} className="text-base font-semibold text-sidebar">{student.name}</StudentLink>
               {student.dropped_out && <Chip tone="red">Dropped out</Chip>}
               {hasOpenCase && <Chip tone="amber">Open case</Chip>}
               {student.graduated && <Chip tone="gray">Graduated</Chip>}
@@ -422,7 +424,9 @@ export function CaseDetailPage() {
                   attendance.map((a, index) => (
                     <TableRow key={index} className="border-border/40">
                       <TableCell className="text-xs text-muted-foreground">{a.year ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{a.label}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        T{a.term} <WeekLabel year={a.year} term={a.term} week={a.week} />
+                      </TableCell>
                       {a.percent === null ? (
                         <TableCell
                           className="text-center text-xs font-semibold text-muted-foreground"

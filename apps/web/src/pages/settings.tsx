@@ -22,19 +22,21 @@ import { usePagination } from "@/hooks/use-pagination"
 import { getAttendanceYears, getLGAs, getSchools } from "@/api/attendance"
 import {
   CLOSURE_REASONS,
-  addTermHoliday,
+  addPublicHoliday,
   closeSchools,
   getClosuresByWeek,
+  getPublicHolidays,
   getSchoolClosures,
   getTermCalendar,
-  removeTermHoliday,
+  removePublicHoliday,
   reopenSchools,
-  setTermWeeks,
+  setTermCalendar,
   type ClosureReason,
   type ClosureSelection,
   type TermCalendar,
 } from "@/api/term-calendar"
 import { formatAcademicYear, getTermLabel, ordinal } from "@/lib/formatters"
+import { formatShortDate } from "@/hooks/use-week-dates"
 
 const TERMS = ["1", "2", "3"]
 const ALL_SCHOOLS = "All schools in the LGA"
@@ -71,10 +73,12 @@ function Section({
 }
 
 /**
- * The school calendar for a term: how many weeks it ran, public holidays, and
- * the weeks schools were closed (e.g. for insecurity). Staff only. Every entry
- * changes who qualifies: holidays shorten their week, and a closed week does
- * not count for that school, so it can't pull a student's average down.
+ * The school calendar: when each term started and how many weeks it ran (school
+ * weeks are calendar weeks from the start), public holidays by date, and the
+ * weeks schools were closed (e.g. for insecurity). Staff only. Every entry
+ * changes who qualifies: holidays take their school days out of a week, and a
+ * closed week does not count for that school, so it can't pull a student's
+ * average down. A dated term also refuses attendance for weeks still to come.
  */
 export function SettingsPage() {
   useLogVisit("Settings", "Visited Settings")
@@ -121,7 +125,7 @@ export function SettingsPage() {
       {calendar.isError && <QueryError />}
       {year !== null && calendar.data && (
         <>
-          <TermLengthSection key={`${year}-${term}`} calendar={calendar.data} />
+          <TermDatesSection key={`${year}-${term}`} calendar={calendar.data} />
           <HolidaysSection calendar={calendar.data} />
           <ClosuresSection calendar={calendar.data} />
         </>
@@ -134,6 +138,8 @@ function useInvalidateCalendar() {
   const queryClient = useQueryClient()
   return () => {
     queryClient.invalidateQueries({ queryKey: ["term-calendar"] })
+    queryClient.invalidateQueries({ queryKey: ["term-dates"] })
+    queryClient.invalidateQueries({ queryKey: ["public-holidays"] })
     queryClient.invalidateQueries({ queryKey: ["school-closures"] })
     queryClient.invalidateQueries({ queryKey: ["closures-by-week"] })
     // Every qualification figure depends on the calendar.
@@ -144,32 +150,51 @@ function useInvalidateCalendar() {
   }
 }
 
-function TermLengthSection({ calendar }: { calendar: TermCalendar }) {
+function weekRange(starts: string, ends: string) {
+  return `${formatShortDate(starts)} – ${formatShortDate(ends)}`
+}
+
+function TermDatesSection({ calendar }: { calendar: TermCalendar }) {
   const invalidate = useInvalidateCalendar()
+  const [startDate, setStartDate] = useState(calendar.start_date ?? "")
   const [weeks, setWeeks] = useState(String(calendar.weeks))
   const save = useMutation({
-    mutationFn: (value: number | null) => setTermWeeks(calendar.year, calendar.term, value),
+    mutationFn: (changes: { weeks?: number | null; start_date?: string | null }) =>
+      setTermCalendar(calendar.year, calendar.term, changes),
     onSuccess: (result) => {
+      setStartDate(result.start_date ?? "")
       setWeeks(String(result.weeks))
       invalidate()
     },
   })
-  const parsed = Number(weeks)
-  const valid = Number.isInteger(parsed) && parsed >= 1 && parsed <= calendar.max_weeks
+  const parsedWeeks = Number(weeks)
+  const weeksValid =
+    Number.isInteger(parsedWeeks) && parsedWeeks >= 1 && parsedWeeks <= calendar.max_weeks
+  const changed =
+    (startDate || null) !== calendar.start_date || (weeksValid && parsedWeeks !== calendar.weeks)
+  const termName = `${getTermLabel(String(calendar.term))} ${formatAcademicYear(String(calendar.year))}`
 
   return (
     <Section
-      title="Term length"
-      description={`How many weeks ${getTermLabel(String(calendar.term))} ${formatAcademicYear(String(calendar.year))} ran. Used for "whole term" closures and the case-management outlook.`}
+      title="Term dates"
+      description={`When ${termName} started and how many weeks it ran. School weeks are calendar weeks: week 1 is the week the term starts in. Once dated, attendance can't be recorded for a week that hasn't begun, and holidays fall into their weeks.`}
     >
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-40">
+        <div className="w-48">
+          <LabeledInput label="First day of term" type="date" value={startDate} onChange={setStartDate} />
+        </div>
+        <div className="w-36">
           <LabeledInput label="Weeks in term" type="number" value={weeks} onChange={setWeeks} />
         </div>
         <Button
           className="h-11 rounded-full bg-sidebar px-6 text-white hover:bg-sidebar/90 disabled:opacity-50"
-          disabled={!valid || parsed === calendar.weeks || save.isPending}
-          onClick={() => save.mutate(parsed)}
+          disabled={!weeksValid || !changed || save.isPending}
+          onClick={() =>
+            save.mutate({
+              start_date: startDate || null,
+              weeks: parsedWeeks === calendar.weeks && !calendar.weeks_set ? null : parsedWeeks,
+            })
+          }
         >
           {save.isPending ? "Saving…" : "Save"}
         </Button>
@@ -178,117 +203,160 @@ function TermLengthSection({ calendar }: { calendar: TermCalendar }) {
             variant="outline"
             className="h-11 rounded-full px-5"
             disabled={save.isPending}
-            onClick={() => save.mutate(null)}
+            onClick={() => save.mutate({ weeks: null })}
           >
-            Use the default
+            Default length
           </Button>
         )}
         <span className="pb-3 text-xs text-muted-foreground">
-          {calendar.weeks_set ? "Set for this term." : "The default — not set for this term yet."}
+          {calendar.start_date ? "Dated." : "Not dated yet — weeks have no dates."}{" "}
+          {calendar.weeks_set ? "" : `${calendar.weeks} weeks is the default.`}
         </span>
       </div>
       {save.isError && (
-        <p className="text-xs text-red-600">{errorText(save.error, "Could not save the term length.")}</p>
+        <p className="text-xs text-red-600">{errorText(save.error, "Could not save the term dates.")}</p>
       )}
-    </Section>
-  )
-}
 
-function HolidaysSection({ calendar }: { calendar: TermCalendar }) {
-  const invalidate = useInvalidateCalendar()
-  const [week, setWeek] = useState("")
-  const [days, setDays] = useState("1")
-  const [name, setName] = useState("")
-  const takenWeeks = new Set(calendar.holidays.map((holiday) => holiday.week))
-  const freeWeeks = Array.from({ length: calendar.weeks }, (_, index) => String(index + 1)).filter(
-    (option) => !takenWeeks.has(Number(option)),
-  )
-  const dayOptions = Array.from({ length: calendar.school_days_per_week }, (_, index) =>
-    String(index + 1),
-  )
-
-  const add = useMutation({
-    mutationFn: () =>
-      addTermHoliday({
-        year: calendar.year,
-        term: calendar.term,
-        week: Number(week),
-        days: Number(days),
-        name: name.trim(),
-      }),
-    onSuccess: () => {
-      setWeek("")
-      setDays("1")
-      setName("")
-      invalidate()
-    },
-  })
-  const remove = useMutation({ mutationFn: removeTermHoliday, onSuccess: invalidate })
-
-  return (
-    <Section
-      title="Public holidays"
-      description={`Days schools were shut state-wide, per week. A week with 1 holiday expects ${calendar.school_days_per_week - 1} days instead of ${calendar.school_days_per_week}; a week that is all holidays does not count.`}
-    >
-      {calendar.holidays.length > 0 ? (
+      {calendar.week_dates.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border/40">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead className="text-xs font-semibold text-sidebar">Week</TableHead>
-                <TableHead className="text-xs font-semibold text-sidebar">Holiday days</TableHead>
-                <TableHead className="text-xs font-semibold text-sidebar">Name</TableHead>
-                <TableHead className="w-12" />
+                <TableHead className="text-xs font-semibold text-sidebar">Dates</TableHead>
+                <TableHead className="text-xs font-semibold text-sidebar">School days</TableHead>
+                <TableHead className="text-xs font-semibold text-sidebar">Why fewer</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {calendar.holidays.map((holiday) => (
-                <TableRow key={holiday.id} className="border-border/40">
-                  <TableCell className="text-sm">Week {holiday.week}</TableCell>
-                  <TableCell className="text-sm">
-                    {holiday.days} of {calendar.school_days_per_week}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{holiday.name || "—"}</TableCell>
-                  <TableCell>
-                    <button
-                      type="button"
-                      title="Remove this holiday"
-                      className="rounded-full p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                      disabled={remove.isPending}
-                      onClick={() => remove.mutate(holiday.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {calendar.week_dates.map((row) => {
+                const open = calendar.school_days_per_week - row.days_off
+                return (
+                  <TableRow key={row.week} className="border-border/40">
+                    <TableCell className="text-sm font-medium">Week {row.week}</TableCell>
+                    <TableCell className="text-sm">{weekRange(row.starts, row.ends)}</TableCell>
+                    <TableCell className={`text-sm ${row.days_off ? "font-semibold text-amber-700" : ""}`}>
+                      {open <= 0 ? "None — does not count" : `${open} of ${calendar.school_days_per_week}`}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.reasons.join(", ") || "—"}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">No public holidays recorded for this term.</p>
+      )}
+    </Section>
+  )
+}
+
+function holidayDates(holiday: { start_date: string; end_date: string; recurring: boolean }) {
+  const options: Intl.DateTimeFormatOptions = holiday.recurring
+    ? { day: "numeric", month: "short" }
+    : { day: "numeric", month: "short", year: "numeric" }
+  const format = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString(undefined, options)
+  }
+  return holiday.start_date === holiday.end_date
+    ? format(holiday.start_date)
+    : `${format(holiday.start_date)} – ${format(holiday.end_date)}`
+}
+
+function HolidaysSection({ calendar }: { calendar: TermCalendar }) {
+  const invalidate = useInvalidateCalendar()
+  const { data: holidays = [], isError } = useQuery({
+    queryKey: ["public-holidays"],
+    queryFn: getPublicHolidays,
+  })
+  const [name, setName] = useState("")
+  const [from, setFrom] = useState("")
+  const [to, setTo] = useState("")
+  const [recurring, setRecurring] = useState(false)
+
+  const add = useMutation({
+    mutationFn: () =>
+      addPublicHoliday({
+        name: name.trim(),
+        start_date: from,
+        ...(to ? { end_date: to } : {}),
+        recurring,
+      }),
+    onSuccess: () => {
+      setName("")
+      setFrom("")
+      setTo("")
+      setRecurring(false)
+      invalidate()
+    },
+  })
+  const remove = useMutation({
+    mutationFn: removePublicHoliday,
+    onSuccess: invalidate,
+  })
+  const recurringHolidays = holidays.filter((holiday) => holiday.recurring)
+  const oneOffHolidays = holidays.filter((holiday) => !holiday.recurring)
+
+  return (
+    <Section
+      title="Public holidays"
+      description={`Days schools were shut state-wide — a single date or a range (enter a mid-term break as one). Tick "every year" for fixed-date holidays such as Christmas. A holiday on a school day takes that day out of its week for every school; a week that is all holidays does not count.${calendar.start_date ? "" : " This term has no start date yet, so its holidays can't be placed in weeks."}`}
+    >
+      {isError && <QueryError />}
+      {[
+        { title: "Every year", rows: recurringHolidays },
+        { title: "One-off", rows: oneOffHolidays },
+      ].map(({ title, rows }) =>
+        rows.length === 0 ? null : (
+          <div key={title} className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+            <div className="overflow-x-auto rounded-xl border border-border/40">
+              <Table>
+                <TableBody>
+                  {rows.map((holiday) => (
+                    <TableRow key={holiday.id} className="border-border/40">
+                      <TableCell className="text-sm font-medium">{holiday.name}</TableCell>
+                      <TableCell className="text-sm">{holidayDates(holiday)}</TableCell>
+                      <TableCell className="w-12">
+                        <button
+                          type="button"
+                          title="Remove this holiday"
+                          className="rounded-full p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          disabled={remove.isPending}
+                          onClick={() => remove.mutate(holiday.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ),
+      )}
+      {holidays.length === 0 && (
+        <p className="text-sm text-muted-foreground">No public holidays recorded yet.</p>
       )}
 
-      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[8rem_8rem_1fr_auto]">
-        <LabeledSelect
-          label="Week"
-          value={week}
-          onValueChange={(value) => setWeek(value ?? "")}
-          items={freeWeeks}
-          placeholder="Week"
-          formatItem={(value) => `Week ${value}`}
-        />
-        <LabeledSelect
-          label="Holiday days"
-          value={days}
-          onValueChange={(value) => setDays(value ?? "1")}
-          items={dayOptions}
-          placeholder="Days"
-        />
-        <LabeledInput label="Name (optional)" value={name} onChange={setName} />
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_11rem_11rem_auto_auto]">
+        <LabeledInput label="Name" value={name} onChange={setName} />
+        <LabeledInput label="From" type="date" value={from} onChange={setFrom} />
+        <LabeledInput label="To (optional)" type="date" value={to} onChange={setTo} />
+        <label className="flex h-11 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={recurring}
+            onChange={(event) => setRecurring(event.target.checked)}
+          />
+          Every year
+        </label>
         <Button
           className="h-11 gap-2 rounded-full bg-sidebar px-6 text-white hover:bg-sidebar/90 disabled:opacity-50"
-          disabled={!week || add.isPending}
+          disabled={!name.trim() || !from || add.isPending}
           onClick={() => add.mutate()}
         >
           <CalendarDays className="size-4" />
@@ -381,6 +449,11 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
 
   const busy = close.isPending || reopen.isPending
   const weekNumbers = Array.from({ length: calendar.weeks }, (_, index) => index + 1)
+  const weekDate = new Map(calendar.week_dates.map((row) => [row.week, row.starts]))
+  const dateOf = (number: number) => {
+    const starts = weekDate.get(number)
+    return starts ? formatShortDate(starts) : ""
+  }
 
   return (
     <Section
@@ -401,7 +474,8 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
               }`}
             >
               W{number}
-              {closed ? ` · ${closed}` : ""}
+              {dateOf(number) ? ` (${dateOf(number)})` : ""}
+              {closed ? ` · ${closed} closed` : ""}
             </span>
           )
         })}
@@ -466,6 +540,9 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
                 }`}
               >
                 {number}
+                {dateOf(number) && (
+                  <span className="ml-1 font-normal opacity-70">{dateOf(number)}</span>
+                )}
               </button>
             ))}
           </div>
@@ -544,7 +621,12 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
                 <TableRow key={closure.id} className="border-border/40">
                   <TableCell className="text-sm font-medium">{closure.school_name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{closure.lga}</TableCell>
-                  <TableCell className="text-sm">Week {closure.week}</TableCell>
+                  <TableCell className="text-sm">
+                    Week {closure.week}
+                    {dateOf(closure.week) && (
+                      <span className="ml-1 text-xs text-muted-foreground">({dateOf(closure.week)})</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm">{closure.reason_label}</TableCell>
                   <TableCell className="max-w-[16rem] truncate text-xs text-muted-foreground" title={closure.note}>
                     {closure.note || "—"}

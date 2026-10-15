@@ -1,3 +1,4 @@
+import { CountedWeek, WeekLabel } from "@/components/week-cell"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, ChevronRight, ExternalLink, FileText, MapPin } from "lucide-react"
@@ -80,13 +81,21 @@ function groupByYear(weeks: AttendanceRecord[]) {
     }))
 }
 
+/**
+ * The weeks that count towards qualification, at the figure they count for:
+ * closed school-weeks (and weeks that were all holidays) left out, holidays
+ * taken off their week — the same rule the payments page applies.
+ */
+function countedPercents(weeks: AttendanceRecord[]) {
+  return weeks
+    .filter((week) => !week.school_closed && week.counted_average !== null)
+    .map((week) => Number(week.counted_average ?? week.attendance_average ?? 0))
+}
+
 function averageOf(weeks: AttendanceRecord[]) {
-  if (weeks.length === 0) return 0
-  const total = weeks.reduce(
-    (sum, week) => sum + Number(week.attendance_average || 0),
-    0,
-  )
-  return total / weeks.length
+  const percents = countedPercents(weeks)
+  if (percents.length === 0) return 0
+  return percents.reduce((sum, percent) => sum + percent, 0) / percents.length
 }
 
 function termLabel(record: { year: string | number; term: string | number }) {
@@ -260,12 +269,9 @@ export function StudentDetailPage() {
   const longitude = enrolment?.gps_longitude
 
   const weeksRecorded = attendance.length
-  const overallAverage = weeksRecorded
-    ? roundUpPercent(
-        attendance.reduce((total, week) => total + Number(week.attendance_average || 0), 0) /
-          weeksRecorded,
-      )
-    : 0
+  const weeksCounted = countedPercents(attendance).length
+  const weeksNotCounted = weeksRecorded - weeksCounted
+  const overallAverage = weeksCounted ? roundUpPercent(averageOf(attendance)) : 0
   const paid = payments.filter((payment) => payment.disbursed)
   const totalPaid = paid.reduce(
     (total, payment) => total + Number(payment.amount_received || 0),
@@ -290,7 +296,9 @@ export function StudentDetailPage() {
     {
       label: "Average Attendance",
       value: `${overallAverage}%`,
-      sub: `across ${weeksRecorded} week${weeksRecorded === 1 ? "" : "s"}`,
+      sub:
+        `across ${weeksCounted} week${weeksCounted === 1 ? "" : "s"}` +
+        (weeksNotCounted ? ` · ${weeksNotCounted} not counted` : ""),
       icon: Percent,
       color: "bg-[var(--stat-accent-2)]",
     },
@@ -571,12 +579,15 @@ export function StudentDetailPage() {
                       </TableHeader>
                       <TableBody>
                         {weeks.map((week) => (
-                          <TableRow key={week.id} className="border-border/40">
+                          <TableRow
+                            key={week.id}
+                            className={`border-border/40 ${week.school_closed ? "bg-slate-50/70 text-muted-foreground" : ""}`}
+                          >
                             <TableCell className="text-xs text-muted-foreground">
                               {week.term}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {week.week}
+                              <WeekLabel year={week.year} term={week.term} week={week.week} />
                             </TableCell>
                             {activeDays.map((day) => (
                               <TableCell key={day} className="text-center text-xs">
@@ -588,8 +599,9 @@ export function StudentDetailPage() {
                               </TableCell>
                             ))}
                             <TableCell className="text-center">
-                              <PercentageBadge
-                                value={Number(week.attendance_average || 0)}
+                              <CountedWeek
+                                record={week}
+                                render={(percent) => <PercentageBadge value={percent} />}
                               />
                             </TableCell>
                           </TableRow>

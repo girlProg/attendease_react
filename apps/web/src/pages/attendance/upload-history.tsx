@@ -1,3 +1,4 @@
+import { WeekLabel } from "@/components/week-cell"
 import { useState } from "react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { Download, Eye } from "lucide-react"
@@ -103,7 +104,9 @@ export function UploadHistory({ scope, ready }: { scope: FilterScope; ready: boo
                     {row.year ?? "—"}
                   </TableCell>
                   <TableCell className="text-center text-xs text-muted-foreground">{row.term}</TableCell>
-                  <TableCell className="text-center text-xs text-muted-foreground">{row.week}</TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">
+                    <WeekLabel year={row.year} term={row.term} week={row.week} />
+                  </TableCell>
                   <TableCell className="text-center text-xs font-semibold text-brand">
                     {row.student_count}
                   </TableCell>

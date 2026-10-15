@@ -1,18 +1,30 @@
 import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/types"
 
-// The school calendar a term's attendance is judged against. Public holidays
-// shorten a week for every school; a school closure takes the week out for
-// that school. Both change who qualifies (the server applies them to every
-// qualification figure); the registers themselves are never rewritten.
+// The school calendar a term's attendance is judged against. School weeks are
+// calendar weeks from the term's start date. Public holidays (dates, ranges,
+// or every year) take their school days out of a week for every school; a
+// school closure takes the week out for that school. Both change who
+// qualifies (the server applies them to every qualification figure); the
+// registers themselves are never rewritten.
 
-export interface TermHoliday {
+/** A day or range schools were shut state-wide; optionally every year. */
+export interface PublicHoliday {
   id: number
-  year: number
-  term: number
-  week: number
-  days: number
   name: string
+  start_date: string
+  end_date: string
+  recurring: boolean
+}
+
+/** One school week of a dated term. */
+export interface WeekDates {
+  week: number
+  starts: string
+  ends: string
+  // School days lost to holidays (or before the term began), and why.
+  days_off: number
+  reasons: string[]
 }
 
 export interface TermCalendar {
@@ -21,11 +33,22 @@ export interface TermCalendar {
   weeks: number
   // False while the term uses the deployment's default length.
   weeks_set: boolean
+  // First school day; week 1 is the calendar week containing it.
+  start_date: string | null
   school_days_per_week: number
   max_weeks: number
-  holidays: TermHoliday[]
+  // Empty until the term has a start date.
+  week_dates: WeekDates[]
   closed_school_weeks: number
   closed_schools: number
+}
+
+/** A term's start and length, for labelling weeks with dates anywhere. */
+export interface TermDates {
+  year: number
+  term: number
+  weeks: number | null
+  start_date: string | null
 }
 
 export type ClosureReason = "insecurity" | "disaster" | "strike" | "other"
@@ -69,16 +92,31 @@ export const getTermCalendar = (year: number, term: number) =>
     .get<TermCalendar>("/term-calendar/", { params: { year, term } })
     .then((response) => response.data)
 
-/** Set the term's length in weeks; `null` goes back to the default. */
-export const setTermWeeks = (year: number, term: number, weeks: number | null) =>
+/** Set the term's start date and/or length; `null` clears either. */
+export const setTermCalendar = (
+  year: number,
+  term: number,
+  changes: { weeks?: number | null; start_date?: string | null },
+) =>
   api
-    .put<TermCalendar>("/term-calendar/", { year, term, weeks: weeks ?? "" })
+    .put<TermCalendar>("/term-calendar/", {
+      year,
+      term,
+      ...("weeks" in changes ? { weeks: changes.weeks ?? "" } : {}),
+      ...("start_date" in changes ? { start_date: changes.start_date ?? "" } : {}),
+    })
     .then((response) => response.data)
 
-export const addTermHoliday = (holiday: Omit<TermHoliday, "id">) =>
-  api.post<TermHoliday>("/term-holidays/", holiday).then((response) => response.data)
+export const getTermDates = () =>
+  api.get<TermDates[]>("/term-calendars/").then((response) => response.data)
 
-export const removeTermHoliday = (id: number) => api.delete(`/term-holidays/${id}/`)
+export const getPublicHolidays = () =>
+  api.get<PublicHoliday[]>("/public-holidays/").then((response) => response.data)
+
+export const addPublicHoliday = (holiday: Omit<PublicHoliday, "id" | "end_date"> & { end_date?: string }) =>
+  api.post<PublicHoliday>("/public-holidays/", holiday).then((response) => response.data)
+
+export const removePublicHoliday = (id: number) => api.delete(`/public-holidays/${id}/`)
 
 export const getSchoolClosures = (
   page: number,

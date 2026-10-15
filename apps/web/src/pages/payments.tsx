@@ -1,3 +1,4 @@
+import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw, History, Info } from "lucide-react"
@@ -407,7 +408,7 @@ export function PaymentsPage() {
                             CASE
                           </button>
                         )}
-                        <span className="text-xs font-semibold text-foreground">{record.name}</span>
+                        <StudentLink studentId={record.id} className="text-xs font-semibold text-foreground">{record.name}</StudentLink>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.current_class}</TableCell>

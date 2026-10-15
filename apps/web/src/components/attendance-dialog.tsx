@@ -1,3 +1,4 @@
+import { StudentLink } from "@/components/student-link"
 import { useQuery } from "@tanstack/react-query"
 import { X } from "lucide-react"
 import {
@@ -95,7 +96,9 @@ export function AttendanceDialog({
                 {records.map((record, index) => (
                   <TableRow key={record.id} className="border-border/40">
                     <TableCell className="text-center text-xs text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell className="text-xs font-semibold text-foreground">{record.student?.name}</TableCell>
+                    <TableCell className="text-xs font-semibold text-foreground">
+                      <StudentLink studentId={record.student?.id}>{record.student?.name}</StudentLink>
+                    </TableCell>
                     {activeDays.map((day) => (
                       <DayCell key={day} active={Boolean(record[day as keyof AttendanceRecord])} />
                     ))}

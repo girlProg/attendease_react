@@ -35,9 +35,10 @@ export function StatCard({
       </div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="truncate text-xl font-bold text-foreground">
+        {/* A div, not a p: while loading it holds the skeleton (a div). */}
+        <div className="truncate text-xl font-bold text-foreground">
           <StatValue loading={loading}>{value}</StatValue>
-        </p>
+        </div>
         {sub && <p className="truncate text-[11px] text-muted-foreground">{sub}</p>}
       </div>
     </>

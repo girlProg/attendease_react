@@ -1,3 +1,4 @@
+import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
@@ -128,7 +129,7 @@ export function StudentsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <StudentPhoto url={record.photo_url} name={record.name} studentId={record.id} hasPhoto={record.has_photo} />
-                        <span className="text-xs font-semibold text-foreground">{record.name}</span>
+                        <StudentLink studentId={record.id} className="text-xs font-semibold text-foreground">{record.name}</StudentLink>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.id}</TableCell>

@@ -1,3 +1,4 @@
+import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ChevronDown, ChevronRight, Download, X } from "lucide-react"
@@ -385,7 +386,11 @@ function AuditRow({
         </TableCell>
         <TableCell className="text-xs font-medium text-foreground">{event.event_type_label}</TableCell>
         <TableCell className="text-xs text-foreground">
-          {event.student_name || <span className="text-muted-foreground">—</span>}
+          {event.student_name ? (
+            <StudentLink studentId={event.student}>{event.student_name}</StudentLink>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
           {typeof event.details.beneficiary_id === "string" && event.details.beneficiary_id && (
             <span className="block text-[11px] text-muted-foreground">{event.details.beneficiary_id}</span>
           )}

@@ -1,3 +1,5 @@
+import { formatShortDate, useWeekDates } from "@/hooks/use-week-dates"
+import { StudentLink } from "@/components/student-link"
 import { useState, useEffect, useMemo } from "react"
 import { FileArchive, FileSpreadsheet } from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
@@ -120,11 +122,25 @@ export function NewAttendancePage() {
       setSuccessMessage("Attendance saved successfully!")
       setTimeout(() => setSuccessMessage(""), 5000)
     },
-    onError: () => {
+    onError: (error) => {
       setSuccessMessage("")
-      setErrorMessage("Failed to save attendance. Please try again.")
+      // The server says why when it refuses — e.g. a week that hasn't begun.
+      const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data
+      const week = data?.week
+      const reason = Array.isArray(week) ? week[0] : typeof week === "string" ? week : null
+      setErrorMessage(
+        typeof reason === "string" ? reason : "Failed to save attendance. Please try again.",
+      )
     },
   })
+
+  // The chosen week's dates (dated terms only), and whether it has begun —
+  // the server refuses attendance for a week still to come.
+  const { weekStart } = useWeekDates()
+  const chosenWeekStart = scopeParams.week
+    ? weekStart(scopeParams.year, scopeParams.term ?? "", scopeParams.week)
+    : null
+  const weekNotBegun = chosenWeekStart !== null && chosenWeekStart > new Date()
 
   function handleSave() {
     if (!scopeReady || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week) return
@@ -202,6 +218,19 @@ export function NewAttendancePage() {
         </Button>
       </div>
 
+      {chosenWeekStart && (
+        <p
+          className={`rounded-xl border px-4 py-2 text-sm ${
+            weekNotBegun
+              ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-border/40 bg-white text-muted-foreground"
+          }`}
+        >
+          Week {scopeParams.week} starts {formatShortDate(chosenWeekStart)}
+          {weekNotBegun ? " — attendance can't be saved for a week that hasn't begun." : "."}
+        </p>
+      )}
+
       <PaginationBar
             totalPages={totalPages}
             currentPage={page}
@@ -257,7 +286,7 @@ export function NewAttendancePage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <StudentPhoto url={student.photo_url} name={student.name} studentId={student.id} hasPhoto={student.has_photo} />
-                          <span className="text-sm font-semibold text-foreground">{student.name}</span>
+                          <StudentLink studentId={student.id} newTab className="text-sm font-semibold text-foreground">{student.name}</StudentLink>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{student.id}</TableCell>
@@ -330,7 +359,7 @@ export function NewAttendancePage() {
         </PrimaryButton>
         <PrimaryButton
           className="w-auto px-8"
-          disabled={isSaving || !scopeReady || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week}
+          disabled={isSaving || !scopeReady || weekNotBegun || !scopeParams.school || !scopeParams.cohort || !scopeParams.year || !scopeParams.term || !scopeParams.week}
           onClick={handleSave}
         >
           {isSaving ? "Saving…" : "Save Attendance"}

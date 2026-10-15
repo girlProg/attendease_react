@@ -1,3 +1,4 @@
+import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { AlertTriangle, Download, Phone } from "lucide-react"
@@ -229,7 +230,7 @@ export function CaseManagementPage() {
                     <div className="flex items-center gap-2">
                       <StudentPhoto url={row.photo_url} name={row.name} studentId={row.id} hasPhoto={row.has_photo} />
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-sidebar">{row.name}</span>
+                        <StudentLink studentId={row.id} className="text-xs font-semibold text-sidebar">{row.name}</StudentLink>
                         <span className="text-[10px] text-muted-foreground">
                           {row.current_class || "—"}
                         </span>
