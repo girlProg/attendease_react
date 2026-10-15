@@ -121,20 +121,12 @@ export function PaymentsPage() {
       "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
     )
   }
-  if (listScope && listScope.hidden_no_account > 0) {
-    scopeNotes.push(
-      `${listScope.hidden_no_account.toLocaleString()} eligible student${listScope.hidden_no_account === 1 ? " is" : "s are"} not shown: no 10-digit account at a recognised bank.`,
-    )
-  }
-  const emptyMessage = !listScope
-    ? undefined
-    : listScope.eligible === 0
-      ? listScope.source === "no_objection"
+  const emptyMessage =
+    listScope?.eligible !== 0
+      ? undefined
+      : listScope.source === "no_objection"
         ? "None of the students in this selection are on the No Objection list."
         : "No student in this selection meets the attendance threshold for this year and term."
-      : listScope.hidden_no_account === listScope.eligible
-        ? "Every eligible student in this selection is missing a usable bank account."
-        : undefined
 
   // Clicking a card narrows the (loaded) rows to that outcome for the
   // selected term. Same rules as the server: disbursed = successful; latest

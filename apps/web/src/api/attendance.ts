@@ -508,12 +508,10 @@ export interface TermAveragesSummary {
   awaiting: number;
   total_amount: string;
   // How the payments list was decided (only with qualifying=true): a No
-  // Objection list or the attendance rule, how many that made eligible, and
-  // how many of those are hidden for want of a usable bank account.
+  // Objection list or the attendance rule, and how many that made eligible.
   scope?: {
     source: "no_objection" | "qualifying";
     eligible: number;
-    hidden_no_account: number;
   };
 }
 
