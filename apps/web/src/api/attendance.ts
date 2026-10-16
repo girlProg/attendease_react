@@ -509,6 +509,46 @@ export interface NoObjectionResult {
   not_found: string[];
 }
 
+// A proportional No Objection list: every LGA, and every school within it, gets
+// the same percentage of its qualifying students (highest attendance first).
+export interface ProportionalSchool {
+  school: number | null;
+  school_name: string;
+  qualifying: number;
+  allocated: number;
+}
+
+export interface ProportionalLga {
+  lga: number | null;
+  lga_name: string;
+  qualifying: number;
+  allocated: number;
+  percent: number;
+  schools: ProportionalSchool[];
+}
+
+export interface ProportionalAllocation {
+  qualifying: number;
+  target: number;
+  percent: number;
+  committed: boolean;
+  id?: number;
+  lgas: ProportionalLga[];
+}
+
+/** Staff only. Previews unless `commit`; give `target` students or `percent`. */
+export const proportionalNoObjection = (input: {
+  cohort: number;
+  year: string;
+  term: string;
+  target?: number;
+  percent?: number;
+  commit?: boolean;
+}) =>
+  api
+    .post<ProportionalAllocation>("/no-objection/proportional/", input)
+    .then((response) => response.data);
+
 // Admin-only: mark students as having no objection for a (cohort, year, term).
 // With a CSV file, students are matched on the "Beneficiary ID" column;
 // otherwise the qualifying students for the scope are used.
