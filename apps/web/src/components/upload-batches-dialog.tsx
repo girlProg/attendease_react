@@ -114,6 +114,9 @@ export function UploadBatchesDialog() {
                     </TableCell>
                     <TableCell className="text-xs text-foreground">
                       {batch.cohort_name}
+                      <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {batch.purpose === "verification" ? "Verification" : "Record update"}
+                      </span>
                       {batch.filename && (
                         <span
                           className="block max-w-[14rem] truncate text-[11px] text-muted-foreground"

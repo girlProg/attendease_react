@@ -28,10 +28,17 @@ import {
   type UploadField,
   type UploadInspection,
   type UploadReport,
+  type UploadPurpose,
   type UploadRowType,
 } from "@/api/beneficiary-upload"
 
 const PAYEE_DEFAULT = "__default__"
+// What the payee box shows (the select would otherwise print the raw value).
+const PAYEE_LABELS: Record<string, string> = {
+  [PAYEE_DEFAULT]: "Cohort default",
+  student: "Student",
+  caregiver: "Caregiver",
+}
 const IGNORE_COLUMN = "__ignore__"
 const NEW_COHORT = "__new__"
 const ACCEPTED_FILES = ".csv,.xlsx"
@@ -86,6 +93,8 @@ export function UploadRecordsDialog() {
   const [inspection, setInspection] = useState<UploadInspection | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [defaultRowType, setDefaultRowType] = useState<UploadRowType>("returning")
+  // Record update unless verification is chosen — it is never implied.
+  const [purpose, setPurpose] = useState<UploadPurpose>("update")
   // Which row of the sheet holds the column names; the server guesses, the
   // user can correct it (files often carry a title row above the headers).
   const [headerRow, setHeaderRow] = useState<number | null>(null)
@@ -130,6 +139,7 @@ export function UploadRecordsDialog() {
         mapping,
         default_row_type: defaultRowType,
         header_row: headerRow ?? undefined,
+        purpose,
       }),
     onSuccess: (report: UploadReport) => {
       if (report.committed) {
@@ -192,6 +202,7 @@ export function UploadRecordsDialog() {
     setInspection(null)
     setMapping({})
     setDefaultRowType("returning")
+    setPurpose("update")
     setHeaderRow(null)
     inspect.reset()
     upload.reset()
@@ -232,7 +243,7 @@ export function UploadRecordsDialog() {
         <DialogDescription>
           {onMappingStep
             ? "Any spreadsheet works — tell us which column holds which field. Columns marked “Ignore” are not read. Preview first; nothing is saved until you confirm."
-            : "Verify and update existing beneficiaries, and enrol new students, from any CSV. You'll match its columns to fields on the next step."}
+            : "Update existing beneficiaries' records, verify them, or enrol new students, from any CSV. You'll match its columns to fields and choose which on the next step."}
         </DialogDescription>
 
         {!onMappingStep && (
@@ -289,7 +300,9 @@ export function UploadRecordsDialog() {
                 <label className="text-xs font-medium text-muted-foreground">Payee</label>
                 <Select value={payee} onValueChange={(value) => setPayee(value ?? PAYEE_DEFAULT)}>
                   <SelectTrigger className="h-11 w-full rounded-lg border-border/60 bg-white px-4">
-                    <SelectValue placeholder="Cohort default" />
+                    <SelectValue placeholder="Cohort default">
+                      {PAYEE_LABELS[payee] ?? "Cohort default"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={PAYEE_DEFAULT}>Cohort default</SelectItem>
@@ -366,7 +379,7 @@ export function UploadRecordsDialog() {
                   checked={updateExisting}
                   onChange={(event) => setUpdateExisting(event.target.checked)}
                 />
-                Update existing beneficiaries (verify + write captured data)
+                Update existing beneficiaries (write captured data)
               </label>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
@@ -553,6 +566,36 @@ export function UploadRecordsDialog() {
               </div>
             </div>
 
+            {/* What the upload is for: verification must be chosen explicitly. */}
+            <div className="rounded-lg bg-muted/30 p-3 text-sm">
+              <p className="font-medium text-foreground">This upload is a…</p>
+              <div className="mt-2 flex flex-col gap-2">
+                {(
+                  [
+                    ["update", "Record update", "Writes the mapped fields that have a value. Nobody is marked verified; rows with nothing to write are skipped."],
+                    ["verification", "Verification", "Also marks every matched beneficiary — and any new student — as verified."],
+                  ] as [UploadPurpose, string, string][]
+                ).map(([value, label, hint]) => (
+                  <label key={value} className="flex items-start gap-2 text-sm text-foreground">
+                    <input
+                      type="radio"
+                      name="upload-purpose"
+                      className="mt-0.5 size-4 accent-sidebar"
+                      checked={purpose === value}
+                      onChange={() => {
+                        setPurpose(value)
+                        resetReport()
+                      }}
+                    />
+                    <span>
+                      <span className="font-medium">{label}</span>
+                      <span className="block text-xs text-muted-foreground">{hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {mappingWarnings.length > 0 && !report && (
               <ul className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
                 {mappingWarnings.map((warning) => (
@@ -580,7 +623,11 @@ export function UploadRecordsDialog() {
                 <p className="font-medium">Preview — nothing saved yet</p>
                 <p className="mt-1">
                   Will create {report.to_create ?? 0}, update {report.to_update ?? 0}, skip{" "}
-                  {report.skipped ?? 0}. Click “Confirm &amp; Commit” to apply.
+                  {report.skipped ?? 0}
+                  {report.purpose === "verification"
+                    ? ", and mark every matched and new beneficiary verified"
+                    : " — nobody is marked verified"}
+                  . Click “Confirm &amp; Commit” to apply.
                 </p>
                 {report.skip_reasons && Object.keys(report.skip_reasons).length > 0 && (
                   <p className="mt-1 text-xs">

@@ -30,7 +30,12 @@ export interface UploadReport {
   created?: number;
   updated?: number;
   batch_id?: number;
+  purpose?: UploadPurpose;
 }
+
+// A record update writes the mapped fields; a verification also marks the
+// beneficiaries verified. Verification is never implied.
+export type UploadPurpose = "update" | "verification";
 
 export interface UploadBatch {
   id: number;
@@ -43,6 +48,7 @@ export interface UploadBatch {
   // {file column: field key}; empty when the template's own headers were used.
   column_mapping: Record<string, string>;
   default_row_type: "returning" | "new";
+  purpose: UploadPurpose;
   created_count: number;
   updated_count: number;
   status: "committed" | "reversed";
@@ -66,6 +72,7 @@ export interface UploadRecordsParams {
   default_row_type?: UploadRowType;
   // 1-based row holding the column names (auto-detected when omitted).
   header_row?: number;
+  purpose: UploadPurpose;
 }
 
 // One field a file column can be mapped to (from the backend catalogue).
@@ -123,6 +130,7 @@ export const uploadRecords = async (
   if (params.mapping) formData.append("mapping", JSON.stringify(params.mapping));
   if (params.default_row_type) formData.append("default_row_type", params.default_row_type);
   if (params.header_row) formData.append("header_row", String(params.header_row));
+  formData.append("purpose", params.purpose);
 
   try {
     const { data } = await api.post<UploadReport>(
