@@ -16,28 +16,83 @@ import type {
 } from "@/types";
 
 
-export const getAttendance = (
-  page = 1,
-  pageSize = 100,
-  search = "",
-  scope: FilterScope = {},
-) => {
+// The Real-Time tab's own filters on the attendance rows' reason and remark.
+export interface NoteFilters {
+  // Reason OR remark contains this (any case).
+  note?: string;
+  // Exactly this reason, as the common-reasons list groups it.
+  reason?: string;
+  // Only rows with a reason or remark written.
+  hasNote?: boolean;
+  // A school picked from the By school view (narrows the bar's scope).
+  school?: number;
+}
+
+function attendanceParams(search: string, scope: FilterScope, notes: NoteFilters = {}) {
   // Cohort, LGA and school by ID — the name filters are substring matches.
   const filterParams: Record<string, string | number> = {};
   if (search) filterParams.student__name = search;
   if (scope.cohort) filterParams.cohort = scope.cohort;
   if (scope.lga) filterParams.lga = scope.lga;
-  if (scope.school) filterParams.student__school = scope.school;
+  const school = notes.school ?? scope.school;
+  if (school) filterParams.student__school = school;
   if (scope.year) filterParams.year = scope.year;
   if (scope.term) filterParams.term = scope.term;
   if (scope.week) filterParams.week = scope.week;
+  if (notes.note) filterParams.note = notes.note;
+  if (notes.reason) filterParams.reason = notes.reason;
+  if (notes.hasNote) filterParams.has_note = "true";
+  return filterParams;
+}
 
-  return api
+export const getAttendance = (
+  page = 1,
+  pageSize = 100,
+  search = "",
+  scope: FilterScope = {},
+  notes: NoteFilters = {},
+) =>
+  api
     .get<PaginatedResponse<AttendanceRecord>>("/attendance/", {
-      params: { page, page_size: pageSize, ...filterParams },
+      params: { page, page_size: pageSize, ...attendanceParams(search, scope, notes) },
     })
     .then((r) => r.data);
-};
+
+export interface CommonReason {
+  // Lower-cased and trimmed, as the server groups (and `reason` matches) it.
+  reason: string;
+  count: number;
+}
+
+/** The most common reasons under the filters (the chosen reason left out). */
+export const getAttendanceReasons = (search: string, scope: FilterScope, notes: NoteFilters) =>
+  api
+    .get<CommonReason[]>("/attendance/reasons/", {
+      params: attendanceParams(search, scope, { ...notes, reason: undefined }),
+    })
+    .then((r) => r.data);
+
+export interface AttendanceSchoolCount {
+  school: number;
+  school_name: string;
+  lga: string | null;
+  rows: number;
+  students: number;
+}
+
+/** The filtered attendance rows counted per school, most first. */
+export const getAttendanceBySchool = (
+  page: number,
+  pageSize: number,
+  search: string,
+  scope: FilterScope,
+  notes: NoteFilters,
+) =>
+  api
+    .get<PaginatedResponse<AttendanceSchoolCount>>("/attendance/by-school/", {
+      params: { page, page_size: pageSize, ...attendanceParams(search, scope, notes) },
+    })
+    .then((r) => r.data);
 
 export interface AttendanceUploadHistoryRow {
   id: number;
