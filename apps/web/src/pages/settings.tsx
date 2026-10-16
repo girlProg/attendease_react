@@ -3,6 +3,7 @@ import { CalendarDays, CalendarOff, Info, Trash2 } from "lucide-react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
+import { Dialog, DialogDescription, DialogPopup, DialogTitle } from "@workspace/ui/components/dialog"
 import {
   Table,
   TableBody,
@@ -37,9 +38,11 @@ import {
 } from "@/api/term-calendar"
 import { formatAcademicYear, getTermLabel, ordinal } from "@/lib/formatters"
 import { formatShortDate } from "@/hooks/use-week-dates"
+import { useAuth } from "@/contexts/auth-context"
 
 const TERMS = ["1", "2", "3"]
 const ALL_SCHOOLS = "All schools in the LGA"
+const WHOLE_STATE = "Whole state (every LGA)"
 
 function errorText(error: unknown, fallback: string): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data
@@ -378,6 +381,11 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
 
   const { data: lgas } = useQuery({ queryKey: ["lga"], queryFn: getLGAs })
   const [lgaName, setLgaName] = useState("")
+  // The whole state is offered only to accounts not limited to some LGAs
+  // (the server refuses it for them too).
+  const { profile } = useAuth()
+  const canCloseState = !(profile?.role === "user" && (profile.lgas?.length ?? 0) > 0)
+  const wholeState = canCloseState && lgaName === WHOLE_STATE
   const lgaId = lgas?.find((lga) => lga.name === lgaName)?.id
   const { data: schools } = useQuery({
     queryKey: ["closure-schools", lgaId],
@@ -397,20 +405,54 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
   const [reason, setReason] = useState<ClosureReason>("insecurity")
   const [note, setNote] = useState("")
   const [result, setResult] = useState<string | null>(null)
+  // A state-wide change waits here, with the server's counts, until confirmed.
+  const [confirming, setConfirming] = useState<{ action: "close" | "reopen"; text: string } | null>(null)
 
   const selection: ClosureSelection | null =
-    lgaId === undefined || (!wholeTerm && weeks.length === 0)
+    (lgaId === undefined && !wholeState) || (!wholeTerm && weeks.length === 0)
       ? null
       : {
           year,
           term,
-          ...(schoolName === ALL_SCHOOLS ? { lga: lgaId } : { schools: schoolIds }),
+          ...(wholeState
+            ? { whole_state: true }
+            : schoolName === ALL_SCHOOLS
+              ? { lga: lgaId }
+              : { schools: schoolIds }),
           ...(wholeTerm ? { whole_term: true } : { weeks }),
         }
+  const weeksText = wholeTerm
+    ? `the whole ${getTermLabel(term).toLowerCase()}`
+    : `week${weeks.length === 1 ? "" : "s"} ${weeks.join(", ")} of the ${getTermLabel(term).toLowerCase()}`
+
+  const preview = useMutation({
+    mutationFn: async (action: "close" | "reopen") => {
+      const chosen = selection as ClosureSelection
+      if (action === "close") {
+        const counts = await closeSchools({ ...chosen, reason, note }, true)
+        return {
+          action,
+          text:
+            `Close all ${counts.schools.toLocaleString()} schools in the state for ${weeksText}? ` +
+            `${counts.created.toLocaleString()} school-week(s) will be marked closed` +
+            (counts.already_closed ? ` (${counts.already_closed.toLocaleString()} already are).` : "."),
+        }
+      }
+      const counts = await reopenSchools(chosen, true)
+      return {
+        action,
+        text:
+          `Reopen ${weeksText} for every school in the state? ` +
+          `${counts.deleted.toLocaleString()} closed school-week(s) at ${(counts.schools ?? 0).toLocaleString()} school(s) will be removed.`,
+      }
+    },
+    onSuccess: setConfirming,
+  })
 
   const close = useMutation({
     mutationFn: () => closeSchools({ ...(selection as ClosureSelection), reason, note }),
     onSuccess: (response) => {
+      setConfirming(null)
       setResult(
         `${response.created} school-week${response.created === 1 ? "" : "s"} closed` +
           (response.already_closed ? ` (${response.already_closed} already were)` : "") +
@@ -422,6 +464,7 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
   const reopen = useMutation({
     mutationFn: () => reopenSchools(selection as ClosureSelection),
     onSuccess: (response) => {
+      setConfirming(null)
       setResult(`${response.deleted} school-week${response.deleted === 1 ? "" : "s"} reopened.`)
       invalidate()
     },
@@ -447,7 +490,14 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
   })
   const totalPages = list.data ? Math.ceil(list.data.count / pageSize) : 0
 
-  const busy = close.isPending || reopen.isPending
+  const busy = close.isPending || reopen.isPending || preview.isPending
+  // A state-wide change is counted and confirmed first; anything smaller saves.
+  const run = (action: "close" | "reopen") => {
+    setResult(null)
+    if (wholeState) preview.mutate(action)
+    else if (action === "close") close.mutate()
+    else reopen.mutate()
+  }
   const weekNumbers = Array.from({ length: calendar.weeks }, (_, index) => index + 1)
   const weekDate = new Map(calendar.week_dates.map((row) => [row.week, row.starts]))
   const dateOf = (number: number) => {
@@ -458,7 +508,7 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
   return (
     <Section
       title="School closures"
-      description="Weeks a school did not open — insecurity, disasters, strikes. A closed week does not count for that school, so it cannot pull its students' averages down. Close a single school or a whole LGA, for chosen weeks or the whole term."
+      description="Weeks a school did not open — insecurity, disasters, strikes. A closed week does not count for that school, so it cannot pull its students' averages down. Close a single school, a whole LGA or every school in the state, for chosen weeks or the whole term."
     >
       <div className="flex flex-wrap gap-2">
         {weekNumbers.map((number) => {
@@ -495,16 +545,20 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
               setLgaName(value ?? "")
               setSchoolName(ALL_SCHOOLS)
             }}
-            items={(lgas ?? []).map((lga) => lga.name)}
+            items={[...(canCloseState ? [WHOLE_STATE] : []), ...(lgas ?? []).map((lga) => lga.name)]}
             placeholder="Choose an LGA"
           />
-          <LabeledSelect
-            label="School"
-            value={schoolName}
-            onValueChange={(value) => setSchoolName(value ?? ALL_SCHOOLS)}
-            items={[ALL_SCHOOLS, ...schoolNames]}
-            placeholder="School"
-          />
+          {wholeState ? (
+            <LabeledInput label="School" value="Every school in the state" onChange={() => {}} disabled />
+          ) : (
+            <LabeledSelect
+              label="School"
+              value={schoolName}
+              onValueChange={(value) => setSchoolName(value ?? ALL_SCHOOLS)}
+              items={[ALL_SCHOOLS, ...schoolNames]}
+              placeholder="School"
+            />
+          )}
           <LabeledSelect
             label="Reason"
             value={reason}
@@ -552,40 +606,55 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
           <Button
             className="h-11 gap-2 rounded-full bg-amber-600 px-6 text-white hover:bg-amber-700 disabled:opacity-50"
             disabled={selection === null || busy}
-            onClick={() => {
-              setResult(null)
-              close.mutate()
-            }}
+            onClick={() => run("close")}
           >
             <CalendarOff className="size-4" />
-            {close.isPending ? "Closing…" : "Mark closed"}
+            {close.isPending ? "Closing…" : preview.isPending && preview.variables === "close" ? "Counting…" : "Mark closed"}
           </Button>
           <Button
             variant="outline"
             className="h-11 rounded-full px-6"
             disabled={selection === null || busy}
-            onClick={() => {
-              setResult(null)
-              reopen.mutate()
-            }}
+            onClick={() => run("reopen")}
           >
-            {reopen.isPending ? "Reopening…" : "Reopen"}
+            {reopen.isPending ? "Reopening…" : preview.isPending && preview.variables === "reopen" ? "Counting…" : "Reopen"}
           </Button>
           <span className="text-xs text-muted-foreground">
             {selection === null
-              ? "Choose an LGA and at least one week (or the whole term)."
-              : `${schoolName === ALL_SCHOOLS ? `Every school in ${lgaName}` : schoolName}, ${
+              ? "Choose an LGA (or the whole state) and at least one week (or the whole term)."
+              : `${wholeState ? "Every school in the state" : schoolName === ALL_SCHOOLS ? `Every school in ${lgaName}` : schoolName}, ${
                   wholeTerm ? "the whole term" : `week${weeks.length === 1 ? "" : "s"} ${weeks.join(", ")}`
                 }.`}
           </span>
         </div>
         {result && <p className="text-xs font-medium text-emerald-700">{result}</p>}
-        {(close.isError || reopen.isError) && (
+        {(close.isError || reopen.isError || preview.isError) && (
           <p className="text-xs text-red-600">
-            {errorText(close.error ?? reopen.error, "Could not save the closure.")}
+            {errorText(close.error ?? reopen.error ?? preview.error, "Could not save the closure.")}
           </p>
         )}
       </div>
+
+      <Dialog open={confirming !== null} onOpenChange={(open) => !open && !busy && setConfirming(null)}>
+        <DialogPopup>
+          <DialogTitle>
+            {confirming?.action === "close" ? "Close every school in the state?" : "Reopen every school in the state?"}
+          </DialogTitle>
+          <DialogDescription>{confirming?.text}</DialogDescription>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" className="h-10 rounded-full px-5" disabled={busy} onClick={() => setConfirming(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="h-10 rounded-full bg-amber-600 px-5 text-white hover:bg-amber-700"
+              disabled={busy}
+              onClick={() => (confirming?.action === "close" ? close.mutate() : reopen.mutate())}
+            >
+              {busy ? "Saving…" : confirming?.action === "close" ? "Close all schools" : "Reopen all schools"}
+            </Button>
+          </div>
+        </DialogPopup>
+      </Dialog>
 
       <PaginationBar
         totalPages={totalPages}
@@ -614,7 +683,7 @@ function ClosuresSection({ calendar }: { calendar: TermCalendar }) {
             ) : (list.data?.results ?? []).length === 0 ? (
               <TableEmptyState
                 colSpan={6}
-                message={lgaName ? `No closures in ${lgaName} this term.` : "No closures this term."}
+                message={lgaName && !wholeState ? `No closures in ${lgaName} this term.` : "No closures this term."}
               />
             ) : (
               (list.data?.results ?? []).map((closure) => (

@@ -79,9 +79,10 @@ export interface SchoolClosure {
 export interface ClosureSelection {
   year: number
   term: number
-  // Specific school rows, or every school in `lga`.
+  // Specific school rows, every school in `lga`, or every school in the state.
   schools?: number[]
   lga?: number
+  whole_state?: boolean
   // Specific weeks, or the whole term.
   weeks?: number[]
   whole_term?: boolean
@@ -143,17 +144,23 @@ export const getClosuresByWeek = (year: number, term: number) =>
     })
     .then((response) => response.data)
 
+// `preview` counts what would change without writing — used to confirm a
+// state-wide change before making it.
 export const closeSchools = (
   selection: ClosureSelection & { reason: ClosureReason; note?: string },
+  preview = false,
 ) =>
   api
     .post<{ created: number; already_closed: number; schools: number; weeks: number[] }>(
       "/school-closures/bulk/",
-      selection,
+      { ...selection, preview },
     )
     .then((response) => response.data)
 
-export const reopenSchools = (selection: ClosureSelection) =>
+export const reopenSchools = (selection: ClosureSelection, preview = false) =>
   api
-    .post<{ deleted: number }>("/school-closures/bulk-delete/", selection)
+    .post<{ deleted: number; schools?: number }>("/school-closures/bulk-delete/", {
+      ...selection,
+      preview,
+    })
     .then((response) => response.data)
