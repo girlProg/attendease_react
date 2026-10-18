@@ -83,8 +83,11 @@ export function ProportionalNoObjection({
       <p className="text-sm text-muted-foreground">
         For when payment is approved for fewer students than qualify. Every LGA,
         and every school within it, gets the same share of its own qualifying
-        students; within a school the highest attendance goes first. Students
-        with and without bank accounts both count.
+        students (counting those with and without bank accounts). Places go to
+        students with a usable account first, highest attendance first; a school
+        short of them passes its spare places to the best account holders
+        elsewhere in its LGA. Students without an account are picked only when
+        an LGA runs out of account holders.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -153,6 +156,13 @@ export function ProportionalNoObjection({
             {allocation.lgas.length === 1 ? "" : "s"}. Click an LGA to see its
             schools.
           </p>
+          <p
+            className={`text-xs ${allocation.without_account ? "text-amber-700" : "text-emerald-700"}`}
+          >
+            {allocation.without_account
+              ? `${allocation.without_account.toLocaleString()} of the picked students have no usable account — their LGAs ran out of students with one.`
+              : "Every picked student has a usable account."}
+          </p>
           <div className="max-h-80 overflow-y-auto rounded-lg border border-border/40">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-muted/60 text-left text-sidebar">
@@ -161,7 +171,13 @@ export function ProportionalNoObjection({
                   <th className="px-3 py-2 text-right font-semibold">
                     Qualifying
                   </th>
+                  <th className="px-3 py-2 text-right font-semibold">
+                    With account
+                  </th>
                   <th className="px-3 py-2 text-right font-semibold">Places</th>
+                  <th className="px-3 py-2 text-right font-semibold">
+                    No account
+                  </th>
                   <th className="px-3 py-2 text-right font-semibold">%</th>
                 </tr>
               </thead>
@@ -188,8 +204,16 @@ export function ProportionalNoObjection({
                         <td className="px-3 py-2 text-right">
                           {lga.qualifying.toLocaleString()}
                         </td>
+                        <td className="px-3 py-2 text-right">
+                          {lga.with_account.toLocaleString()}
+                        </td>
                         <td className="px-3 py-2 text-right font-semibold text-brand">
                           {lga.allocated.toLocaleString()}
+                        </td>
+                        <td
+                          className={`px-3 py-2 text-right ${lga.without_account ? "font-semibold text-amber-700" : "text-muted-foreground"}`}
+                        >
+                          {lga.without_account || "—"}
                         </td>
                         <td className="px-3 py-2 text-right text-muted-foreground">
                           {lga.percent}%
@@ -208,7 +232,25 @@ export function ProportionalNoObjection({
                               {school.qualifying.toLocaleString()}
                             </td>
                             <td className="px-3 py-1.5 text-right">
+                              {school.with_account.toLocaleString()}
+                            </td>
+                            <td
+                              className="px-3 py-1.5 text-right"
+                              title={
+                                school.allocated !== school.share
+                                  ? `Fair share ${school.share}; places moved to students with an account`
+                                  : undefined
+                              }
+                            >
                               {school.allocated.toLocaleString()}
+                              {school.allocated !== school.share && (
+                                <span className="ml-1 text-[10px] text-amber-700">
+                                  (share {school.share})
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-1.5 text-right">
+                              {school.without_account || "—"}
                             </td>
                             <td className="px-3 py-1.5 text-right">
                               {school.qualifying

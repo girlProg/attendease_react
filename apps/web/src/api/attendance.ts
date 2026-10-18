@@ -570,14 +570,21 @@ export interface ProportionalSchool {
   school: number | null;
   school_name: string;
   qualifying: number;
+  with_account: number;
+  // The school's fair share, and the students actually picked from it (more
+  // or fewer when places moved to account holders elsewhere in the LGA).
+  share: number;
   allocated: number;
+  without_account: number;
 }
 
 export interface ProportionalLga {
   lga: number | null;
   lga_name: string;
   qualifying: number;
+  with_account: number;
   allocated: number;
+  without_account: number;
   percent: number;
   schools: ProportionalSchool[];
 }
@@ -586,6 +593,8 @@ export interface ProportionalAllocation {
   qualifying: number;
   target: number;
   percent: number;
+  // Picked students without a usable account (only where an LGA ran out).
+  without_account: number;
   committed: boolean;
   id?: number;
   lgas: ProportionalLga[];
