@@ -583,6 +583,8 @@ export interface ProportionalLga {
   lga_name: string;
   qualifying: number;
   with_account: number;
+  // The LGA's fair share, and the students actually picked from it.
+  share: number;
   allocated: number;
   without_account: number;
   percent: number;

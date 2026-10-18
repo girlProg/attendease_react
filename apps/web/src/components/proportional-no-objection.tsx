@@ -84,10 +84,10 @@ export function ProportionalNoObjection({
         For when payment is approved for fewer students than qualify. Every LGA,
         and every school within it, gets the same share of its own qualifying
         students (counting those with and without bank accounts). Places go to
-        students with a usable account first, highest attendance first; a school
-        short of them passes its spare places to the best account holders
-        elsewhere in its LGA. Students without an account are picked only when
-        an LGA runs out of account holders.
+        students with a usable account first, highest attendance first. A school
+        short of them passes its spare places to the best account holders in its
+        LGA, and an LGA still short to the best in the state. Students without
+        an account are picked only when the state runs out of account holders.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -160,7 +160,7 @@ export function ProportionalNoObjection({
             className={`text-xs ${allocation.without_account ? "text-amber-700" : "text-emerald-700"}`}
           >
             {allocation.without_account
-              ? `${allocation.without_account.toLocaleString()} of the picked students have no usable account — their LGAs ran out of students with one.`
+              ? `${allocation.without_account.toLocaleString()} of the picked students have no usable account — the state ran out of students with one.`
               : "Every picked student has a usable account."}
           </p>
           <div className="max-h-80 overflow-y-auto rounded-lg border border-border/40">
@@ -207,8 +207,20 @@ export function ProportionalNoObjection({
                         <td className="px-3 py-2 text-right">
                           {lga.with_account.toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 text-right font-semibold text-brand">
+                        <td
+                          className="px-3 py-2 text-right font-semibold text-brand"
+                          title={
+                            lga.allocated !== lga.share
+                              ? `Fair share ${lga.share}; places moved to students with an account`
+                              : undefined
+                          }
+                        >
                           {lga.allocated.toLocaleString()}
+                          {lga.allocated !== lga.share && (
+                            <span className="ml-1 text-[10px] font-normal text-amber-700">
+                              (share {lga.share})
+                            </span>
+                          )}
                         </td>
                         <td
                           className={`px-3 py-2 text-right ${lga.without_account ? "font-semibold text-amber-700" : "text-muted-foreground"}`}
