@@ -118,6 +118,8 @@ export interface AttendanceOverviewClass {
   recorded: number;
   average_attendance: number;
   qualifying_students: number;
+  // With the overview's approved figures only.
+  approved_students?: number;
 }
 
 // The same three attendance figures, over the rows that arrived in an uploaded
@@ -128,6 +130,9 @@ export interface SubmittedAttendanceStats {
   average_attendance: number;
   qualifying_students: number;
   qualifying_percentage: number;
+  // Set with the overview's approved figures (see AttendanceOverview).
+  approved_students?: number;
+  approved_percentage?: number;
   submissions: number;
 }
 
@@ -143,6 +148,11 @@ export interface AttendanceOverview {
   average_attendance: number;
   qualifying_students: number;
   qualifying_percentage: number;
+  // Students on the No Objection list, when the filters name one cohort, year
+  // and term that has one; null otherwise. Shown as "Approved" in place of
+  // the qualifying figures.
+  approved_students: number | null;
+  approved_percentage: number | null;
   by_class: AttendanceOverviewClass[];
   submitted?: SubmittedAttendanceStats;
 }

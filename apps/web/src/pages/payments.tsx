@@ -117,7 +117,8 @@ export function PaymentsPage() {
   const listScope = summary?.scope
   // Why the list is short or empty, in the server's own counts.
   const scopeNotes: string[] = []
-  if (listScope?.source === "no_objection") {
+  // Staff only: everyone else just sees the list.
+  if (isStaffuser && listScope?.source === "no_objection") {
     scopeNotes.push(
       "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
     )

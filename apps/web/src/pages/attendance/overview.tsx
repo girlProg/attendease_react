@@ -32,13 +32,23 @@ function percentOf(part: number, whole: number): number {
   return whole > 0 ? roundUpPercent((part / whole) * 100) : 0
 }
 
-export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean }) {
+export function Overview({
+  scope,
+  ready,
+}: {
+  scope: FilterScope
+  ready: boolean
+}) {
   // The tab's filters exactly as the bar shows them (see useAttendanceFilters).
   const params = scope
 
   const { isStaffuser } = useAuth()
 
-  const { data, isError, isLoading: isFetchingFirst } = useQuery({
+  const {
+    data,
+    isError,
+    isLoading: isFetchingFirst,
+  } = useQuery({
     queryKey: ["attendance-overview", params],
     queryFn: () => getAttendanceOverview(params),
     enabled: ready,
@@ -53,6 +63,8 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
   const graduated = data?.graduated_students ?? 0
   const schools = data?.total_schools ?? 0
   const submitted = data?.submitted
+  // A No Objection list exists for the chosen cohort, year and term.
+  const approved = data?.approved_students != null
 
   const stats = [
     {
@@ -65,7 +77,9 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
     {
       label: "Schools",
       value: schools.toLocaleString(),
-      sub: schools ? `${Math.round(beneficiaries / schools)} avg / school` : undefined,
+      sub: schools
+        ? `${Math.round(beneficiaries / schools)} avg / school`
+        : undefined,
       icon: School,
       color: "bg-[var(--stat-accent-2)]",
     },
@@ -83,13 +97,23 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
       icon: Percent,
       color: "bg-[var(--stat-accent-2)]",
     },
-    {
-      label: "Qualifying Students",
-      value: (data?.qualifying_students ?? 0).toLocaleString(),
-      sub: `${data?.qualifying_percentage ?? 0}% of recorded`,
-      icon: UserCheck,
-      color: "bg-[var(--stat-accent-1)]",
-    },
+    // With a No Objection list for the chosen term, the approved students
+    // stand in for the qualifying ones.
+    approved
+      ? {
+          label: "Approved",
+          value: (data?.approved_students ?? 0).toLocaleString(),
+          sub: `${data?.approved_percentage ?? 0}% of recorded`,
+          icon: UserCheck,
+          color: "bg-[var(--stat-accent-1)]",
+        }
+      : {
+          label: "Qualifying Students",
+          value: (data?.qualifying_students ?? 0).toLocaleString(),
+          sub: `${data?.qualifying_percentage ?? 0}% of recorded`,
+          icon: UserCheck,
+          color: "bg-[var(--stat-accent-1)]",
+        },
     {
       label: "Graduated",
       value: graduated.toLocaleString(),
@@ -129,13 +153,21 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
       icon: Percent,
       color: "bg-[var(--stat-accent-2)]",
     },
-    {
-      label: "Qualifying Students",
-      value: (submitted?.qualifying_students ?? 0).toLocaleString(),
-      sub: `${submitted?.qualifying_percentage ?? 0}% of submitted`,
-      icon: UserCheck,
-      color: "bg-[var(--stat-accent-1)]",
-    },
+    approved
+      ? {
+          label: "Approved",
+          value: (submitted?.approved_students ?? 0).toLocaleString(),
+          sub: `${submitted?.approved_percentage ?? 0}% of submitted`,
+          icon: UserCheck,
+          color: "bg-[var(--stat-accent-1)]",
+        }
+      : {
+          label: "Qualifying Students",
+          value: (submitted?.qualifying_students ?? 0).toLocaleString(),
+          sub: `${submitted?.qualifying_percentage ?? 0}% of submitted`,
+          icon: UserCheck,
+          color: "bg-[var(--stat-accent-1)]",
+        },
   ]
 
   return (
@@ -153,7 +185,9 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
       {isStaffuser && submitted && (
         <section className="space-y-3">
           <div className="flex items-baseline gap-2">
-            <h3 className="text-sm font-bold text-sidebar">Submitted attendance</h3>
+            <h3 className="text-sm font-bold text-sidebar">
+              Submitted attendance
+            </h3>
             <p className="text-[11px] text-muted-foreground">
               From {submitted.submissions.toLocaleString()} uploaded register
               {submitted.submissions === 1 ? "" : "s"} · staff only
@@ -171,7 +205,9 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
         <Table className="min-w-[520px]">
           <TableHeader>
             <TableRow className="border-border/40 bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-xs font-semibold text-sidebar">Class</TableHead>
+              <TableHead className="text-xs font-semibold text-sidebar">
+                Class
+              </TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">
                 Attendance Recorded
               </TableHead>
@@ -179,7 +215,7 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
                 Average
               </TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">
-                Qualifying
+                {approved ? "Approved" : "Qualifying"}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -201,7 +237,10 @@ export function Overview({ scope, ready }: { scope: FilterScope; ready: boolean 
                     <PercentageBadge value={row.average_attendance} />
                   </TableCell>
                   <TableCell className="text-center text-xs text-muted-foreground">
-                    {row.qualifying_students.toLocaleString()}
+                    {(approved
+                      ? (row.approved_students ?? 0)
+                      : row.qualifying_students
+                    ).toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))
