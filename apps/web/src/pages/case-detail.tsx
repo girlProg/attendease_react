@@ -430,9 +430,13 @@ export function CaseDetailPage() {
                       {a.percent === null ? (
                         <TableCell
                           className="text-center text-xs font-semibold text-muted-foreground"
-                          title="The school was closed this week — it does not count"
+                          title={
+                            a.after_term
+                              ? "After the term's length set on the Settings page — it does not count"
+                              : "The school was closed this week — it does not count"
+                          }
                         >
-                          Closed
+                          {a.after_term ? "After term" : "Closed"}
                         </TableCell>
                       ) : (
                         <TableCell

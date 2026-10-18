@@ -17,7 +17,11 @@ export function WeekLabel({
   return (
     <span className={className}>
       Week {week}
-      {starts && <span className="block text-[10px] text-muted-foreground">from {starts}</span>}
+      {starts && (
+        <span className="block text-[10px] text-muted-foreground">
+          from {starts}
+        </span>
+      )}
     </span>
   )
 }
@@ -36,9 +40,20 @@ export function CountedWeek({
     counted_average?: string | null
     holiday_days?: number
     school_closed?: boolean
+    after_term?: boolean
   }
   render: (percent: number) => React.ReactNode
 }) {
+  if (record.after_term) {
+    return (
+      <span
+        className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600"
+        title="After the term's length set on the Settings page — it does not count towards qualification"
+      >
+        After term
+      </span>
+    )
+  }
   if (record.school_closed) {
     return (
       <span
@@ -59,7 +74,9 @@ export function CountedWeek({
       </span>
     )
   }
-  const percent = Number(record.counted_average ?? record.attendance_average ?? 0)
+  const percent = Number(
+    record.counted_average ?? record.attendance_average ?? 0
+  )
   const holidays = record.holiday_days ?? 0
   return (
     <span className="inline-flex flex-col items-center">

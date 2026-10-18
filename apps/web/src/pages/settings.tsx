@@ -216,6 +216,11 @@ function TermDatesSection({ calendar }: { calendar: TermCalendar }) {
           {calendar.weeks_set ? "" : `${calendar.weeks} weeks is the default.`}
         </span>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {calendar.weeks_set
+          ? `Qualification counts weeks 1–${calendar.weeks} only: attendance recorded after week ${calendar.weeks} does not count. "Default length" removes the cap.`
+          : "No length set, so every week with attendance counts. Saving a length caps qualification at it: weeks after it stop counting."}
+      </p>
       {save.isError && (
         <p className="text-xs text-red-600">{errorText(save.error, "Could not save the term dates.")}</p>
       )}

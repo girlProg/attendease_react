@@ -152,6 +152,8 @@ export interface AttendanceHistoryEntry {
   // null for a week the school was closed, which does not count.
   percent: number | null;
   closed?: boolean;
+  // After the term's set length: doesn't count.
+  after_term?: boolean;
   reason: string;
   remark: string;
   recorded_at: string;

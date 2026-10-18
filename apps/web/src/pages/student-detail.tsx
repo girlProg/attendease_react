@@ -581,7 +581,7 @@ export function StudentDetailPage() {
                         {weeks.map((week) => (
                           <TableRow
                             key={week.id}
-                            className={`border-border/40 ${week.school_closed ? "bg-slate-50/70 text-muted-foreground" : ""}`}
+                            className={`border-border/40 ${week.school_closed || week.after_term ? "bg-slate-50/70 text-muted-foreground" : ""}`}
                           >
                             <TableCell className="text-xs text-muted-foreground">
                               {week.term}

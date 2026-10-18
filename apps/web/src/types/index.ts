@@ -180,6 +180,8 @@ export interface AttendanceRecord {
   // School days the week lost to public holidays (or before the term began).
   holiday_days?: number;
   school_closed?: boolean;
+  // After the term's length set on Settings: doesn't count.
+  after_term?: boolean;
 }
 
 export type DayName =
