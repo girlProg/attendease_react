@@ -80,6 +80,31 @@ export interface AttendanceSchoolCount {
   students: number;
 }
 
+/** One week of the filtered rows: how it counts, and why it went badly. */
+export interface AttendanceWeekSummary {
+  year: number | null;
+  term: number;
+  week: number;
+  rows: number;
+  students: number;
+  // As qualification counts it (over the days schools were open); null when
+  // the week doesn't count at all (closed, all holidays, or after the term).
+  counted_average: number | null;
+  // The registers as recorded.
+  register_average: number | null;
+  closed_schools: number;
+  holiday_days: number;
+  after_term: boolean;
+  reasons: CommonReason[];
+}
+
+export const getAttendanceByWeek = (search: string, scope: FilterScope, notes: NoteFilters) =>
+  api
+    .get<AttendanceWeekSummary[]>("/attendance/by-week/", {
+      params: attendanceParams(search, scope, notes),
+    })
+    .then((r) => r.data);
+
 /** The filtered attendance rows counted per school, most first. */
 export const getAttendanceBySchool = (
   page: number,
