@@ -17,6 +17,8 @@ import { SearchBar } from "@/components/search-bar"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { WeekLabel } from "@/components/week-cell"
+import { WeekClosuresDialog, type ClosureWeek } from "@/components/week-closures-dialog"
+import { useAuth } from "@/contexts/auth-context"
 import {
   getAttendance,
   getAttendanceBySchool,
@@ -62,6 +64,9 @@ export function RealTime({
   const [hasNote, setHasNote] = useState(false)
   const [pickedSchool, setPickedSchool] = useState<{ id: number; name: string } | null>(null)
   const [pickedWeek, setPickedWeek] = useState<PickedWeek | null>(null)
+  // The week whose closures are being marked (staff only).
+  const [closureWeek, setClosureWeek] = useState<ClosureWeek | null>(null)
+  const { isStaffuser } = useAuth()
 
   // The bar's school wins; a pick from By school narrows only when it has none.
   const narrowedTo = pickedSchool && !scope.school ? pickedSchool : null
@@ -202,11 +207,14 @@ export function RealTime({
         />
       )}
 
+      <WeekClosuresDialog week={closureWeek} scope={scope} onClose={() => setClosureWeek(null)} />
+
       {view === "weeks" ? (
         <WeekTable
           weeks={weeks.data}
           isLoading={(weeks.isLoading && !weeks.data) || !ready}
           qualifying={qualifying}
+          onMarkClosures={isStaffuser ? setClosureWeek : undefined}
           onPick={(week) => {
             setPickedWeek({ year: week.year, term: week.term, week: week.week })
             setView("rows")
@@ -285,12 +293,16 @@ function WeekTable({
   isLoading,
   qualifying,
   onPick,
+  onMarkClosures,
 }: {
   weeks: AttendanceWeekSummary[] | undefined
   isLoading: boolean
   qualifying: number
   onPick: (week: AttendanceWeekSummary) => void
+  // Staff only: open the closures dialog for a week.
+  onMarkClosures?: (week: ClosureWeek) => void
 }) {
+  const columns = onMarkClosures ? 8 : 7
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
@@ -310,13 +322,14 @@ function WeekTable({
               <TableHead className="text-center text-xs font-semibold text-sidebar">Closed schools</TableHead>
               <TableHead className="text-center text-xs font-semibold text-sidebar">Holiday days</TableHead>
               <TableHead className="text-xs font-semibold text-sidebar">Top reasons</TableHead>
+              {onMarkClosures && <TableHead className="text-right text-xs font-semibold text-sidebar">Closures</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeletonRows columns={7} />
+              <TableSkeletonRows columns={columns} />
             ) : (weeks?.length ?? 0) === 0 ? (
-              <TableEmptyState colSpan={7} />
+              <TableEmptyState colSpan={columns} />
             ) : (
               weeks?.map((week) => {
                 const low = week.counted_average !== null && week.counted_average < qualifying
@@ -358,6 +371,22 @@ function WeekTable({
                             .map((item) => `${capitalise(item.reason)} (${item.count.toLocaleString()})`)
                             .join(" · ")}
                     </TableCell>
+                    {onMarkClosures && (
+                      <TableCell className="text-right">
+                        <button
+                          type="button"
+                          disabled={!week.year}
+                          title={week.year ? "Mark which schools were closed this week" : "This week has no year"}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            if (week.year) onMarkClosures({ year: week.year, term: week.term, week: week.week })
+                          }}
+                          className="inline-flex h-8 items-center rounded-full border border-amber-600 px-3 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-40"
+                        >
+                          Mark closures
+                        </button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 )
               })

@@ -105,6 +105,36 @@ export const getAttendanceByWeek = (search: string, scope: FilterScope, notes: N
     })
     .then((r) => r.data);
 
+/** A school with attendance in one week, for marking closures from By week. */
+export interface WeekSchool {
+  school: number;
+  school_name: string;
+  lga: string | null;
+  // The cohorts its students are in (school rows are per cohort).
+  cohorts: string[];
+  students: number;
+  register_average: number;
+  top_reason: CommonReason | null;
+  closed: boolean;
+  closure_reason: string | null;
+}
+
+/** Every school in the page filters with attendance that week, lowest first. */
+export const getWeekSchools = (
+  scope: FilterScope,
+  week: { year: number; term: number; week: number },
+) =>
+  api
+    .get<WeekSchool[]>("/attendance/week-schools/", {
+      params: {
+        ...attendanceParams("", { ...scope, year: undefined, term: undefined, week: undefined }),
+        year: week.year,
+        term: week.term,
+        week: week.week,
+      },
+    })
+    .then((r) => r.data);
+
 /** The filtered attendance rows counted per school, most first. */
 export const getAttendanceBySchool = (
   page: number,
