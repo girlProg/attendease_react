@@ -12,6 +12,7 @@ export type AuditEventType =
   | "payment_marked_paid"
   | "duplicate_payment_blocked"
   | "poll_cap_reached"
+  | "upload_not_received"
   | "poll_response"
   | "poll_failed"
   | "poll_skipped"
@@ -36,6 +37,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   payment_marked_paid: "Payment marked as paid",
   duplicate_payment_blocked: "Duplicate payment blocked",
   poll_cap_reached: "Status polling gave up",
+  upload_not_received: "Bank confirmed upload not received",
   poll_response: "Status check: bank answer",
   poll_failed: "Status check failed",
   poll_skipped: "Status checks skipped",
