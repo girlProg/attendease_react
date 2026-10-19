@@ -93,6 +93,27 @@ export const pollPendingDisbursements = () =>
     .post<{ queued: number }>("/disbursement-batch/poll-pending/")
     .then((response) => response.data)
 
+/**
+ * Every payment the Disburse button should send for the page's filters, in
+ * full (gathered on the server, so never limited to one page of the list):
+ * the term's undisbursed payments of the students the page lists, minus any
+ * already in flight at the bank.
+ */
+export const getPendingPayments = (scope: {
+  cohort: number | string
+  year: string | number
+  term: string | number
+  school?: number | string
+  lga?: number
+  name?: string
+}) =>
+  api
+    .get<{ payment_ids: number[]; count: number; students: number }>(
+      "/student/pending-payments/",
+      { params: scope },
+    )
+    .then((response) => response.data)
+
 export const generatePayments = ({
   commit,
   ...scope

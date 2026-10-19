@@ -19,10 +19,10 @@ import {
 import { PrimaryButton } from "@/components/primary-button"
 import {
   createDisbursementBatch,
+  getPendingPayments,
   generatePayments,
   type DisbursementBatch,
 } from "@/api/payments"
-import { getTermAverages } from "@/api/attendance"
 import { formatNaira } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
@@ -106,25 +106,9 @@ export function DisburseDialog({
     mutationFn: async (): Promise<DisbursementBatch> => {
       // 1. Create any missing pending payments for qualifying students.
       await generatePayments({ ...scope, commit: true })
-      // 2. Collect all undisbursed payment ids for the term across the scope.
-      const list = await getTermAverages({
-        ...(year ? { year } : {}),
-        ...(school ? { school } : {}),
-        ...(lga ? { lga } : {}),
-        ...(cohort ? { cohort } : {}),
-        ...(term ? { term } : {}),
-        ...(name ? { name } : {}),
-        graduated: "false",
-        qualifying: "true",
-        page: 1,
-        page_size: 5000,
-      })
-      const selectedTerm = Number(term)
-      const paymentIds = list.results.flatMap((record) =>
-        (record.payments ?? [])
-          .filter((payment) => payment.term === selectedTerm && !payment.disbursed)
-          .map((payment) => payment.id),
-      )
+      // 2. Collect every pending payment for the term across the scope — on the
+      //    server, in full (one page of the list holds at most 1,000 rows).
+      const { payment_ids: paymentIds } = await getPendingPayments(scope)
       if (paymentIds.length === 0) {
         throw new Error("No pending payments to disburse for this selection.")
       }
@@ -220,7 +204,9 @@ export function DisburseDialog({
               onValueChange={(value) => value && setPayeeOverride(value as Payee)}
             >
               <SelectTrigger className="h-10 w-44 rounded-full border-sidebar/30 !bg-white px-4">
-                <SelectValue placeholder="Payee" />
+                <SelectValue placeholder="Payee">
+                  {payee === "student" ? "Pay Student" : "Pay Caregiver"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="student">Pay Student</SelectItem>
