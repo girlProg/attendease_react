@@ -27,6 +27,21 @@ export interface DisbursementBatch {
   skipped?: Record<string, string>
 }
 
+// A disbursement bigger than the bank's per-upload limit is sent as several
+// uploads, one batch each. If one fails at the bank the rest are not sent:
+// `not_sent` lists those payment ids, which stay ready to send.
+export interface DisbursementUploads {
+  batches: DisbursementBatch[]
+  skipped: Record<string, string>
+  not_sent: number[]
+}
+
+export type DisbursementResult = DisbursementBatch | DisbursementUploads
+
+export function isUploads(result: DisbursementResult): result is DisbursementUploads {
+  return "batches" in result
+}
+
 export interface CreateDisbursementBatchParams {
   payment_ids: number[]
   amount: number
@@ -36,12 +51,13 @@ export interface CreateDisbursementBatchParams {
 
 /**
  * Create a disbursement batch from existing (undisbursed) Payment ids and
- * submit it to the configured bank provider in one step. Celery then polls the
- * bank until every transaction is terminal.
+ * submit it to the configured bank provider in one step — several batches when
+ * the selection is bigger than the bank takes in one upload. Celery then polls
+ * the bank until every transaction is terminal.
  */
 export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =>
   api
-    .post<DisbursementBatch>("/disbursement-batch/", params)
+    .post<DisbursementResult>("/disbursement-batch/", params)
     .then((response) => response.data)
 
 export interface DisbursementSettings {

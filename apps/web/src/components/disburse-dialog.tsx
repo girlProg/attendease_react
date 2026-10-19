@@ -21,7 +21,9 @@ import {
   createDisbursementBatch,
   getPendingPayments,
   generatePayments,
+  isUploads,
   type DisbursementBatch,
+  type DisbursementResult,
 } from "@/api/payments"
 import { formatNaira } from "@/lib/formatters"
 import type { Payee } from "@/types"
@@ -30,6 +32,10 @@ interface BatchErrorData {
   detail?: string
   payments?: Record<string, string>
   batch?: DisbursementBatch
+  // Sent as several uploads and one failed: every batch created (the failed
+  // one last) and the payments not sent after it.
+  batches?: DisbursementBatch[]
+  not_sent?: number[]
 }
 
 function errorInfo(error: unknown): BatchErrorData {
@@ -103,7 +109,7 @@ export function DisburseDialog({
   })
 
   const disburse = useMutation({
-    mutationFn: async (): Promise<DisbursementBatch> => {
+    mutationFn: async (): Promise<DisbursementResult> => {
       // 1. Create any missing pending payments for qualifying students.
       await generatePayments({ ...scope, commit: true })
       // 2. Collect every pending payment for the term across the scope — on the
@@ -126,10 +132,16 @@ export function DisburseDialog({
   })
 
   const result = disburse.data
+  // One batch, or several when the selection was bigger than one upload.
+  const sentBatches = result ? (isUploads(result) ? result.batches : [result]) : []
+  const skippedCount = result?.skipped ? Object.keys(result.skipped).length : 0
   const failure = disburse.isError ? errorInfo(disburse.error) : undefined
   // A 502 means the batch WAS created but the bank call failed — it is tracked
   // and will be polled, so surface it as a warning, not a hard error.
   const parkedBatch = failure?.batch
+  // Uploads that went through before the failed one, and payments not sent.
+  const sentBeforeFailure = (failure?.batches ?? []).filter((batch) => batch.id !== parkedBatch?.id)
+  const notSentCount = failure?.not_sent?.length ?? 0
 
   function handleOpenChange(next: boolean) {
     setOpen(next)
@@ -254,21 +266,42 @@ export function DisburseDialog({
             </div>
           )}
 
-          {result && (
+          {result && sentBatches.length === 1 && (
             <div className="space-y-1 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
               <p className="flex items-center gap-2 font-medium">
                 <CheckCircle className="size-4 shrink-0" />
-                Batch {result.reference} submitted — status {result.status}.
+                Batch {sentBatches[0].reference} submitted — status {sentBatches[0].status}.
               </p>
               <p className="text-xs">
-                {result.counts.total} transaction(s): {result.counts.successful}{" "}
-                successful, {result.counts.in_flight} in flight,{" "}
-                {result.counts.failed} failed.
+                {sentBatches[0].counts.total} transaction(s): {sentBatches[0].counts.successful}{" "}
+                successful, {sentBatches[0].counts.in_flight} in flight,{" "}
+                {sentBatches[0].counts.failed} failed.
               </p>
-              {result.skipped && Object.keys(result.skipped).length > 0 && (
+              {skippedCount > 0 && (
                 <p className="text-xs">
-                  {Object.keys(result.skipped).length} payment(s) skipped
-                  (already in progress or disbursed).
+                  {skippedCount} payment(s) skipped (already in progress or disbursed).
+                </p>
+              )}
+            </div>
+          )}
+
+          {result && sentBatches.length > 1 && (
+            <div className="space-y-1 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
+              <p className="flex items-center gap-2 font-medium">
+                <CheckCircle className="size-4 shrink-0" />
+                Sent to the bank in {sentBatches.length} uploads (
+                {sentBatches.reduce((total, batch) => total + batch.counts.total, 0)} transactions).
+              </p>
+              <ul className="list-disc pl-5 text-xs">
+                {sentBatches.map((batch) => (
+                  <li key={batch.id}>
+                    {batch.reference}: {batch.counts.total} transaction(s), status {batch.status}
+                  </li>
+                ))}
+              </ul>
+              {skippedCount > 0 && (
+                <p className="text-xs">
+                  {skippedCount} payment(s) skipped (already in progress or disbursed).
                 </p>
               )}
             </div>
@@ -284,6 +317,16 @@ export function DisburseDialog({
               <p className="text-xs">
                 It is queued for a status check — do not re-submit. {failure?.detail}
               </p>
+              {sentBeforeFailure.length > 0 && (
+                <p className="text-xs">
+                  Sent before it: {sentBeforeFailure.map((batch) => batch.reference).join(", ")}.
+                </p>
+              )}
+              {notSentCount > 0 && (
+                <p className="text-xs">
+                  {notSentCount} payment(s) after it were not sent and are still ready to send.
+                </p>
+              )}
             </div>
           )}
 
