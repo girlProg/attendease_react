@@ -83,8 +83,8 @@ function Section({
  * closed week does not count for that school, so it can't pull a student's
  * average down. A dated term also refuses attendance for weeks still to come.
  */
-export function SettingsPage() {
-  useLogVisit("Settings", "Visited Settings")
+export function TermSettingsPage() {
+  useLogVisit("Settings", "Visited Term Settings")
   const { data: years } = useQuery({ queryKey: ["attendance-years"], queryFn: getAttendanceYears })
   const [chosenYear, setChosenYear] = useState<string | null>(null)
   const [term, setTerm] = useState("1")

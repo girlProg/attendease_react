@@ -64,6 +64,8 @@ export interface DisbursementSettings {
   enabled: boolean
   // Diagnostic: every bank status check is written to the audit trail.
   poll_logging: boolean
+  // A bigger disbursement goes as several uploads of equal size; null = no limit.
+  max_transfers_per_upload: number | null
   updated_at: string | null
   updated_by: string | null
 }
@@ -76,7 +78,9 @@ export const getDisbursementSettings = () =>
 
 /** Flip either switch (superusers only); send just the one that changes. */
 export const setDisbursementSettings = (
-  changes: Partial<Pick<DisbursementSettings, "enabled" | "poll_logging">>,
+  changes: Partial<
+    Pick<DisbursementSettings, "enabled" | "poll_logging" | "max_transfers_per_upload">
+  >,
 ) =>
   api
     .put<DisbursementSettings>("/disbursement-settings/", changes)

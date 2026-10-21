@@ -30,6 +30,15 @@ export function CaseManagerRoute() {
   return <Outlet />
 }
 
+/** Django superusers only, whatever their role. */
+export function SuperuserRoute() {
+  const { isSuperuser, isLoading } = useAuth()
+
+  if (isLoading) return null
+  if (!isSuperuser) return <Navigate to="/" replace />
+  return <Outlet />
+}
+
 /** Staff accounts only (Django is_staff), whatever their role. */
 export function StaffRoute() {
   const { isStaffuser, isLoading } = useAuth()

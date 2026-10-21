@@ -20,6 +20,7 @@ export type AuditEventType =
   | "refresh_requested"
   | "poll_pending_requested"
   | "disbursement_switch_toggled"
+  | "upload_cap_changed"
   | "payments_generated"
   | "no_objection_created"
   | "no_objection_deleted"
@@ -45,6 +46,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   refresh_requested: "Status refresh requested",
   poll_pending_requested: "Refresh of all in-flight batches",
   disbursement_switch_toggled: "Disbursements switched",
+  upload_cap_changed: "Most transfers per upload changed",
   payments_generated: "Payment records generated",
   no_objection_created: "No Objection list created",
   no_objection_deleted: "No Objection list deleted",
