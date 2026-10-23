@@ -54,10 +54,29 @@ function cohortErrorMessage(error: unknown): string {
   return parts.join(" ") || "Could not create the cohort."
 }
 
+// Why an upload failed, in words: the server's own reason when it gave one,
+// otherwise what the failure itself says (no answer at all, too large, too slow).
 function errorMessage(error: unknown): string {
-  const data = (error as { response?: { data?: { error?: string; detail?: string } } })
-    ?.response?.data
-  return data?.error ?? data?.detail ?? "Upload failed. Please try again."
+  const response = (error as { response?: { status?: number; data?: unknown } })?.response
+  const data = response?.data
+  if (data && typeof data === "object") {
+    const { error: reason, detail } = data as { error?: string; detail?: string }
+    if (reason || detail) return (reason ?? detail) as string
+  }
+  if (!response) {
+    return (
+      "The connection to the server was lost before it answered. This usually means the file is " +
+      "too large for your connection: try a smaller file (only the columns you map, saved as " +
+      ".xlsx, or split into parts)."
+    )
+  }
+  if (response.status === 413) {
+    return "The file is larger than the server accepts. Remove unused columns or split it into parts."
+  }
+  if (response.status === 502 || response.status === 504) {
+    return `The server took too long to answer (status ${response.status}). Try a smaller file.`
+  }
+  return `Upload failed: the server answered with status ${response.status}. Please try again.`
 }
 
 // Field options for the mapping select, grouped as the catalogue groups them
