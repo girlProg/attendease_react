@@ -24,6 +24,7 @@ export type AuditEventType =
   | "payments_generated"
   | "no_objection_created"
   | "no_objection_deleted"
+  | "student_deleted"
   | "status_snapshot"
 
 // Human labels, in the order the filter dropdown lists them (mirrors the
@@ -50,6 +51,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   payments_generated: "Payment records generated",
   no_objection_created: "No Objection list created",
   no_objection_deleted: "No Objection list deleted",
+  student_deleted: "Student and their records deleted",
   status_snapshot: "Status snapshot (backfilled)",
 }
 
