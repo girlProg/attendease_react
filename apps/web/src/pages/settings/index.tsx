@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 const PAGES = [
   { label: "Term", path: "/settings/term", superuserOnly: false },
   { label: "Payments", path: "/settings/payments", superuserOnly: true },
+  { label: "Cohorts", path: "/settings/cohorts", superuserOnly: true },
 ] as const
 
 export function SettingsLayout() {

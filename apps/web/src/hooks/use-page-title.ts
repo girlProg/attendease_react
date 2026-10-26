@@ -16,6 +16,7 @@ const titles: Record<string, string> = {
   "/settings": "Settings",
   "/settings/term": "Term Settings",
   "/settings/payments": "Payment Settings",
+  "/settings/cohorts": "Cohort Settings",
 }
 
 export function usePageTitle() {

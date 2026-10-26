@@ -27,6 +27,7 @@ import { LogsPage } from "@/pages/logs"
 import { DashboardPage } from "@/pages/dashboard"
 import { AskPage } from "@/pages/ask"
 import { SettingsLayout } from "@/pages/settings"
+import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { PaymentSettingsPage } from "@/pages/settings/payments"
 import { TermSettingsPage } from "@/pages/settings/term"
 
@@ -50,6 +51,7 @@ export function App() {
             <Route path="term" element={<TermSettingsPage />} />
             <Route element={<SuperuserRoute />}>
               <Route path="payments" element={<PaymentSettingsPage />} />
+              <Route path="cohorts" element={<CohortSettingsPage />} />
             </Route>
           </Route>
         </Route>
