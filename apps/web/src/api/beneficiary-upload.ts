@@ -73,6 +73,9 @@ export interface UploadRecordsParams {
   // 1-based row holding the column names (auto-detected when omitted).
   header_row?: number;
   purpose: UploadPurpose;
+  // Field keys that find a returning student instead of the S/N; every one
+  // must match one student exactly. Empty = by S/N or beneficiary ID.
+  match_on?: string[];
 }
 
 // One field a file column can be mapped to (from the backend catalogue).
@@ -84,6 +87,8 @@ export interface UploadField {
   // "update" = needed to match returning beneficiaries, "create" = needed to
   // enrol new students, "" = optional.
   required_for: "update" | "create" | "";
+  // Can identify a returning student (a "find each student by" column).
+  matchable: boolean;
 }
 
 export interface UploadInspection {
@@ -131,6 +136,9 @@ export const uploadRecords = async (
   if (params.default_row_type) formData.append("default_row_type", params.default_row_type);
   if (params.header_row) formData.append("header_row", String(params.header_row));
   formData.append("purpose", params.purpose);
+  if (params.match_on && params.match_on.length > 0) {
+    formData.append("match_on", JSON.stringify(params.match_on));
+  }
 
   try {
     const { data } = await api.post<UploadReport>(

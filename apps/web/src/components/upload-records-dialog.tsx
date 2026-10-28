@@ -117,6 +117,11 @@ export function UploadRecordsDialog() {
   // Which row of the sheet holds the column names; the server guesses, the
   // user can correct it (files often carry a title row above the headers).
   const [headerRow, setHeaderRow] = useState<number | null>(null)
+  // How a returning row finds its student: by the system's S/N, or by columns
+  // the user chooses (a file from outside the system has no S/N), all of
+  // which must match one student exactly.
+  const [matchBy, setMatchBy] = useState<"id" | "columns">("id")
+  const [matchOn, setMatchOn] = useState<string[]>([])
 
   const { data: cohorts = [] } = useQuery({ queryKey: ["cohorts"], queryFn: getCohorts })
 
@@ -159,6 +164,7 @@ export function UploadRecordsDialog() {
         default_row_type: defaultRowType,
         header_row: headerRow ?? undefined,
         purpose,
+        match_on: findingByColumns ? chosenMatch : undefined,
       }),
     onSuccess: (report: UploadReport) => {
       if (report.committed) {
@@ -182,14 +188,29 @@ export function UploadRecordsDialog() {
     [inspection],
   )
   const sourceMapped = mappedKeys.has("source")
+  // Mapped columns that can identify a student, and those ticked (a column
+  // unmapped after ticking drops out).
+  const matchableMapped = (inspection?.fields ?? []).filter(
+    (field) => field.matchable && mappedKeys.has(field.key),
+  )
+  const chosenMatch = matchOn.filter((key) => mappedKeys.has(key))
+  const findingByColumns = updateExisting && matchBy === "columns"
 
   // Gentle guidance — the server still validates every row.
   const mappingWarnings: string[] = []
   if (inspection) {
-    if (updateExisting && !mappedKeys.has("studentsn") && (sourceMapped || defaultRowType === "returning")) {
+    if (
+      updateExisting &&
+      !findingByColumns &&
+      !mappedKeys.has("studentsn") &&
+      (sourceMapped || defaultRowType === "returning")
+    ) {
       mappingWarnings.push(
-        "Returning beneficiaries can't be matched without a column mapped to “Student S/N or Beneficiary ID”.",
+        "Returning beneficiaries can't be matched without a column mapped to “Student S/N or Beneficiary ID”, or columns chosen under “Find each student by”.",
       )
+    }
+    if (findingByColumns && chosenMatch.length === 0) {
+      mappingWarnings.push("Tick at least one column under “Find each student by”.")
     }
     if (createNew && (sourceMapped || defaultRowType === "new")) {
       const missing = (inspection.fields ?? [])
@@ -203,7 +224,11 @@ export function UploadRecordsDialog() {
       mappingWarnings.push("Both “update existing” and “enrol new” are off — every row will be skipped.")
     }
   }
-  const canPreview = onMappingStep && mappedCount > 0 && !upload.isPending
+  const canPreview =
+    onMappingStep &&
+    mappedCount > 0 &&
+    !upload.isPending &&
+    !(findingByColumns && chosenMatch.length === 0)
 
   function resetReport() {
     if (upload.data || upload.error) upload.reset()
@@ -223,6 +248,8 @@ export function UploadRecordsDialog() {
     setDefaultRowType("returning")
     setPurpose("update")
     setHeaderRow(null)
+    setMatchBy("id")
+    setMatchOn([])
     inspect.reset()
     upload.reset()
   }
@@ -564,7 +591,7 @@ export function UploadRecordsDialog() {
               <div className="mt-2 flex flex-wrap gap-4">
                 {(
                   [
-                    ["returning", "Returning beneficiary (matched by S/N or beneficiary ID)"],
+                    ["returning", "Returning beneficiary (an existing student to update)"],
                     ["new", "New student to enrol"],
                   ] as [UploadRowType, string][]
                 ).map(([value, label]) => (
@@ -584,6 +611,66 @@ export function UploadRecordsDialog() {
                 ))}
               </div>
             </div>
+
+            {/* How a returning row finds its student: S/N, or chosen columns. */}
+            {updateExisting && (
+              <div className="rounded-lg bg-muted/30 p-3 text-sm">
+                <p className="font-medium text-foreground">Find each student by…</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {(
+                    [
+                      ["id", "Student S/N or beneficiary ID", "The system's own ID, as in a file downloaded from here."],
+                      ["columns", "Columns I choose", "For a file from elsewhere: every ticked column must match one student exactly. A row matching no one, or several students, is skipped and listed."],
+                    ] as ["id" | "columns", string, string][]
+                  ).map(([value, label, hint]) => (
+                    <label key={value} className="flex items-start gap-2 text-sm text-foreground">
+                      <input
+                        type="radio"
+                        name="match-by"
+                        className="mt-0.5 size-4 accent-sidebar"
+                        checked={matchBy === value}
+                        onChange={() => {
+                          setMatchBy(value)
+                          resetReport()
+                        }}
+                      />
+                      <span>
+                        <span className="font-medium">{label}</span>
+                        <span className="block text-xs text-muted-foreground">{hint}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {matchBy === "columns" &&
+                  (matchableMapped.length === 0 ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Map a column to something that identifies a student (e.g. Student NIN, Caregiver BVN,
+                      Student photo URL) and it will appear here.
+                    </p>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/40 pt-3">
+                      {matchableMapped.map((field) => (
+                        <label key={field.key} className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-sidebar"
+                            checked={chosenMatch.includes(field.key)}
+                            onChange={(event) => {
+                              setMatchOn((current) =>
+                                event.target.checked
+                                  ? [...current, field.key]
+                                  : current.filter((key) => key !== field.key),
+                              )
+                              resetReport()
+                            }}
+                          />
+                          {field.label}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+              </div>
+            )}
 
             {/* What the upload is for: verification must be chosen explicitly. */}
             <div className="rounded-lg bg-muted/30 p-3 text-sm">
@@ -698,7 +785,7 @@ export function UploadRecordsDialog() {
               <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
                 <p className="flex items-center gap-2 font-medium">
                   <AlertCircle className="size-4 shrink-0" />
-                  {report.warnings.length} row(s) skipped — no matching beneficiary.
+                  {report.warnings.length} row(s) skipped — each one says why below.
                   {report.committed ? " The rest were saved." : " The rest will be saved."}
                 </p>
                 <ul className="max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs">
