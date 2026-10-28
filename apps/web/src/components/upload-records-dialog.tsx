@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import { Upload, CheckCircle, AlertCircle, Plus, ArrowLeft, Wand2 } from "lucide-react"
+import { Upload, CheckCircle, AlertCircle, Plus, ArrowLeft, Wand2, EyeOff } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
@@ -468,17 +468,32 @@ export function UploadRecordsDialog() {
                 {inspection.row_count.toLocaleString()} row{inspection.row_count === 1 ? "" : "s"} ·{" "}
                 {mappedCount} of {inspection.headers.length} columns matched
               </span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-sidebar underline-offset-2 hover:underline"
-                onClick={() => {
-                  setMapping(inspection.suggested_mapping)
-                  resetReport()
-                }}
-              >
-                <Wand2 className="size-3.5" />
-                Reset to suggested
-              </button>
+              <span className="flex flex-wrap items-center gap-4">
+                {/* To update just one field: clear every column, then pick it. */}
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-sidebar underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline"
+                  disabled={mappedCount === 0}
+                  onClick={() => {
+                    setMapping({})
+                    resetReport()
+                  }}
+                >
+                  <EyeOff className="size-3.5" />
+                  Ignore all
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-sidebar underline-offset-2 hover:underline"
+                  onClick={() => {
+                    setMapping(inspection.suggested_mapping)
+                    resetReport()
+                  }}
+                >
+                  <Wand2 className="size-3.5" />
+                  Reset to suggested
+                </button>
+              </span>
             </div>
 
             {/* Header row picker: which row of the sheet names the columns */}
