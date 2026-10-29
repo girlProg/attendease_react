@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import { Upload, CheckCircle, AlertCircle, Plus, ArrowLeft, Wand2, EyeOff } from "lucide-react"
+import { Upload, CheckCircle, AlertCircle, Plus, ArrowLeft, Wand2, EyeOff, Download } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
@@ -31,8 +31,11 @@ import {
   type UploadPurpose,
   type UploadRowType,
 } from "@/api/beneficiary-upload"
+import { describeChanges, downloadPreviewCsv, foundWith } from "@/lib/upload-preview-csv"
 
 const PAYEE_DEFAULT = "__default__"
+// Matched rows listed on screen; the CSV download has every row.
+const MATCHES_SHOWN = 50
 // What the payee box shows (the select would otherwise print the raw value).
 const PAYEE_LABELS: Record<string, string> = {
   [PAYEE_DEFAULT]: "Cohort default",
@@ -195,6 +198,7 @@ export function UploadRecordsDialog() {
   )
   const chosenMatch = matchOn.filter((key) => mappedKeys.has(key))
   const findingByColumns = updateExisting && matchBy === "columns"
+  const matchedRows = (report?.preview ?? []).filter((row) => row.match)
 
   // Gentle guidance — the server still validates every row.
   const mappingWarnings: string[] = []
@@ -758,6 +762,60 @@ export function UploadRecordsDialog() {
                       .join(", ")}
                     .
                   </p>
+                )}
+                {report.preview && report.preview.length > 0 && (
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold underline-offset-2 hover:underline"
+                    onClick={() =>
+                      downloadPreviewCsv(
+                        report,
+                        `preview-${(file?.name ?? "upload").replace(/\.[^.]+$/, "")}.csv`,
+                      )
+                    }
+                  >
+                    <Download className="size-3.5" />
+                    Download preview (CSV) — every row, who it found and what changes
+                  </button>
+                )}
+                {matchedRows.length > 0 && (
+                  <details className="mt-2 text-xs" open>
+                    <summary className="cursor-pointer font-medium">
+                      Matched rows (first {Math.min(matchedRows.length, MATCHES_SHOWN)} of{" "}
+                      {matchedRows.length})
+                    </summary>
+                    <div className="mt-1 max-h-72 overflow-auto rounded border border-sky-100 bg-white">
+                      <table className="w-full text-left text-[11px] text-slate-700">
+                        <thead className="sticky top-0 bg-sky-100 text-sky-900">
+                          <tr>
+                            <th className="px-2 py-1">Row</th>
+                            <th className="px-2 py-1">Found with</th>
+                            <th className="px-2 py-1">Name in file</th>
+                            <th className="px-2 py-1">Stored student</th>
+                            <th className="px-2 py-1">Changes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchedRows.slice(0, MATCHES_SHOWN).map((row) => (
+                            <tr key={row.row} className="border-t border-sky-50 align-top">
+                              <td className="px-2 py-1">{row.row}</td>
+                              <td className="px-2 py-1">{foundWith(row.match!)}</td>
+                              <td className="px-2 py-1">{row.match!.file_name}</td>
+                              <td className="px-2 py-1">
+                                {row.match!.name}
+                                <div className="text-slate-500">
+                                  {row.beneficiary_id}
+                                  {row.match!.serial ? ` · S/N ${row.match!.serial}` : ""}
+                                  {row.match!.school ? ` · ${row.match!.school}` : ""}
+                                </div>
+                              </td>
+                              <td className="px-2 py-1">{describeChanges(row.match!) || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
                 )}
                 {report.preview && report.preview.some((row) => row.action === "skip") && (
                   <details className="mt-2 text-xs">

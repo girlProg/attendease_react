@@ -12,6 +12,20 @@ export interface UploadPreviewRow {
   action: string;
   beneficiary_id: string;
   note: string;
+  // Update rows only: who the row found and what it will change.
+  match?: UploadMatch;
+}
+
+// Long numbers (account, NIN, BVN, phone) arrive masked to the last four.
+export interface UploadMatch {
+  file_name: string;
+  // {column label: the file's value} for the columns that found the student.
+  found_with: Record<string, string>;
+  name: string;
+  serial: number | null;
+  school: string;
+  lga: string;
+  changes: { field: string; old: string; new: string }[];
 }
 
 // The report returned by /student/upload-records/ for both preview and commit.
