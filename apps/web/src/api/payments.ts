@@ -22,42 +22,69 @@ export interface DisbursementBatch {
   counts: DisbursementBatchCounts
   created_at: string
   updated_at: string
-  // Payments left out of this batch (already in-flight / disbursed), keyed by
-  // payment id → reason. Present on the create response only.
-  skipped?: Record<string, string>
 }
 
-// A disbursement bigger than the bank's per-upload limit is sent as several
-// uploads, one batch each. If one fails at the bank the rest are not sent:
-// `not_sent` lists those payment ids, which stay ready to send.
-export interface DisbursementUploads {
-  batches: DisbursementBatch[]
-  skipped: Record<string, string>
-  not_sent: number[]
+export type DisbursementRunStatus = "queued" | "sending" | "sent" | "stopped"
+
+// One press of Disburse: one school's payments, sent in the background as one
+// or more uploads. The latest run is "the last school disbursed".
+export interface DisbursementRun {
+  id: number
+  school: number
+  school_name: string
+  cohort: number | null
+  year: number | null
+  term: number | null
+  amount: string
+  status: DisbursementRunStatus
+  status_label: string
+  uploads_total: number
+  uploads_sent: number
+  payment_count: number
+  // Payments left ready to send when the run stopped early.
+  not_sent_count: number
+  // Payments that couldn't go (already paid, in flight, no account...).
+  skipped_count: number
+  // Its transfers still being worked on at the bank (they hold up the next school).
+  waiting_at_bank: number
+  // Why it stopped, in words.
+  detail: string
+  created_by: string
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  uploads: { reference: string; status: string; counts: DisbursementBatchCounts }[]
 }
 
-export type DisbursementResult = DisbursementBatch | DisbursementUploads
-
-export function isUploads(result: DisbursementResult): result is DisbursementUploads {
-  return "batches" in result
+export interface CurrentDisbursement {
+  run: DisbursementRun | null
+  // Why the next Disburse can't start yet; null when it can.
+  refusal: string | null
 }
 
 export interface CreateDisbursementBatchParams {
   payment_ids: number[]
+  // A Disburse pays one school; every payment must be in it.
+  school: number
   amount: number
   use_single_debit?: boolean
   payee?: Payee
 }
 
 /**
- * Create a disbursement batch from existing (undisbursed) Payment ids and
- * submit it to the configured bank provider in one step — several batches when
- * the selection is bigger than the bank takes in one upload. Celery then polls
- * the bank until every transaction is terminal.
+ * Disburse one school: saves the run and returns at once; the uploads are sent
+ * in the background (follow them with `getCurrentDisbursement`). Refused (409)
+ * while the last school disbursed is still being sent or worked on at the bank.
  */
 export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =>
   api
-    .post<DisbursementResult>("/disbursement-batch/", params)
+    .post<DisbursementRun>("/disbursement-batch/", params)
+    .then((response) => response.data)
+
+/** The last school disbursed, its progress, and whether the next can start. */
+export const getCurrentDisbursement = () =>
+  api
+    .get<CurrentDisbursement>("/disbursement-batch/current/")
     .then((response) => response.data)
 
 export interface DisbursementSettings {

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react"
+import { Plus, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
@@ -19,36 +19,87 @@ import {
 import { PrimaryButton } from "@/components/primary-button"
 import {
   createDisbursementBatch,
+  getCurrentDisbursement,
   getPendingPayments,
   generatePayments,
-  isUploads,
-  type DisbursementBatch,
-  type DisbursementResult,
+  type DisbursementRun,
 } from "@/api/payments"
 import { formatNaira } from "@/lib/formatters"
 import type { Payee } from "@/types"
 
-interface BatchErrorData {
-  detail?: string
-  payments?: Record<string, string>
-  batch?: DisbursementBatch
-  // Sent as several uploads and one failed: every batch created (the failed
-  // one last) and the payments not sent after it.
-  batches?: DisbursementBatch[]
-  not_sent?: number[]
+function errorDetail(error: unknown): string {
+  const data = (error as { response?: { data?: { detail?: string; school?: string[] } } })
+    ?.response?.data
+  return (
+    data?.detail ??
+    data?.school?.[0] ??
+    (error as Error)?.message ??
+    "Could not disburse. Please try again."
+  )
 }
 
-function errorInfo(error: unknown): BatchErrorData {
-  const resp = (error as { response?: { data?: BatchErrorData } })?.response?.data
-  if (resp) return resp
-  const message = (error as Error)?.message
-  return message ? { detail: message } : {}
+/** How far a run has got, as the progress panel shows it. */
+export function RunProgress({ run }: { run: DisbursementRun }) {
+  const finished = run.status === "sent" && run.waiting_at_bank === 0
+  const tone =
+    run.status === "stopped"
+      ? "bg-amber-50 text-amber-800"
+      : finished
+        ? "bg-emerald-50 text-emerald-700"
+        : "bg-sky-50 text-sky-800"
+  const headline =
+    run.status === "queued"
+      ? "Waiting to start…"
+      : run.status === "sending"
+        ? `Sending upload ${Math.min(run.uploads_sent + 1, run.uploads_total || 1)} of ${run.uploads_total || "…"}…`
+        : run.status === "stopped"
+          ? `Stopped after ${run.uploads_sent} of ${run.uploads_total} upload(s).`
+          : finished
+            ? `Finished: ${run.uploads_sent} upload(s) sent and settled at the bank.`
+            : `${run.uploads_sent} upload(s) sent; ${run.waiting_at_bank} transfer(s) waiting for the bank.`
+  return (
+    <div className={`space-y-1 rounded-lg p-3 text-sm ${tone}`}>
+      <p className="flex items-center gap-2 font-medium">
+        {run.status === "stopped" ? (
+          <AlertTriangle className="size-4 shrink-0" />
+        ) : finished ? (
+          <CheckCircle className="size-4 shrink-0" />
+        ) : (
+          <Loader2 className="size-4 shrink-0 animate-spin" />
+        )}
+        {run.school_name}: {headline}
+      </p>
+      {run.detail && <p className="text-xs">{run.detail}</p>}
+      {run.uploads.length > 0 && (
+        <ul className="list-disc pl-5 text-xs">
+          {run.uploads.map((upload) => (
+            <li key={upload.reference}>
+              {upload.reference}: {upload.counts.total} transfer(s) —{" "}
+              {upload.counts.successful} successful, {upload.counts.in_flight} in flight,{" "}
+              {upload.counts.failed} failed
+            </li>
+          ))}
+        </ul>
+      )}
+      {run.skipped_count > 0 && (
+        <p className="text-xs">
+          {run.skipped_count} payment(s) skipped (already paid, in progress or no account).
+        </p>
+      )}
+      {run.not_sent_count > 0 && (
+        <p className="text-xs">
+          {run.not_sent_count} payment(s) were not sent and are still ready to send.
+        </p>
+      )}
+    </div>
+  )
 }
 
 /**
- * One-step disbursement: generates a pending payment for every qualifying
- * student in the current selection, then disburses all pending payments for the
- * selected term to the bank.
+ * Disburse one school: generates a pending payment for every qualifying
+ * student in the school, then sends all its pending payments for the selected
+ * term. The sending happens in the background, so the panel follows it; the
+ * next school can be paid once this one is finished at the bank.
  */
 export function DisburseDialog({
   cohort,
@@ -90,7 +141,18 @@ export function DisburseDialog({
 
   const amountNum = parseFloat(amount)
   const amountValid = Number.isFinite(amountNum) && amountNum > 0
-  const ready = scopeReady && termSelected && amountValid && Boolean(cohort && year && term)
+  const ready =
+    scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
+
+  // The last school disbursed: its progress, and whether the next can start.
+  // Followed every few seconds while the dialog is open.
+  const current = useQuery({
+    queryKey: ["disbursement-current"],
+    queryFn: getCurrentDisbursement,
+    enabled: open,
+    refetchInterval: open ? 3000 : false,
+  })
+  const refusal = current.data?.refusal ?? null
 
   const scope = {
     cohort: cohort as number,
@@ -109,39 +171,35 @@ export function DisburseDialog({
   })
 
   const disburse = useMutation({
-    mutationFn: async (): Promise<DisbursementResult> => {
+    mutationFn: async (): Promise<DisbursementRun> => {
       // 1. Create any missing pending payments for qualifying students.
       await generatePayments({ ...scope, commit: true })
-      // 2. Collect every pending payment for the term across the scope — on the
+      // 2. Collect every pending payment for the term in the school — on the
       //    server, in full (one page of the list holds at most 1,000 rows).
       const { payment_ids: paymentIds } = await getPendingPayments(scope)
       if (paymentIds.length === 0) {
-        throw new Error("No pending payments to disburse for this selection.")
+        throw new Error("No pending payments to disburse for this school.")
       }
-      // 3. Create + submit the disbursement batch (never single-debit).
+      // 3. Save the run; the uploads go in the background (never single-debit).
       return createDisbursementBatch({
         payment_ids: paymentIds,
+        school: school as number,
         amount: amountNum,
         payee,
       })
     },
-    onSuccess: () => {
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
       queryClient.invalidateQueries({ queryKey: ["term-averages"] })
       queryClient.invalidateQueries({ queryKey: ["disburse-preview"] })
     },
   })
 
-  const result = disburse.data
-  // One batch, or several when the selection was bigger than one upload.
-  const sentBatches = result ? (isUploads(result) ? result.batches : [result]) : []
-  const skippedCount = result?.skipped ? Object.keys(result.skipped).length : 0
-  const failure = disburse.isError ? errorInfo(disburse.error) : undefined
-  // A 502 means the batch WAS created but the bank call failed — it is tracked
-  // and will be polled, so surface it as a warning, not a hard error.
-  const parkedBatch = failure?.batch
-  // Uploads that went through before the failed one, and payments not sent.
-  const sentBeforeFailure = (failure?.batches ?? []).filter((batch) => batch.id !== parkedBatch?.id)
-  const notSentCount = failure?.not_sent?.length ?? 0
+  // The run this press started, as it progresses.
+  const startedRun =
+    disburse.data && current.data?.run?.id === disburse.data.id
+      ? current.data.run
+      : disburse.data
 
   function handleOpenChange(next: boolean) {
     setOpen(next)
@@ -173,12 +231,30 @@ export function DisburseDialog({
       <DialogPopup className="max-h-[85vh] overflow-y-auto">
         <DialogTitle>Disburse Payment</DialogTitle>
         <DialogDescription>
-          Creates a pending payment for every qualifying student in the current
-          selection, then disburses all pending payments for{" "}
-          {termLabel ?? "the term"} to the bank.
+          Pays one school at a time: creates a pending payment for every
+          qualifying student in the selected school, then sends all its pending
+          payments for {termLabel ?? "the term"} to the bank. The next school
+          can be paid once this one is finished at the bank.
         </DialogDescription>
 
         <div className="mt-6 space-y-4">
+          {!school && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              <AlertCircle className="size-4 shrink-0" />
+              Choose a school on the page first — Disburse pays one school at a time.
+            </div>
+          )}
+
+          {refusal && !startedRun && (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                {refusal}
+              </div>
+              {current.data?.run && <RunProgress run={current.data.run} />}
+            </div>
+          )}
+
           {!termSelected && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
@@ -266,87 +342,21 @@ export function DisburseDialog({
             </div>
           )}
 
-          {result && sentBatches.length === 1 && (
-            <div className="space-y-1 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
-              <p className="flex items-center gap-2 font-medium">
-                <CheckCircle className="size-4 shrink-0" />
-                Batch {sentBatches[0].reference} submitted — status {sentBatches[0].status}.
+          {startedRun && (
+            <>
+              <RunProgress run={startedRun} />
+              <p className="text-xs text-muted-foreground">
+                You can close this window: the sending carries on, and the Payments
+                page shows how far it has got. Don't press Disburse again for this
+                school.
               </p>
-              <p className="text-xs">
-                {sentBatches[0].counts.total} transaction(s): {sentBatches[0].counts.successful}{" "}
-                successful, {sentBatches[0].counts.in_flight} in flight,{" "}
-                {sentBatches[0].counts.failed} failed.
-              </p>
-              {skippedCount > 0 && (
-                <p className="text-xs">
-                  {skippedCount} payment(s) skipped (already in progress or disbursed).
-                </p>
-              )}
-            </div>
+            </>
           )}
 
-          {result && sentBatches.length > 1 && (
-            <div className="space-y-1 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
-              <p className="flex items-center gap-2 font-medium">
-                <CheckCircle className="size-4 shrink-0" />
-                Sent to the bank in {sentBatches.length} uploads (
-                {sentBatches.reduce((total, batch) => total + batch.counts.total, 0)} transactions).
-              </p>
-              <ul className="list-disc pl-5 text-xs">
-                {sentBatches.map((batch) => (
-                  <li key={batch.id}>
-                    {batch.reference}: {batch.counts.total} transaction(s), status {batch.status}
-                  </li>
-                ))}
-              </ul>
-              {skippedCount > 0 && (
-                <p className="text-xs">
-                  {skippedCount} payment(s) skipped (already in progress or disbursed).
-                </p>
-              )}
-            </div>
-          )}
-
-          {parkedBatch && (
-            <div className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-              <p className="flex items-center gap-2 font-medium">
-                <AlertTriangle className="size-4 shrink-0" />
-                Batch {parkedBatch.reference} was created but the bank call did not
-                confirm.
-              </p>
-              <p className="text-xs">
-                It is queued for a status check — do not re-submit. {failure?.detail}
-              </p>
-              {sentBeforeFailure.length > 0 && (
-                <p className="text-xs">
-                  Sent before it: {sentBeforeFailure.map((batch) => batch.reference).join(", ")}.
-                </p>
-              )}
-              {notSentCount > 0 && (
-                <p className="text-xs">
-                  {notSentCount} payment(s) after it were not sent and are still ready to send.
-                </p>
-              )}
-            </div>
-          )}
-
-          {failure && !parkedBatch && (
-            <div className="space-y-1 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-              <p className="flex items-center gap-2 font-medium">
-                <AlertCircle className="size-4 shrink-0" />
-                {failure.detail ?? "Could not disburse. Please try again."}
-              </p>
-              {failure.payments && (
-                <ul className="list-disc pl-5 text-xs">
-                  {Object.entries(failure.payments)
-                    .slice(0, 5)
-                    .map(([pk, message]) => (
-                      <li key={pk}>
-                        Payment #{pk}: {message}
-                      </li>
-                    ))}
-                </ul>
-              )}
+          {disburse.isError && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              {errorDetail(disburse.error)}
             </div>
           )}
 
@@ -356,10 +366,10 @@ export function DisburseDialog({
             </DialogClose>
             <PrimaryButton
               className="h-10 w-auto px-6"
-              disabled={!ready || disburse.isPending || Boolean(result)}
+              disabled={!ready || Boolean(refusal) || disburse.isPending || Boolean(startedRun)}
               onClick={() => disburse.mutate()}
             >
-              {disburse.isPending ? "Disbursing…" : "Generate & Disburse"}
+              {disburse.isPending ? "Starting…" : "Generate & Disburse"}
             </PrimaryButton>
           </div>
         </div>

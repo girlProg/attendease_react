@@ -16,6 +16,9 @@ export function transferStatusBadge(status: string | null | undefined, bankStatu
     case "pending":
       // The row exists but the upload never reached the bank.
       return { variant: "neutral", label: "NOT SENT" }
+    case "sending":
+      // Saved just before the bank call; the bank hasn't answered yet.
+      return { variant: "submitted", label: "SENDING" }
     case "submitted":
       return { variant: "submitted", label: bankLabel || "SUBMITTED" }
     case "processing":

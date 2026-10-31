@@ -1,7 +1,17 @@
 import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Download, Users, CheckCircle2, XCircle, Banknote, RefreshCw, History, Info } from "lucide-react"
+import {
+  Download,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Banknote,
+  RefreshCw,
+  History,
+  Info,
+  FileCheck2,
+} from "lucide-react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -33,6 +43,7 @@ import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
+import { DisbursementStatusStrip } from "@/components/disbursement-status-strip"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
 import { paymentStatusBadge } from "@/lib/payment-status"
 import type { Payee } from "@/types"
@@ -341,7 +352,20 @@ export function PaymentsPage() {
             Audit Trail
           </Button>
         )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            title="Match a bank statement against the payments sent"
+            onClick={() => navigate("/payments/reconciliation")}
+          >
+            <FileCheck2 className="size-4" />
+            Reconciliation
+          </Button>
+        )}
       </div>
+
+      {isAdmin && <DisbursementStatusStrip />}
 
       {/* Pagination */}
       <PaginationBar
