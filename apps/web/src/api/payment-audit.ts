@@ -4,6 +4,7 @@ import type { PaginatedResponse } from "@/types"
 
 export type AuditEventType =
   | "batch_created"
+  | "batch_sending"
   | "batch_submitted"
   | "batch_submit_failed"
   | "batch_status_changed"
@@ -24,12 +25,18 @@ export type AuditEventType =
   | "payments_generated"
   | "no_objection_created"
   | "no_objection_deleted"
+  | "disburse_requested"
+  | "disburse_stopped"
+  | "statement_reconciled"
+  | "payment_account_updated"
+  | "retry_held_back"
   | "status_snapshot"
 
 // Human labels, in the order the filter dropdown lists them (mirrors the
 // backend's AuditEventType choices).
 export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   batch_created: "Batch created",
+  batch_sending: "Upload about to be sent",
   batch_submitted: "Batch submitted to bank",
   batch_submit_failed: "Batch submission failed",
   batch_status_changed: "Batch status changed",
@@ -50,6 +57,11 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   payments_generated: "Payment records generated",
   no_objection_created: "No Objection list created",
   no_objection_deleted: "No Objection list deleted",
+  disburse_requested: "Disburse requested for a school",
+  disburse_stopped: "Disburse stopped before the end",
+  statement_reconciled: "Bank statement reconciled",
+  payment_account_updated: "Payment account updated before sending",
+  retry_held_back: "Retry held back: bank has an earlier one",
   status_snapshot: "Status snapshot (backfilled)",
 }
 
