@@ -435,11 +435,14 @@ export function PaymentsPage() {
                     {termSelected ? (
                       <>
                         <TableCell className="text-center">
-                          <PercentageBadge value={
-                            filters.term === "1" ? record.term_1
-                            : filters.term === "2" ? record.term_2
-                            : record.term_3
-                          } />
+                          <PercentageBadge
+                            value={
+                              filters.term === "1" ? record.term_1
+                              : filters.term === "2" ? record.term_2
+                              : record.term_3
+                            }
+                            scIns={selectedTerm !== null && record.sc_ins_terms?.includes(selectedTerm)}
+                          />
                         </TableCell>
                         {(() => {
                           const payment = record.payments?.find((payment) => payment.term === selectedTerm)
@@ -466,9 +469,9 @@ export function PaymentsPage() {
                       </>
                     ) : (
                       <>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_1} /></TableCell>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_2} /></TableCell>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_3} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_1} scIns={record.sc_ins_terms?.includes(1)} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_2} scIns={record.sc_ins_terms?.includes(2)} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_3} scIns={record.sc_ins_terms?.includes(3)} /></TableCell>
                         <TableCell className="text-center"><PercentageBadge value={record.average} /></TableCell>
                       </>
                     )}

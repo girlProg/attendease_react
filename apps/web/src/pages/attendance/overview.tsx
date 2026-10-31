@@ -110,7 +110,9 @@ export function Overview({
       : {
           label: "Qualifying Students",
           value: (data?.qualifying_students ?? 0).toLocaleString(),
-          sub: `${data?.qualifying_percentage ?? 0}% of recorded`,
+          sub:
+            `${data?.qualifying_percentage ?? 0}% of recorded` +
+            (data?.sc_ins_students ? `, ${data.sc_ins_students.toLocaleString()} SC-INS` : ""),
           icon: UserCheck,
           color: "bg-[var(--stat-accent-1)]",
         },

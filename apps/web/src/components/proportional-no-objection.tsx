@@ -25,8 +25,9 @@ function errorMessage(error: unknown, fallback: string): string {
 /**
  * Build a No Objection list when payment is approved for fewer students than
  * qualify: every LGA, and every school within it, gets the same percentage of
- * its qualifying students; within a school the highest attendance goes first.
- * Preview first — "Create list" saves exactly what was previewed.
+ * its qualifying students. Within a school, students already paid for the term
+ * go first, then those qualifying by attendance, then SC-INS. Preview first —
+ * "Create list" saves exactly what was previewed.
  */
 export function ProportionalNoObjection({
   cohort,
@@ -83,11 +84,16 @@ export function ProportionalNoObjection({
       <p className="text-sm text-muted-foreground">
         For when payment is approved for fewer students than qualify. Every LGA,
         and every school within it, gets the same share of its own qualifying
-        students (counting those with and without bank accounts). Places go to
-        students with a usable account first, highest attendance first. A school
-        short of them passes its spare places to the best account holders in its
-        LGA, and an LGA still short to the best in the state. Students without
-        an account are picked only when the state runs out of account holders.
+        students (counting those with and without bank accounts, and those
+        already paid for the term). Inside each share, places are filled in
+        this order: students <strong>already paid</strong> for the term (all of
+        them, whatever their attendance; a school with more than its share keeps
+        them all and the extra places come from the others), then students
+        qualifying <strong>by attendance</strong>, highest first, then{" "}
+        <strong>SC-INS</strong> students not paid last term, then the other
+        SC-INS students. Students with a usable account go before those without.
+        A school short of them passes its spare places to the best account
+        holders in its LGA, and an LGA still short to the best in the state.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -151,10 +157,18 @@ export function ProportionalNoObjection({
         <div className="space-y-3">
           <p className="text-sm font-medium text-foreground">
             {allocation.target.toLocaleString()} of{" "}
-            {allocation.qualifying.toLocaleString()} qualifying students (
+            {allocation.qualifying.toLocaleString()} qualifying
+            {allocation.paid ? " or already paid" : ""} students (
             {allocation.percent}%), shared across {allocation.lgas.length} LGA
             {allocation.lgas.length === 1 ? "" : "s"}. Click an LGA to see its
             schools.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Already paid: {allocation.by_tier.paid.toLocaleString()} · by
+            attendance: {allocation.by_tier.attendance.toLocaleString()} ·
+            SC-INS not paid last term:{" "}
+            {allocation.by_tier.sc_ins_not_paid.toLocaleString()} · SC-INS paid
+            last term: {allocation.by_tier.sc_ins_paid.toLocaleString()}
           </p>
           <p
             className={`text-xs ${allocation.without_account ? "text-amber-700" : "text-emerald-700"}`}
@@ -173,6 +187,9 @@ export function ProportionalNoObjection({
                   </th>
                   <th className="px-3 py-2 text-right font-semibold">
                     With account
+                  </th>
+                  <th className="px-3 py-2 text-right font-semibold">
+                    Already paid
                   </th>
                   <th className="px-3 py-2 text-right font-semibold">Places</th>
                   <th className="px-3 py-2 text-right font-semibold">
@@ -206,6 +223,9 @@ export function ProportionalNoObjection({
                         </td>
                         <td className="px-3 py-2 text-right">
                           {lga.with_account.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {lga.paid ? lga.paid.toLocaleString() : "—"}
                         </td>
                         <td
                           className="px-3 py-2 text-right font-semibold text-brand"
@@ -245,6 +265,9 @@ export function ProportionalNoObjection({
                             </td>
                             <td className="px-3 py-1.5 text-right">
                               {school.with_account.toLocaleString()}
+                            </td>
+                            <td className="px-3 py-1.5 text-right">
+                              {school.paid ? school.paid.toLocaleString() : "—"}
                             </td>
                             <td
                               className="px-3 py-1.5 text-right"

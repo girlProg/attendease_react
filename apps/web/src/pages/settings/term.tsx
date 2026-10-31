@@ -131,6 +131,7 @@ export function TermSettingsPage() {
           <TermDatesSection key={`${year}-${term}`} calendar={calendar.data} />
           <HolidaysSection calendar={calendar.data} />
           <ClosuresSection calendar={calendar.data} />
+          <ClosedTermSection calendar={calendar.data} />
         </>
       )}
     </div>
@@ -151,6 +152,38 @@ function useInvalidateCalendar() {
     queryClient.invalidateQueries({ queryKey: ["students-summary"] })
     queryClient.invalidateQueries({ queryKey: ["cases"] })
   }
+}
+
+/** The term's SC-INS switch: students closed all term qualify on their last
+ * term with open weeks. Off by default; every change is logged. */
+function ClosedTermSection({ calendar }: { calendar: TermCalendar }) {
+  const invalidate = useInvalidateCalendar()
+  const save = useMutation({
+    mutationFn: (on: boolean) =>
+      setTermCalendar(calendar.year, calendar.term, { closed_term_qualifies: on }),
+    onSuccess: invalidate,
+  })
+  const termName = `${getTermLabel(String(calendar.term))} ${formatAcademicYear(String(calendar.year))}`
+
+  return (
+    <Section
+      title="Closed all term (SC-INS)"
+      description={`For students whose school was closed every week of the ${termName}. No week of theirs counts, so their average would read 0%. Switched on, they show as SC-INS instead and qualify if they qualified in their last term with open weeks (terms closed all through are skipped back over). They count wherever qualification does: Payments, Disburse, the Overview and No Objection lists.`}
+    >
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={calendar.closed_term_qualifies}
+          disabled={save.isPending}
+          onChange={(event) => save.mutate(event.target.checked)}
+        />
+        Students closed all term qualify on their last open term (SC-INS)
+      </label>
+      {save.isError && (
+        <p className="text-xs text-red-600">{errorText(save.error, "Could not save the SC-INS setting.")}</p>
+      )}
+    </Section>
+  )
 }
 
 function weekRange(starts: string, ends: string) {

@@ -148,6 +148,8 @@ export interface AttendanceOverview {
   average_attendance: number;
   qualifying_students: number;
   qualifying_percentage: number;
+  // Of the qualifying, those closed all term who qualify as SC-INS.
+  sc_ins_students?: number;
   // Students on the No Objection list, when the filters name one cohort, year
   // and term that has one; null otherwise. Shown as "Approved" in place of
   // the qualifying figures.

@@ -262,7 +262,8 @@ export function NoObjectionDialog({
                   <p className="text-sm text-muted-foreground">
                     Upload a CSV (matched on the “Beneficiary ID” column) to
                     mark a specific list, or leave it empty to use all
-                    qualifying students in the current filter.
+                    qualifying students in the current filter, plus everyone
+                    already paid for the term.
                   </p>
 
                   <button

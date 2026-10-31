@@ -576,6 +576,8 @@ export interface ProportionalSchool {
   share: number;
   allocated: number;
   without_account: number;
+  // Already paid for the term: always placed, so the share is never fewer.
+  paid: number;
 }
 
 export interface ProportionalLga {
@@ -587,16 +589,30 @@ export interface ProportionalLga {
   share: number;
   allocated: number;
   without_account: number;
+  paid: number;
   percent: number;
   schools: ProportionalSchool[];
 }
 
+// The order places are filled in.
+export interface ProportionalTiers {
+  paid: number;
+  attendance: number;
+  sc_ins_not_paid: number;
+  sc_ins_paid: number;
+}
+
 export interface ProportionalAllocation {
+  // Everyone who can take a place: who qualifies, plus who's already paid.
   qualifying: number;
   target: number;
   percent: number;
-  // Picked students without a usable account (only where an LGA ran out).
+  // Picked students without a usable account (where an LGA ran out, or
+  // already paid).
   without_account: number;
+  // Already paid for the term; all of them are on the list.
+  paid: number;
+  by_tier: ProportionalTiers;
   committed: boolean;
   id?: number;
   lgas: ProportionalLga[];
@@ -713,6 +729,8 @@ export const getTermAverages = (params: {
     term_1: number;
     term_2: number;
     term_3: number;
+    // Terms shown as SC-INS (school closed all term) instead of their 0%.
+    sc_ins_terms?: number[];
     average: number;
     account_number?: string;
     bank_name?: string;

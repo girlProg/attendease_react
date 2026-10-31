@@ -35,6 +35,9 @@ export interface TermCalendar {
   weeks_set: boolean
   // First school day; week 1 is the calendar week containing it.
   start_date: string | null
+  // SC-INS: students whose school was closed every week of this term qualify
+  // on their last term with open weeks, and show "SC-INS" instead of 0%.
+  closed_term_qualifies: boolean
   school_days_per_week: number
   max_weeks: number
   // Empty until the term has a start date.
@@ -93,11 +96,12 @@ export const getTermCalendar = (year: number, term: number) =>
     .get<TermCalendar>("/term-calendar/", { params: { year, term } })
     .then((response) => response.data)
 
-/** Set the term's start date and/or length; `null` clears either. */
+/** Set the term's start date, length and/or SC-INS switch; `null` clears
+ * the date or length. */
 export const setTermCalendar = (
   year: number,
   term: number,
-  changes: { weeks?: number | null; start_date?: string | null },
+  changes: { weeks?: number | null; start_date?: string | null; closed_term_qualifies?: boolean },
 ) =>
   api
     .put<TermCalendar>("/term-calendar/", {
@@ -105,6 +109,9 @@ export const setTermCalendar = (
       term,
       ...("weeks" in changes ? { weeks: changes.weeks ?? "" } : {}),
       ...("start_date" in changes ? { start_date: changes.start_date ?? "" } : {}),
+      ...("closed_term_qualifies" in changes
+        ? { closed_term_qualifies: changes.closed_term_qualifies }
+        : {}),
     })
     .then((response) => response.data)
 
