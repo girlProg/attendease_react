@@ -38,6 +38,34 @@ function errorDetail(error: unknown): string {
   )
 }
 
+/** A bar split into coloured parts, each a share of the total. */
+function ProgressBar({
+  total,
+  parts,
+}: {
+  total: number
+  parts: { value: number; className: string }[]
+}) {
+  const done = parts.reduce((sum, part) => sum + part.value, 0)
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={done}
+      className="flex h-2 w-full overflow-hidden rounded-full bg-black/10"
+    >
+      {parts.map((part, index) => (
+        <div
+          key={index}
+          className={`h-full transition-all ${part.className}`}
+          style={{ width: `${total ? (part.value / total) * 100 : 0}%` }}
+        />
+      ))}
+    </div>
+  )
+}
+
 /** How far a run has got, as the progress panel shows it. */
 export function RunProgress({ run }: { run: DisbursementRun }) {
   const finished = run.status === "sent" && run.waiting_at_bank === 0
@@ -70,15 +98,47 @@ export function RunProgress({ run }: { run: DisbursementRun }) {
         {run.school_name}: {headline}
       </p>
       {run.detail && <p className="text-xs">{run.detail}</p>}
-      {run.uploads.length > 0 && (
-        <ul className="list-disc pl-5 text-xs">
-          {run.uploads.map((upload) => (
-            <li key={upload.reference}>
-              {upload.reference}: {upload.counts.total} transfer(s) —{" "}
-              {upload.counts.successful} successful, {upload.counts.in_flight} in flight,{" "}
-              {upload.counts.failed} failed
+      {run.uploads_total > 0 && (
+        <div className="space-y-1 text-xs">
+          <p>
+            Uploads sent: {run.uploads_sent} of {run.uploads_total}
+          </p>
+          <ProgressBar
+            total={run.uploads_total}
+            parts={[{ value: run.uploads_sent, className: "bg-emerald-500" }]}
+          />
+        </div>
+      )}
+      {run.uploads_total > 0 && (
+        <ul className="space-y-2 pt-1 text-xs">
+          {run.uploads.map((upload, index) => (
+            <li key={upload.reference} className="space-y-1">
+              <p>
+                Upload {index + 1}: {upload.counts.total} transfer(s) —{" "}
+                {upload.counts.successful} successful, {upload.counts.in_flight} in flight,{" "}
+                {upload.counts.failed} failed
+                <span className="block font-mono text-[11px] opacity-70">{upload.reference}</span>
+              </p>
+              <ProgressBar
+                total={upload.counts.total}
+                parts={[
+                  { value: upload.counts.successful, className: "bg-emerald-500" },
+                  { value: upload.counts.in_flight, className: "animate-pulse bg-sky-400" },
+                  { value: upload.counts.failed, className: "bg-red-500" },
+                ]}
+              />
             </li>
           ))}
+          {run.status !== "stopped" &&
+            Array.from(
+              { length: Math.max(run.uploads_total - run.uploads.length, 0) },
+              (_, offset) => (
+                <li key={`waiting-${offset}`} className="space-y-1 opacity-70">
+                  <p>Upload {run.uploads.length + offset + 1}: waiting to be sent</p>
+                  <ProgressBar total={1} parts={[]} />
+                </li>
+              ),
+            )}
         </ul>
       )}
       {run.skipped_count > 0 && (
