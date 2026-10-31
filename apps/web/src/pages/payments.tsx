@@ -18,7 +18,13 @@ import { useLogVisit } from "@/hooks/use-log-visit"
 import { useAuth } from "@/contexts/auth-context"
 import { NoObjectionDialog } from "@/components/no-objection-dialog"
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import {
   Table,
   TableBody,
@@ -40,6 +46,7 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
+import { getConfig } from "@/api/config"
 import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
@@ -65,6 +72,11 @@ export function PaymentsPage() {
   // caregiver) and can be overridden per disbursement. The override is keyed to
   // the cohort so switching cohorts falls back to that cohort's default.
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  // The amounts a student can be paid, chosen from a list and never typed (a
+  // slip like 100000 for 10000 would pay a whole school ten times over). The
+  // server sends the list and refuses any other amount.
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
+  const disburseAmounts = config?.disburse_amounts ?? []
   // Default payee for the selected cohort (Niger=student, Kaduna=caregiver); the
   // Disburse dialog lets you override it per disbursement.
   const cohortPayee: Payee =
@@ -263,14 +275,30 @@ export function PaymentsPage() {
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        {/* Amount input with the Disburse button embedded inside it */}
+        {/* Amount dropdown with the Disburse button embedded inside it */}
         <div className="relative flex items-center">
-          <Input
-            placeholder="Amount Per Student"
-            value={amountPerStudent}
-            onChange={(event) => setAmountPerStudent(event.target.value)}
-            className="h-11 w-64 rounded-full border-sidebar/30 !bg-white pr-32 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
-          />
+          <Select
+            value={amountPerStudent || null}
+            onValueChange={(value) => setAmountPerStudent(value ?? "")}
+          >
+            <SelectTrigger
+              aria-label="Amount Per Student"
+              className="h-11 w-72 rounded-full border-sidebar/30 !bg-white pr-32 pl-4 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
+            >
+              <SelectValue placeholder="Amount Per Student">
+                {amountPerStudent
+                  ? formatNaira(Number(amountPerStudent))
+                  : "Amount Per Student"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {disburseAmounts.map((amount) => (
+                <SelectItem key={amount} value={amount}>
+                  {formatNaira(Number(amount))}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DisburseDialog
             cohort={scopeParams.cohort}
             year={scopeParams.year}

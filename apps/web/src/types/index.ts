@@ -219,6 +219,9 @@ export interface DeploymentConfig {
   features?: {
     monthly_reports: boolean;
   };
+  // What a student can be paid per Disburse (e.g. "10000.00"): the Payments
+  // page's amount dropdown offers exactly these, and Disburse refuses others.
+  disburse_amounts?: string[];
   // The enrolment form's choice lists, so dropdowns never hardcode them.
   choices?: {
     disability_status: ChoiceOption[];

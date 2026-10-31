@@ -341,7 +341,7 @@ export function DisburseDialog({
           {!amountValid && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
-              Enter a valid “Amount Per Student” on the page first.
+              Choose an “Amount Per Student” on the page first.
             </div>
           )}
 
