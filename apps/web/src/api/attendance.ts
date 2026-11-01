@@ -631,6 +631,28 @@ export const proportionalNoObjection = (input: {
     .post<ProportionalAllocation>("/no-objection/proportional/", input)
     .then((response) => response.data);
 
+export interface EveryoneNoObjection {
+  // Every active student of the cohort, whatever their attendance.
+  students: number;
+  without_account: number;
+  already_on_list: number;
+  committed: boolean;
+  id?: number;
+  students_added?: number;
+  total_students?: number;
+}
+
+/** Staff only. Previews unless `commit`; extends an existing list. */
+export const everyoneNoObjection = (input: {
+  cohort: number;
+  year: string;
+  term: string;
+  commit?: boolean;
+}) =>
+  api
+    .post<EveryoneNoObjection>("/no-objection/everyone/", input)
+    .then((response) => response.data);
+
 // Admin-only: mark students as having no objection for a (cohort, year, term).
 // With a CSV file, students are matched on the "Beneficiary ID" column;
 // otherwise the qualifying students for the scope are used.

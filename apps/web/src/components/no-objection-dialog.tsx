@@ -16,6 +16,7 @@ import {
   DialogDescription,
   DialogClose,
 } from "@workspace/ui/components/dialog"
+import { EveryoneNoObjection } from "@/components/everyone-no-objection"
 import { PrimaryButton } from "@/components/primary-button"
 import { ProportionalNoObjection } from "@/components/proportional-no-objection"
 import {
@@ -47,8 +48,11 @@ export function NoObjectionDialog({
 
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-  // The whole qualifying list (or a CSV), or a share of it split fairly by LGA.
-  const [mode, setMode] = useState<"whole" | "proportional">("whole")
+  // The whole qualifying list (or a CSV), a share of it split fairly by LGA,
+  // or every student in the cohort whatever their attendance.
+  const [mode, setMode] = useState<"whole" | "proportional" | "everyone">(
+    "whole"
+  )
   // Set once a list is created, so the dialog says so instead of flipping
   // straight to "Delete" when the status refreshes.
   const [createdCount, setCreatedCount] = useState<number | null>(null)
@@ -227,6 +231,7 @@ export function NoObjectionDialog({
                   [
                     ["whole", "Whole list"],
                     ["proportional", "Proportional by LGA"],
+                    ["everyone", "Everyone in the cohort"],
                   ] as const
                 ).map(([value, label]) => (
                   <button
@@ -248,6 +253,18 @@ export function NoObjectionDialog({
               {mode === "proportional" ? (
                 ready && (
                   <ProportionalNoObjection
+                    cohort={cohort as number}
+                    year={year as string}
+                    term={term as string}
+                    onCreated={(count) => {
+                      setCreatedCount(count)
+                      invalidateAll()
+                    }}
+                  />
+                )
+              ) : mode === "everyone" ? (
+                ready && (
+                  <EveryoneNoObjection
                     cohort={cohort as number}
                     year={year as string}
                     term={term as string}
