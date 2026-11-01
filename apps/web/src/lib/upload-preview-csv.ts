@@ -2,7 +2,8 @@ import type { UploadMatch, UploadReport } from "@/api/beneficiary-upload"
 
 // One row per file row: who it found (the file's name beside the stored one)
 // and what it will change, or why it is skipped. Built from the preview the
-// server already sent, so long numbers are masked there.
+// server already sent, so long numbers are masked there (except account
+// numbers, which the server sends in full).
 
 const HEADERS = [
   "Row",
