@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import { downloadFile } from "@/lib/blob-download"
 import type { PaginatedResponse } from "@/types"
 
 // Payments › Reconciliation: a Zenith statement matched against the transfers
@@ -93,23 +94,11 @@ export const uploadStatement = (file: File) => {
     .then((response) => response.data)
 }
 
-async function download(path: string, fallbackName: string) {
-  const response = await api.get(path, { responseType: "blob" })
-  const disposition = String(response.headers["content-disposition"] ?? "")
-  const match = disposition.match(/filename="?([^";]+)"?/)
-  const url = URL.createObjectURL(response.data as Blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = match?.[1] ?? fallbackName
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
 export const downloadStatement = (reconciliation: Reconciliation) =>
-  download(`/payment-reconciliation/${reconciliation.id}/file/`, reconciliation.filename)
+  downloadFile(`/payment-reconciliation/${reconciliation.id}/file/`, reconciliation.filename)
 
 export const downloadFindings = (reconciliation: Reconciliation) =>
-  download(
+  downloadFile(
     `/payment-reconciliation/${reconciliation.id}/exceptions-csv/`,
     `reconciliation-${reconciliation.period_start}-to-${reconciliation.period_end}.csv`,
   )

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { downloadBlobFromResponse } from "@/lib/blob-download";
+import { downloadFile } from "@/lib/blob-download";
 
 /** Whether a rise in a figure is good news. Sent by the backend, because it is
  *  programme policy — coverage up is good, data gaps up is not. */
@@ -141,6 +141,4 @@ export const generateMonthlyReport = (period: string) =>
     .then((response) => response.data);
 
 export const exportMonthlyReport = (period: string) =>
-  api
-    .get(`/monthly-report/${period}/export/`, { responseType: "blob" })
-    .then((response) => downloadBlobFromResponse(response, `monthly-report-${period}.csv`));
+  downloadFile(`/monthly-report/${period}/export/`, `monthly-report-${period}.csv`);

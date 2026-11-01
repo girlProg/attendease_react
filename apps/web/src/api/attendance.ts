@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import { downloadBlobFromResponse } from "../lib/blob-download";
+import { downloadFile } from "../lib/blob-download";
 import type { FilterScope } from "@/hooks/use-attendance-filters";
 import type {
   PaginatedResponse,
@@ -168,11 +168,10 @@ export interface AttendanceUploadHistoryRow {
 // Download the original uploaded attendance file for a submission (LGA-scoped
 // on the server; only present when has_source_file is true).
 export const downloadAttendanceFile = (submissionId: number) =>
-  api
-    .get(`/attendance-submission/${submissionId}/file/`, { responseType: "blob" })
-    .then((response) =>
-      downloadBlobFromResponse(response, `attendance_${submissionId}.csv`),
-    );
+  downloadFile(
+    `/attendance-submission/${submissionId}/file/`,
+    `attendance_${submissionId}.csv`,
+  );
 
 /**
  * Fetch the uploaded attendance file as raw text, for previewing it in-app.
@@ -405,12 +404,9 @@ export const downloadExcelTemplate = (params: {
   week: string;
   year: string;
 }) => {
-  return api
-    .get("/attendance/download-template/", {
-      params,
-      responseType: "blob",
-    })
-    .then((response) => downloadBlobFromResponse(response, "attendance_template.xlsx"));
+  return downloadFile("/attendance/download-template/", "attendance_template.xlsx", {
+    params,
+  });
 };
 
 export const downloadLgaTemplates = (params: {
@@ -420,12 +416,9 @@ export const downloadLgaTemplates = (params: {
   week: string;
   year: string;
 }) => {
-  return api
-    .get("/attendance/download-lga-templates/", {
-      params,
-      responseType: "blob",
-    })
-    .then((response) => downloadBlobFromResponse(response, "lga_templates.zip"));
+  return downloadFile("/attendance/download-lga-templates/", "lga_templates.zip", {
+    params,
+  });
 };
 
 export interface AttendanceUploadReport {
@@ -539,21 +532,15 @@ export const getAttendanceYears = () =>
   api.get<string[]>("/attendance/years/").then((response) => response.data);
 
 export const exportStudents = (scope: { cohort: number; lga?: number }) => {
-  return api
-    .get("/student/export/", {
-      params: { cohort: scope.cohort, ...(scope.lga ? { lga: scope.lga } : {}) },
-      responseType: "blob",
-    })
-    .then((response) => downloadBlobFromResponse(response, "students_export.xlsx"));
+  return downloadFile("/student/export/", "students_export.xlsx", {
+    params: { cohort: scope.cohort, ...(scope.lga ? { lga: scope.lga } : {}) },
+  });
 };
 
 export const exportPayments = (params: Record<string, string | number>) => {
-  return api
-    .get("/student/export-payments/", {
-      params,
-      responseType: "blob",
-    })
-    .then((response) => downloadBlobFromResponse(response, "payments_export.csv"));
+  return downloadFile("/student/export-payments/", "payments_export.csv", {
+    params,
+  });
 };
 
 export interface NoObjectionResult {
@@ -927,12 +914,7 @@ export const downloadRegisterPage = (
   registerId: number,
   pageId: number,
   filename: string,
-) =>
-  api
-    .get(`/school-register/${registerId}/page/${pageId}/`, {
-      responseType: "blob",
-    })
-    .then((response) => downloadBlobFromResponse(response, filename));
+) => downloadFile(`/school-register/${registerId}/page/${pageId}/`, filename);
 
 export const deleteRegisterPage = (registerId: number, pageId: number) =>
   api

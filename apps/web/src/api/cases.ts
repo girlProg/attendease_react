@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import { downloadBlobFromResponse } from "../lib/blob-download";
+import { downloadFile } from "../lib/blob-download";
 import type { PaginatedResponse } from "@/types";
 
 export type CaseStatus = "flagged" | "open" | "treated" | "closed" | "dropped";
@@ -245,6 +245,4 @@ export const setDroppedOut = (studentId: number, dropped: boolean) =>
   api.post(`/case/${studentId}/drop-out/`, { dropped }).then((r) => r.data);
 
 export const exportCases = (filters: CaseFilters = {}) =>
-  api
-    .get("/case/export/", { params: toParams(filters), responseType: "blob" })
-    .then((response) => downloadBlobFromResponse(response, "case_management.csv"));
+  downloadFile("/case/export/", "case_management.csv", { params: toParams(filters) });
