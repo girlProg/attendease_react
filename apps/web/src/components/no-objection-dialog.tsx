@@ -37,16 +37,25 @@ export function NoObjectionDialog({
   cohortName,
   year,
   term,
+  open: openFromOutside,
+  onOpenChange,
 }: {
   cohort?: number
   cohortName?: string
   year?: string
   term?: string
+  // Opened from somewhere else (the new Payments page's More menu): no
+  // button of its own then.
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = openFromOutside !== undefined
+  const open = controlled ? openFromOutside : ownOpen
+  const setOpen = (next: boolean) => (onOpenChange ?? setOwnOpen)(next)
   const [file, setFile] = useState<File | null>(null)
   // The whole qualifying list (or a CSV), a share of it split fairly by LGA,
   // or every student in the cohort whatever their attendance.
@@ -128,22 +137,24 @@ export function NoObjectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={
-          exists
-            ? "inline-flex h-11 items-center gap-2 rounded-full border border-red-500 bg-white px-5 text-sm font-medium text-red-600 hover:bg-red-50"
-            : "inline-flex h-11 items-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5"
-        }
-      >
-        {exists ? (
-          <ShieldX className="size-4" />
-        ) : (
-          <ShieldCheck className="size-4" />
-        )}
-        {exists ? "Delete No Objection" : "Create No Objection"}
-      </button>
+      {!controlled && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={
+            exists
+              ? "inline-flex h-11 items-center gap-2 rounded-full border border-red-500 bg-white px-5 text-sm font-medium text-red-600 hover:bg-red-50"
+              : "inline-flex h-11 items-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5"
+          }
+        >
+          {exists ? (
+            <ShieldX className="size-4" />
+          ) : (
+            <ShieldCheck className="size-4" />
+          )}
+          {exists ? "Delete No Objection" : "Create No Objection"}
+        </button>
+      )}
 
       <DialogPopup
         className={`max-h-[85vh] overflow-y-auto ${createdCount === null && !exists && mode === "proportional" ? "max-w-3xl" : ""}`}

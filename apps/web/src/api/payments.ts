@@ -132,6 +132,42 @@ export const setPaymentNotifications = (changes: Partial<PaymentNotifications>) 
     .put<PaymentNotifications>("/payment-notifications/", changes)
     .then((response) => response.data)
 
+// Where a school's payout for the term is: the school being paid now (or
+// transfers still at the bank), some failed, everyone paid, some paid,
+// nothing sent yet, or no one to pay.
+export type SchoolPayoutStatus =
+  | "running"
+  | "failed"
+  | "paid"
+  | "partial"
+  | "not_started"
+  | "nobody"
+
+export interface SchoolPayout {
+  id: number
+  name: string
+  // The students the Payments page lists for it (No Objection list, else who qualifies).
+  students: number
+  paid: number
+  failed: number
+  in_flight: number
+  status: SchoolPayoutStatus
+}
+
+/** Every school of an LGA with how far this term's payout has got, unpaid first. */
+export const getSchoolPayouts = (scope: {
+  cohort: number
+  lga: number
+  year: string
+  term: string
+}) =>
+  api
+    .get<{ source: "no_objection" | "qualifying"; schools: SchoolPayout[] }>(
+      "/student/school-payouts/",
+      { params: scope },
+    )
+    .then((response) => response.data)
+
 export interface GeneratePaymentsResult {
   created: number
   would_create: number

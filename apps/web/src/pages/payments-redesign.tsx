@@ -4,13 +4,14 @@ import {
   ChevronRight,
   Download,
   FileCheck2,
-  GraduationCap,
   History,
   Info,
   MoreHorizontal,
   RefreshCw,
   Search,
   Send,
+  ShieldCheck,
+  ShieldX,
 } from "lucide-react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -33,11 +34,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { exportPayments, getCohorts, getTermAverages } from "@/api/attendance"
+import { exportPayments, getCohorts, getNoObjectionStatus, getTermAverages } from "@/api/attendance"
 import { getConfig } from "@/api/config"
 import {
   getCurrentDisbursement,
   getDisbursementSettings,
+  getSchoolPayouts,
   pollPendingDisbursements,
   setDisbursementSettings,
   type DisbursementSettings,
@@ -47,11 +49,14 @@ import { NoObjectionDialog } from "@/components/no-objection-dialog"
 import { PayoutOutcome, PayoutTracker } from "@/components/payout-tracker"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
+import { SchoolPicker } from "@/components/school-picker"
 import { TableSkeletonRows } from "@/components/skeleton"
+import { StatusBadge } from "@/components/status-badge"
 import { StudentLink } from "@/components/student-link"
 import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { formatAcademicYear, formatNaira, ordinal } from "@/lib/formatters"
+import { paymentStatusBadge } from "@/lib/payment-status"
 import { runInProgress, shortWhen } from "@/lib/payout-run"
 import type { Payee } from "@/types"
 
@@ -62,13 +67,14 @@ type PaymentRecord = Awaited<ReturnType<typeof getTermAverages>>["results"][numb
 // Where a student's payment for the term is, as the tabs sort them.
 type RowStatus = "not_sent" | "queued" | "in_flight" | "unknown" | "failed" | "paid"
 
-const STATUS: Record<RowStatus, { label: string; pill: string; dot: string }> = {
-  not_sent: { label: "Not sent", pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground/40" },
-  queued: { label: "Queued", pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground/40" },
-  in_flight: { label: "In flight", pill: "bg-sidebar/10 text-sidebar", dot: "bg-sidebar/60" },
-  unknown: { label: "Unknown", pill: "bg-violet-50 text-violet-700", dot: "bg-violet-400" },
-  failed: { label: "Failed", pill: "bg-red-50 text-red-700", dot: "bg-orange-500" },
-  paid: { label: "Paid", pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+// Tab names; each row's own badge keeps the bank's status word.
+const TAB_LABEL: Record<RowStatus, string> = {
+  not_sent: "Not sent",
+  queued: "Queued",
+  in_flight: "In flight",
+  unknown: "Unknown",
+  failed: "Failed",
+  paid: "Paid",
 }
 
 // Tabs in the order money moves; Failed and Paid always show, the rest only
@@ -260,6 +266,29 @@ export function NewPaymentsPage() {
   if (run && running && !watchedRuns.includes(run.id)) setWatchedRuns((ids) => [...ids, run.id])
   const runIsHere = Boolean(run && scopeParams.school && run.school === scopeParams.school)
 
+  // Each school of the LGA with where its payout is, for the school picker.
+  const payoutScope =
+    scopeReady && scopeParams.cohort && scopeParams.lga && scopeParams.year && scopeParams.term
+      ? { cohort: scopeParams.cohort, lga: scopeParams.lga, year: scopeParams.year, term: scopeParams.term }
+      : null
+  const schoolPayouts = useQuery({
+    queryKey: ["school-payouts", payoutScope],
+    queryFn: () => getSchoolPayouts(payoutScope as NonNullable<typeof payoutScope>),
+    enabled: payoutScope !== null,
+    refetchInterval: running ? 15000 : false,
+  })
+
+  // The No Objection list for the term: created or deleted from More.
+  const [noObjectionOpen, setNoObjectionOpen] = useState(false)
+  const noObjectionReady = Boolean(scopeParams.cohort && scopeParams.year && scopeParams.term)
+  const noObjection = useQuery({
+    queryKey: ["no-objection-status", scopeParams.cohort, scopeParams.year, scopeParams.term],
+    queryFn: () =>
+      getNoObjectionStatus({ cohort: scopeParams.cohort, year: scopeParams.year, term: scopeParams.term }),
+    enabled: isStaffuser && noObjectionReady,
+  })
+  const noObjectionExists = noObjection.data?.exists ?? false
+
   const { data, isError, isLoading } = useQuery({
     queryKey: ["term-averages", scopeParams, appliedSearch, page, pageSize],
     queryFn: () =>
@@ -401,7 +430,7 @@ export function NewPaymentsPage() {
   return (
     <div className="space-y-3.5">
       {/* Scope bar: cohort, term, session, LGA, school (wraps on narrow screens) */}
-      <div className="flex flex-wrap items-stretch overflow-hidden rounded-2xl bg-white shadow-[0_4px_14px_rgb(75_63_214/0.06)]">
+      <div className="relative z-20 flex flex-wrap items-stretch rounded-2xl bg-white shadow-[0_4px_14px_rgb(75_63_214/0.06)]">
         <div className="shrink-0 px-4 pt-2.5 pb-3 pl-[18px]">
           <ScopeLabel>Cohort</ScopeLabel>
           <Segments
@@ -443,24 +472,16 @@ export function NewPaymentsPage() {
         </div>
         <div className="min-w-64 flex-1 border-l border-border/40 px-4 pt-2.5 pb-3">
           <ScopeLabel>School</ScopeLabel>
-          <div className="flex min-w-0 items-center gap-2">
-            <GraduationCap className="size-[18px] shrink-0 text-sidebar" />
-            <div className="min-w-0 flex-1">
-              <ScopeSelect
-                placeholder="School"
-                noun="school"
-                items={options.schools}
-                value={filters.school}
-                disabled={!filters.lga}
-                onPick={(value) => setFilter("school", value)}
-              />
-            </div>
-            {scopeParams.school && summary && (
-              <span className="shrink-0 text-[11.5px] font-medium text-muted-foreground">
-                {summary.students.toLocaleString()} student{summary.students === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
+          <SchoolPicker
+            schools={options.schools}
+            value={filters.school}
+            disabled={!filters.lga}
+            onPick={(value) => setFilter("school", value)}
+            payouts={schoolPayouts.data?.schools}
+            lga={filters.lga}
+            noObjection={schoolPayouts.data?.source === "no_objection"}
+            studentCount={scopeParams.school ? summary?.students : undefined}
+          />
         </div>
       </div>
 
@@ -569,14 +590,6 @@ export function NewPaymentsPage() {
             <span className="whitespace-nowrap text-xs text-muted-foreground/80">{lastRunText}</span>
           )}
           <div className="ml-auto flex items-center gap-2">
-            {isStaffuser && (
-              <NoObjectionDialog
-                cohort={scopeParams.cohort}
-                cohortName={cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name}
-                year={scopeParams.year}
-                term={scopeParams.term}
-              />
-            )}
             <button
               type="button"
               disabled={refreshStatuses.isPending}
@@ -628,6 +641,27 @@ export function NewPaymentsPage() {
                         Audit trail
                       </button>
                     )}
+                    {isStaffuser && (
+                      <button
+                        type="button"
+                        disabled={!noObjectionReady}
+                        title={noObjectionReady ? undefined : "Choose a cohort, session and term first"}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          setNoObjectionOpen(true)
+                        }}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          noObjectionExists ? "text-red-600" : "text-sidebar-accent-foreground"
+                        }`}
+                      >
+                        {noObjectionExists ? (
+                          <ShieldX className="size-[18px] text-red-600" />
+                        ) : (
+                          <ShieldCheck className="size-[18px] text-muted-foreground" />
+                        )}
+                        {noObjectionExists ? "Delete No Objection" : "Create No Objection"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -675,6 +709,17 @@ export function NewPaymentsPage() {
         </div>
       )}
 
+      {isStaffuser && (
+        <NoObjectionDialog
+          cohort={scopeParams.cohort}
+          cohortName={cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name}
+          year={scopeParams.year}
+          term={scopeParams.term}
+          open={noObjectionOpen}
+          onOpenChange={setNoObjectionOpen}
+        />
+      )}
+
       {isError && <QueryError />}
 
       {/* Table card */}
@@ -682,7 +727,7 @@ export function NewPaymentsPage() {
         <div className="flex flex-wrap items-center gap-1 border-b border-border/40 px-3.5 py-2.5">
           {[
             { key: "all" as RowStatus | "all", label: "All", count: wholeScopeLoaded ? records.length : totalCount },
-            ...tabs.map((status) => ({ key: status as RowStatus | "all", label: STATUS[status].label, count: counts[status] })),
+            ...tabs.map((status) => ({ key: status as RowStatus | "all", label: TAB_LABEL[status], count: counts[status] })),
           ].map((item) => {
               const chosen = item.key === activeTab
               return (
@@ -764,7 +809,7 @@ export function NewPaymentsPage() {
               ) : (
                 shownRecords.map((record) => {
                   const payment = paymentFor(record)
-                  const status = STATUS[statuses.get(record.id) ?? "not_sent"]
+                  const badge = paymentStatusBadge(payment)
                   const atBank = termSelected ? payment?.disbursement_account_name : null
                   return (
                     <TableRow key={record.id} className="border-border/30">
@@ -855,13 +900,13 @@ export function NewPaymentsPage() {
                           : "—"}
                       </TableCell>
                       <TableCell className="px-3.5 py-2.5">
-                        <span
-                          title={payment?.disbursement_bank_status ?? undefined}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${status.pill}`}
-                        >
-                          <span className={`size-1.5 rounded-full ${status.dot}`} />
-                          {status.label}
-                        </span>
+                        {/* The same badge as the current page: the bank's own
+                            status word, one colour per stage. */}
+                        <StatusBadge
+                          variant={badge.variant}
+                          label={badge.label}
+                          title={payment?.disbursement_reason ?? undefined}
+                        />
                         {statuses.get(record.id) === "failed" && payment?.disbursement_reason && (
                           <div className="mt-0.5 max-w-56 truncate text-[11.5px] text-red-600" title={payment.disbursement_reason}>
                             {payment.disbursement_reason}
