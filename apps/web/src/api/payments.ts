@@ -113,6 +113,25 @@ export const setDisbursementSettings = (
     .put<DisbursementSettings>("/disbursement-settings/", changes)
     .then((response) => response.data)
 
+/** Who is emailed about payments, and for which moments (superuser + staff). */
+export interface PaymentNotifications {
+  recipients: string[]
+  notify_coming: boolean
+  notify_sent: boolean
+  notify_paid: boolean
+  notify_failed: boolean
+}
+
+export const getPaymentNotifications = () =>
+  api
+    .get<PaymentNotifications>("/payment-notifications/")
+    .then((response) => response.data)
+
+export const setPaymentNotifications = (changes: Partial<PaymentNotifications>) =>
+  api
+    .put<PaymentNotifications>("/payment-notifications/", changes)
+    .then((response) => response.data)
+
 export interface GeneratePaymentsResult {
   created: number
   would_create: number
