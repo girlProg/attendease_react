@@ -175,6 +175,7 @@ export function DisburseDialog({
   termSelected,
   triggerClassName,
   triggerLabel,
+  triggerDisabled = false,
 }: {
   cohort?: number
   year?: string
@@ -190,7 +191,9 @@ export function DisburseDialog({
   termLabel: string | null
   termSelected: boolean
   triggerClassName?: string
-  triggerLabel?: string
+  triggerLabel?: React.ReactNode
+  // Greys the button out (e.g. while disbursements are switched off).
+  triggerDisabled?: boolean
 }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -279,6 +282,7 @@ export function DisburseDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        disabled={triggerDisabled}
         className={
           triggerClassName ??
           "inline-flex h-11 items-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5"

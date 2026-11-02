@@ -1,4 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+
+import { getConfig } from "@/api/config"
 
 import { Layout } from "@/components/layout"
 import {
@@ -17,6 +20,7 @@ import { BeneficiariesPage } from "@/pages/beneficiaries"
 import { ReportsPage } from "@/pages/reports"
 import { StudentDetailPage } from "@/pages/student-detail"
 import { PaymentsPage } from "@/pages/payments"
+import { NewPaymentsPage } from "@/pages/payments-redesign"
 import { PaymentAuditPage } from "@/pages/payment-audit"
 import { ReconciliationPage } from "@/pages/reconciliation"
 import { StudentsPage } from "@/pages/students"
@@ -32,6 +36,14 @@ import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { DisplaySettingsPage } from "@/pages/settings/display"
 import { PaymentSettingsPage } from "@/pages/settings/payments"
 import { TermSettingsPage } from "@/pages/settings/term"
+
+// The Payments page in the design a superuser switched on for everyone
+// (Settings > Display). Nothing renders until the config says which.
+function PaymentsRoute() {
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
+  if (!config) return null
+  return config.features?.new_payments_page ? <NewPaymentsPage /> : <PaymentsPage />
+}
 
 export function App() {
   return (
@@ -64,7 +76,7 @@ export function App() {
         </Route>
         <Route element={<AdminRoute />}>
           <Route path="ask" element={<AskPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
+          <Route path="payments" element={<PaymentsRoute />} />
           <Route path="payments/audit" element={<PaymentAuditPage />} />
           <Route path="payments/reconciliation" element={<ReconciliationPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />

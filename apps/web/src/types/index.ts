@@ -220,6 +220,9 @@ export interface DeploymentConfig {
   // only some states have is advertised here rather than guessed from the URL.
   features?: {
     monthly_reports: boolean;
+    // The redesigned Payments page, switched on for everyone by a superuser
+    // (Settings > Display).
+    new_payments_page?: boolean;
   };
   // What a student can be paid per Disburse (e.g. "10000.00"): the Payments
   // page's amount dropdown offers exactly these, and Disburse refuses others.
