@@ -242,14 +242,15 @@ export function PayoutTracker({
   return (
     <div className="rounded-2xl bg-white p-3.5 shadow-[0_0_0_1.5px_rgb(75_63_214/0.2),0_8px_24px_rgb(75_63_214/0.10)]">
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-sidebar/10">
+        <div className="flex min-w-0 max-w-full items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sidebar/10">
             <span className="relative flex size-2.5">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-sidebar opacity-50" />
               <span className="relative inline-flex size-2.5 rounded-full bg-sidebar" />
             </span>
           </div>
-          <div className="leading-tight">
+          {/* Wraps on a phone rather than running off the card. */}
+          <div className="min-w-0 break-words leading-tight">
             <p className="text-sm font-bold text-sidebar-accent-foreground">{headline(run, tiles)}</p>
             <p className="text-xs text-muted-foreground">
               {otherSchool && <span className="font-medium text-foreground">{run.school_name} · </span>}
@@ -259,7 +260,7 @@ export function PayoutTracker({
         </div>
 
         {tiles.length > 0 && (
-          <div className="min-w-48 flex-1 px-2">
+          <div className="min-w-0 flex-1 basis-full sm:min-w-48 sm:basis-0 sm:px-2">
             <div className="flex gap-1.5">
               {tiles.map((tile) => (
                 <div
@@ -370,7 +371,7 @@ export function PayoutOutcome({
       >
         {stopped ? <AlertTriangle className="size-5" /> : <Check className="size-5" strokeWidth={2.6} />}
       </div>
-      <div className="shrink-0 leading-tight">
+      <div className="min-w-0 break-words leading-tight">
         <p className="text-sm font-bold text-sidebar-accent-foreground">
           {stopped ? "Payout stopped" : "Payout finished"}
         </p>
@@ -380,7 +381,7 @@ export function PayoutOutcome({
         </p>
       </div>
 
-      <div className="min-w-48 flex-1 px-2">
+      <div className="min-w-0 flex-1 basis-full sm:min-w-48 sm:basis-0 sm:px-2">
         <div className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-sidebar/10">
           <div className="bg-emerald-600" style={{ width: share(paid) }} />
           <div className="bg-orange-500" style={{ width: share(failed) }} />

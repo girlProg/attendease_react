@@ -587,7 +587,7 @@ export function NewPaymentsPage() {
             triggerClassName="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl bg-emerald-700 px-4 text-[13px] font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground/70"
           />
           {lastRunText && (
-            <span className="whitespace-nowrap text-xs text-muted-foreground/80">{lastRunText}</span>
+            <span className="min-w-0 break-words text-xs text-muted-foreground/80">{lastRunText}</span>
           )}
           <div className="ml-auto flex items-center gap-2">
             <button
