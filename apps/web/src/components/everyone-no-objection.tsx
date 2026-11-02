@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { AlertCircle } from "lucide-react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
@@ -12,8 +13,8 @@ function errorMessage(error: unknown, fallback: string): string {
 
 /**
  * Put every active student of the cohort on the term's No Objection list,
- * whatever their attendance. Shows the count first; nobody on the list is
- * removed.
+ * whatever their attendance: only the verified ones while the box is ticked
+ * (as it starts). Shows the count first; nobody on the list is removed.
  */
 export function EveryoneNoObjection({
   cohort,
@@ -27,12 +28,14 @@ export function EveryoneNoObjection({
   // Called with the number of students on the list.
   onCreated: (count: number) => void
 }) {
+  const [verifiedOnly, setVerifiedOnly] = useState(true)
+  const scope = { cohort, year, term, verified_only: verifiedOnly }
   const preview = useQuery({
-    queryKey: ["no-objection-everyone", cohort, year, term],
-    queryFn: () => everyoneNoObjection({ cohort, year, term }),
+    queryKey: ["no-objection-everyone", cohort, year, term, verifiedOnly],
+    queryFn: () => everyoneNoObjection(scope),
   })
   const create = useMutation({
-    mutationFn: () => everyoneNoObjection({ cohort, year, term, commit: true }),
+    mutationFn: () => everyoneNoObjection({ ...scope, commit: true }),
     onSuccess: (created) =>
       onCreated(created.total_students ?? created.students),
   })
@@ -44,6 +47,17 @@ export function EveryoneNoObjection({
         Every student in the cohort goes on the list, whatever their attendance.
         Graduated, dropped-out and replaced students are left out.
       </p>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
+        <input
+          type="checkbox"
+          checked={verifiedOnly}
+          disabled={create.isPending || create.isSuccess}
+          onChange={(event) => setVerifiedOnly(event.target.checked)}
+          className="size-4 accent-brand"
+        />
+        Verified students only
+      </label>
 
       {preview.isPending && (
         <p className="text-sm text-muted-foreground">Counting students…</p>
@@ -58,7 +72,8 @@ export function EveryoneNoObjection({
       {summary && (
         <div className="space-y-1 rounded-lg bg-sky-50 p-3 text-sm text-sky-800">
           <p className="font-medium">
-            {summary.students.toLocaleString()} students will be on the list.
+            {summary.students.toLocaleString()}
+            {summary.verified_only ? " verified" : ""} students will be on the list.
           </p>
           {summary.without_account > 0 && (
             <p>

@@ -619,21 +619,25 @@ export const proportionalNoObjection = (input: {
     .then((response) => response.data);
 
 export interface EveryoneNoObjection {
-  // Every active student of the cohort, whatever their attendance.
+  // Every active student of the cohort, whatever their attendance (only the
+  // verified ones while `verified_only`).
   students: number;
   without_account: number;
   already_on_list: number;
+  verified_only: boolean;
   committed: boolean;
   id?: number;
   students_added?: number;
   total_students?: number;
 }
 
-/** Staff only. Previews unless `commit`; extends an existing list. */
+/** Staff only. Previews unless `commit`; extends an existing list. Verified
+ * students only unless `verified_only` is false. */
 export const everyoneNoObjection = (input: {
   cohort: number;
   year: string;
   term: string;
+  verified_only: boolean;
   commit?: boolean;
 }) =>
   api
