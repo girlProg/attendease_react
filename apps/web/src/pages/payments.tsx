@@ -483,7 +483,21 @@ export function PaymentsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_name ?? "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.caregiver_phone ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{record.bank_account_name || "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {record.bank_account_name || "—"}
+                      {(() => {
+                        // Whose account the bank says it paid this term, from a
+                        // reconciled statement.
+                        const atBank = termSelected
+                          ? record.payments?.find((payment) => payment.term === selectedTerm)?.disbursement_account_name
+                          : null
+                        return atBank ? (
+                          <div className="mt-0.5 text-[10px] text-sidebar" title="The account holder's name the bank resolved, from the bank statement">
+                            At bank: {atBank}
+                          </div>
+                        ) : null
+                      })()}
+                    </TableCell>
                     {termSelected ? (
                       <>
                         <TableCell className="text-center">

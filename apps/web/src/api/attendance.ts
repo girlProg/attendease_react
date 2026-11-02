@@ -768,6 +768,9 @@ export const getTermAverages = (params: {
       nin: string;
       bank_name: string;
       bank_account_number: string;
+      // The account holder's name the bank resolved for the latest transfer,
+      // saved when a statement is reconciled. Not sent to viewers.
+      disbursement_account_name?: string | null;
     }[];
   }> & { summary?: TermAveragesSummary }>("/student/term-averages/", { params }).then((response) => response.data);
 
