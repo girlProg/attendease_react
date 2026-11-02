@@ -494,6 +494,7 @@ export function PaymentsPage() {
                               : record.term_3
                             }
                             scIns={selectedTerm !== null && record.sc_ins_terms?.includes(selectedTerm)}
+                            label={selectedTerm !== null ? record.sc_ins_labels?.[String(selectedTerm)] : undefined}
                           />
                         </TableCell>
                         {(() => {
@@ -521,9 +522,9 @@ export function PaymentsPage() {
                       </>
                     ) : (
                       <>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_1} scIns={record.sc_ins_terms?.includes(1)} /></TableCell>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_2} scIns={record.sc_ins_terms?.includes(2)} /></TableCell>
-                        <TableCell className="text-center"><PercentageBadge value={record.term_3} scIns={record.sc_ins_terms?.includes(3)} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_1} scIns={record.sc_ins_terms?.includes(1)} label={record.sc_ins_labels?.["1"]} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_2} scIns={record.sc_ins_terms?.includes(2)} label={record.sc_ins_labels?.["2"]} /></TableCell>
+                        <TableCell className="text-center"><PercentageBadge value={record.term_3} scIns={record.sc_ins_terms?.includes(3)} label={record.sc_ins_labels?.["3"]} /></TableCell>
                         <TableCell className="text-center"><PercentageBadge value={record.average} /></TableCell>
                       </>
                     )}

@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query"
 
 import { Input } from "@workspace/ui/components/input"
 import { PrimaryButton } from "@/components/primary-button"
+import { useScInsWord } from "@/hooks/use-sc-ins-word"
 import {
   proportionalNoObjection,
   type ProportionalAllocation,
@@ -44,6 +45,7 @@ export function ProportionalNoObjection({
   const [measure, setMeasure] = useState<Measure>("number")
   const [amount, setAmount] = useState("")
   const [openLgas, setOpenLgas] = useState<Set<string>>(new Set())
+  const { word: scInsWord } = useScInsWord()
 
   const value = Number(amount)
   const valid = amount.trim() !== "" && Number.isFinite(value) && value > 0
@@ -90,8 +92,8 @@ export function ProportionalNoObjection({
         them, whatever their attendance; a school with more than its share keeps
         them all and the extra places come from the others), then students
         qualifying <strong>by attendance</strong>, highest first, then{" "}
-        <strong>SC-INS</strong> students not paid last term, then the other
-        SC-INS students. Students with a usable account go before those without.
+        <strong>{scInsWord}</strong> students not paid last term, then the other
+        {" "}{scInsWord} students. Students with a usable account go before those without.
         A school short of them passes its spare places to the best account
         holders in its LGA, and an LGA still short to the best in the state.
       </p>
@@ -166,8 +168,8 @@ export function ProportionalNoObjection({
           <p className="text-xs text-muted-foreground">
             Already paid: {allocation.by_tier.paid.toLocaleString()} · by
             attendance: {allocation.by_tier.attendance.toLocaleString()} ·
-            SC-INS not paid last term:{" "}
-            {allocation.by_tier.sc_ins_not_paid.toLocaleString()} · SC-INS paid
+            {scInsWord} not paid last term:{" "}
+            {allocation.by_tier.sc_ins_not_paid.toLocaleString()} · {scInsWord} paid
             last term: {allocation.by_tier.sc_ins_paid.toLocaleString()}
           </p>
           <p

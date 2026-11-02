@@ -210,6 +210,8 @@ export interface ChoiceOption {
   label: string;
 }
 
+export type ScInsDisplayMode = "label" | "hundred" | "range_screen" | "range_everywhere";
+
 export interface DeploymentConfig {
   active_days: DayName[];
   day_labels: Partial<Record<DayName, string>>;
@@ -222,6 +224,9 @@ export interface DeploymentConfig {
   // What a student can be paid per Disburse (e.g. "10000.00"): the Payments
   // page's amount dropdown offers exactly these, and Disburse refuses others.
   disburse_amounts?: string[];
+  // How SC-INS terms read (Settings > Display). Anything but "label" means
+  // counts and tier names stop using the word SC-INS.
+  sc_ins_display?: ScInsDisplayMode;
   // The enrolment form's choice lists, so dropdowns never hardcode them.
   choices?: {
     disability_status: ChoiceOption[];

@@ -24,6 +24,7 @@ import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { StatCard } from "@/components/stat-card"
 import { useAuth } from "@/contexts/auth-context"
+import { useScInsWord } from "@/hooks/use-sc-ins-word"
 import { getAttendanceOverview } from "@/api/attendance"
 import type { FilterScope } from "@/hooks/use-attendance-filters"
 import { formatNaira, roundUpPercent } from "@/lib/formatters"
@@ -43,6 +44,8 @@ export function Overview({
   const params = scope
 
   const { isStaffuser } = useAuth()
+  // Shown as a percentage instead (Settings > Display): no separate SC-INS note.
+  const { showsLabel: showsScIns } = useScInsWord()
 
   const {
     data,
@@ -112,7 +115,9 @@ export function Overview({
           value: (data?.qualifying_students ?? 0).toLocaleString(),
           sub:
             `${data?.qualifying_percentage ?? 0}% of recorded` +
-            (data?.sc_ins_students ? `, ${data.sc_ins_students.toLocaleString()} SC-INS` : ""),
+            (showsScIns && data?.sc_ins_students
+              ? `, ${data.sc_ins_students.toLocaleString()} SC-INS`
+              : ""),
           icon: UserCheck,
           color: "bg-[var(--stat-accent-1)]",
         },

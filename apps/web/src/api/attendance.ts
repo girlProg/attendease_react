@@ -738,8 +738,10 @@ export const getTermAverages = (params: {
     term_1: number;
     term_2: number;
     term_3: number;
-    // Terms shown as SC-INS (school closed all term) instead of their 0%.
+    // Terms shown as SC-INS (school closed all term) instead of their 0%, and
+    // the text each shows, by term ("SC-INS", or a superuser's percentage).
     sc_ins_terms?: number[];
+    sc_ins_labels?: Record<string, string>;
     average: number;
     account_number?: string;
     bank_name?: string;

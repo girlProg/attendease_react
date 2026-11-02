@@ -141,9 +141,9 @@ export function StudentsPage() {
                         record.current_class || "—"
                       )}
                     </TableCell>
-                    <TableCell className="text-center"><PercentageBadge value={record.term_1} scIns={record.sc_ins_terms?.includes(1)} /></TableCell>
-                    <TableCell className="text-center"><PercentageBadge value={record.term_2} scIns={record.sc_ins_terms?.includes(2)} /></TableCell>
-                    <TableCell className="text-center"><PercentageBadge value={record.term_3} scIns={record.sc_ins_terms?.includes(3)} /></TableCell>
+                    <TableCell className="text-center"><PercentageBadge value={record.term_1} scIns={record.sc_ins_terms?.includes(1)} label={record.sc_ins_labels?.["1"]} /></TableCell>
+                    <TableCell className="text-center"><PercentageBadge value={record.term_2} scIns={record.sc_ins_terms?.includes(2)} label={record.sc_ins_labels?.["2"]} /></TableCell>
+                    <TableCell className="text-center"><PercentageBadge value={record.term_3} scIns={record.sc_ins_terms?.includes(3)} label={record.sc_ins_labels?.["3"]} /></TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
                       {term1Payment ? formatNaira(parseFloat(term1Payment.amount_received)) : "—"}
                     </TableCell>

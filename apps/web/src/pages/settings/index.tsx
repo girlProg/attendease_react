@@ -3,11 +3,13 @@ import { NavLink, Outlet } from "react-router-dom"
 import { useAuth } from "@/contexts/auth-context"
 
 // Settings grouped by what they're for, one page each. Payments is for
-// superusers only: it changes how money is sent to the bank.
+// superusers only: it changes how money is sent to the bank. Display (what an
+// SC-INS term reads as) is superusers only too.
 const PAGES = [
   { label: "Term", path: "/settings/term", superuserOnly: false },
   { label: "Payments", path: "/settings/payments", superuserOnly: true },
   { label: "Cohorts", path: "/settings/cohorts", superuserOnly: true },
+  { label: "Display", path: "/settings/display", superuserOnly: true },
 ] as const
 
 export function SettingsLayout() {
