@@ -126,7 +126,7 @@ export function DisbursementSwitch() {
         onToggle={() => toggle.mutate({ poll_logging: !pollLogging })}
         title={
           pollLogging
-            ? "Every bank status check is recorded in the Audit Trail: what the bank answered for each transfer, or why the check failed. These rows are permanent — turn it off once you have your answer."
+            ? "Every bank status check is recorded in the Audit Trail: what the bank answered for each transfer, or why the check failed — a row every 5 seconds for each transfer still at the bank. These rows are permanent — turn it off once you have your answer."
             : "Only status checks that change something are recorded. Turn on to record every check and the bank's exact answer."
         }
       />
