@@ -5,12 +5,16 @@ import type { SchoolPayout, SchoolPayoutStatus } from "@/api/payments"
 
 const CHIP: Record<SchoolPayoutStatus, { pill: string; dot: string }> = {
   running: { pill: "bg-sidebar/10 text-sidebar", dot: "bg-sidebar/60" },
-  failed: { pill: "bg-red-50 text-red-700", dot: "bg-orange-500" },
+  failed: { pill: "bg-red-50 text-red-700", dot: "bg-red-500" },
   paid: { pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
   partial: { pill: "bg-sky-50 text-sky-700", dot: "bg-sky-400" },
   not_started: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground/40" },
+  no_account: { pill: "bg-amber-50 text-amber-800", dot: "bg-amber-500" },
   nobody: { pill: "bg-white text-muted-foreground/70 ring-1 ring-border", dot: "bg-muted-foreground/30" },
 }
+
+// Paid counts everyone with an account paid or tried; those without one can't be paid.
+const payable = (payout: SchoolPayout) => payout.students - payout.no_account
 
 function chipLabel(payout: SchoolPayout) {
   switch (payout.status) {
@@ -21,12 +25,25 @@ function chipLabel(payout: SchoolPayout) {
     case "paid":
       return "Paid"
     case "partial":
-      return `${payout.paid} of ${payout.students} paid`
+      return `${payout.paid} of ${payable(payout)} paid`
     case "not_started":
       return "Not started"
+    case "no_account":
+      return "No accounts"
     default:
       return "No one to pay"
   }
+}
+
+/** Under the school's name: who it counts, and what's left that can't be paid yet. */
+function detailLine(payout: SchoolPayout, noObjection: boolean) {
+  const parts = [
+    `${payout.students.toLocaleString()} student${payout.students === 1 ? "" : "s"} ${
+      noObjection ? "on No Objection list" : "qualifying"
+    }`,
+  ]
+  if (payout.no_account) parts.push(`${payout.no_account.toLocaleString()} without an account`)
+  return parts.join(" · ")
 }
 
 /**
@@ -73,7 +90,9 @@ export function SchoolPicker({
   ].filter((name, index, names) => names.indexOf(name) === index)
   const term = search.trim().toLowerCase()
   const shown = term ? ordered.filter((name) => name.toLowerCase().includes(term)) : ordered
-  const withPupils = (payouts ?? []).filter((payout) => payout.status !== "nobody")
+  const withPupils = (payouts ?? []).filter(
+    (payout) => payout.status !== "nobody" && payout.status !== "no_account",
+  )
   const paidCount = withPupils.filter((payout) => payout.status === "paid").length
 
   const pick = (name: string) => {
@@ -168,17 +187,27 @@ export function SchoolPicker({
                       <span className="block truncate text-[13px] font-semibold text-sidebar-accent-foreground">{name}</span>
                       {payout && (
                         <span className="block text-[11.5px] text-muted-foreground">
-                          {payout.students.toLocaleString()} student{payout.students === 1 ? "" : "s"}{" "}
-                          {noObjection ? "on No Objection list" : "qualifying"}
+                          {detailLine(payout, noObjection)}
                         </span>
                       )}
                     </span>
                     {payout && (
                       <span
+                        title={
+                          payout.failed
+                            ? `${payout.failed} failed: a retry is possible`
+                            : undefined
+                        }
                         className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${CHIP[payout.status].pill}`}
                       >
-                        <span className={`size-1.5 rounded-full ${CHIP[payout.status].dot}`} />
+                        {/* A red dot: a failure a retry can fix. */}
+                        <span
+                          className={`size-1.5 rounded-full ${payout.failed ? "bg-red-500" : CHIP[payout.status].dot}`}
+                        />
                         {chipLabel(payout)}
+                        {payout.failed > 0 && payout.status !== "failed" && (
+                          <span className="sr-only">, {payout.failed} failed, a retry is possible</span>
+                        )}
                       </span>
                     )}
                   </button>

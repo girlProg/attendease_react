@@ -133,14 +133,16 @@ export const setPaymentNotifications = (changes: Partial<PaymentNotifications>) 
     .then((response) => response.data)
 
 // Where a school's payout for the term is: the school being paid now (or
-// transfers still at the bank), some failed, everyone paid, some paid,
-// nothing sent yet, or no one to pay.
+// transfers still at the bank), everyone with an account paid or tried, some,
+// nothing sent yet, everyone tried and nobody paid, no one with an account,
+// or no one to pay.
 export type SchoolPayoutStatus =
   | "running"
   | "failed"
   | "paid"
   | "partial"
   | "not_started"
+  | "no_account"
   | "nobody"
 
 export interface SchoolPayout {
@@ -149,8 +151,11 @@ export interface SchoolPayout {
   // The students the Payments page lists for it (No Objection list, else who qualifies).
   students: number
   paid: number
+  // Failures a retry can fix (the student has a usable account): a red dot.
   failed: number
   in_flight: number
+  // No usable account on record: Disburse skips them, so they aren't still to pay.
+  no_account: number
   status: SchoolPayoutStatus
 }
 
