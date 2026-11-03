@@ -15,6 +15,9 @@ interface UploadTile {
   paid: number
   inFlight: number
   failed: number
+  // Times the bank has been asked about it, and when last (sent uploads only).
+  checks: number
+  lastCheckedAt: string | null
 }
 
 const CHIP: Record<UploadState, string> = {
@@ -58,6 +61,8 @@ function uploadTiles(run: DisbursementRun): UploadTile[] {
         paid: upload.counts.successful,
         inFlight: upload.counts.in_flight,
         failed: upload.counts.failed,
+        checks: upload.checks ?? 0,
+        lastCheckedAt: upload.last_checked_at ?? null,
       }
     }
     const nextUp = index === run.uploads.length && run.status === "sending" && !oneOnItsWay
@@ -69,6 +74,8 @@ function uploadTiles(run: DisbursementRun): UploadTile[] {
       paid: 0,
       inFlight: 0,
       failed: 0,
+      checks: 0,
+      lastCheckedAt: null,
     }
   })
 }
@@ -122,6 +129,19 @@ function Legend({ tile }: { tile: UploadTile }) {
         <span className="size-1.5 rounded-full bg-orange-500" />
         {tile.failed} failed
       </span>
+      {tile.reference && (
+        <span
+          className="inline-flex items-center gap-1.5"
+          title={
+            tile.lastCheckedAt
+              ? `Last asked the bank at ${new Date(tile.lastCheckedAt).toLocaleTimeString()}`
+              : "Not asked yet"
+          }
+        >
+          <RefreshCw className="size-3" />
+          {tile.checks.toLocaleString()} check{tile.checks === 1 ? "" : "s"}
+        </span>
+      )}
     </div>
   )
 }

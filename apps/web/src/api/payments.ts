@@ -53,7 +53,14 @@ export interface DisbursementRun {
   created_at: string
   started_at: string | null
   finished_at: string | null
-  uploads: { reference: string; status: string; counts: DisbursementBatchCounts }[]
+  uploads: {
+    reference: string
+    status: string
+    counts: DisbursementBatchCounts
+    // Times the bank has been asked about this upload, and when last.
+    checks: number
+    last_checked_at: string | null
+  }[]
 }
 
 export interface CurrentDisbursement {
