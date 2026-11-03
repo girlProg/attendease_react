@@ -258,6 +258,8 @@ export function PayoutTracker({
   const [open, setOpen] = useState(true)
   const tiles = uploadTiles(run)
   const inFlight = tiles.reduce((sum, tile) => sum + tile.inFlight, 0)
+  // With the tiles closed, the bar on top carries what they would show.
+  const summary = (tile: UploadTile) => !open && tile.state === "sent"
 
   return (
     <div className="rounded-2xl bg-white p-3.5 shadow-[0_0_0_1.5px_rgb(75_63_214/0.2),0_8px_24px_rgb(75_63_214/0.10)]">
@@ -282,20 +284,26 @@ export function PayoutTracker({
         {tiles.length > 0 && (
           <div className="min-w-0 flex-1 basis-full sm:min-w-48 sm:basis-0 sm:px-2">
             <div className="flex gap-1.5">
-              {tiles.map((tile) => (
-                <div
-                  key={tile.number}
-                  className={`h-2 flex-1 rounded-full ${
-                    tile.state === "sent"
-                      ? "bg-sidebar"
-                      : tile.state === "sending"
-                        ? "stripes-moving bg-sidebar/60"
-                        : tile.state === "not_sent"
-                          ? "bg-amber-300"
-                          : "bg-sidebar/10"
-                  }`}
-                />
-              ))}
+              {tiles.map((tile) =>
+                // Details closed: a sent upload's segment shows its paid / in
+                // flight / failed split, as its tile would.
+                summary(tile) ? (
+                  <SplitBar key={tile.number} tile={tile} className="h-2 flex-1" />
+                ) : (
+                  <div
+                    key={tile.number}
+                    className={`h-2 flex-1 rounded-full ${
+                      tile.state === "sent"
+                        ? "bg-sidebar"
+                        : tile.state === "sending"
+                          ? "stripes-moving bg-sidebar/60"
+                          : tile.state === "not_sent"
+                            ? "bg-amber-300"
+                            : "bg-sidebar/10"
+                    }`}
+                  />
+                ),
+              )}
             </div>
             <div className="mt-1.5 flex gap-1.5">
               {tiles.map((tile) => (
@@ -309,7 +317,7 @@ export function PayoutTracker({
                         : "font-medium text-muted-foreground/70"
                   }`}
                 >
-                  {tile.number} · {CHIP[tile.state]}
+                  {tile.number} · {summary(tile) ? `${tile.paid} of ${tile.total} paid` : CHIP[tile.state]}
                 </span>
               ))}
             </div>
