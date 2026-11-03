@@ -4,6 +4,7 @@ import { Plus } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { SearchBar } from "@/components/search-bar"
 import { useAuth } from "@/contexts/auth-context"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
@@ -41,7 +42,7 @@ export function AttendancePage() {
   const navigate = useNavigate()
 
   useLogVisit("Attendance", "Visited Attendance")
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
   const { filters, setFilter, options, scope } = useAttendanceFilters()
   const tabFilters = TAB_FILTERS[activeTab]
   const { params: scopeParams, ready: scopeReady } = scope(tabFilters)
@@ -92,8 +93,19 @@ export function AttendancePage() {
 
       {/* Per-tab actions now live BELOW the tabs, so they can't push the strip
           around. */}
-      {activeTab === "Overview" && canWrite && (
-        <div className="flex justify-stretch sm:justify-end">{newAttendanceButton}</div>
+      {activeTab === "Overview" && (canWrite || isAdmin) && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {isAdmin && (
+            <DownloadPdfButton
+              path="/attendance/overview/report-pdf/"
+              params={{ ...scopeParams }}
+              filename="AGILE_Attendance.pdf"
+              missing={scopeReady ? null : "Loading the filters…"}
+              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            />
+          )}
+          {newAttendanceButton}
+        </div>
       )}
       {activeTab === "Real-Time" && (
         <div className="flex flex-col gap-3 sm:flex-row">

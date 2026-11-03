@@ -678,7 +678,7 @@ export function NewPaymentsPage() {
                       path="/student/payments-pdf/"
                       params={{ ...scopeParams, ...(appliedSearch && { name: appliedSearch }) }}
                       filename="AGILE_Payments.pdf"
-                      label="Download PDF report"
+                      label="Download report"
                       missing={
                         scopeParams.cohort && scopeParams.year && scopeParams.term
                           ? null

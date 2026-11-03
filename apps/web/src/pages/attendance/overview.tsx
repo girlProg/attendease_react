@@ -18,7 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
@@ -180,15 +179,6 @@ export function Overview({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <DownloadPdfButton
-          path="/attendance/overview/report-pdf/"
-          params={{ ...params }}
-          filename="AGILE_Attendance.pdf"
-          missing={ready ? null : "Loading the filters…"}
-        />
-      </div>
-
       {isError && <QueryError />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

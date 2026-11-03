@@ -5,8 +5,9 @@ import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
 import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
-import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
+import { useAuth } from "@/contexts/auth-context"
+import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { formatNaira } from "@/lib/formatters"
@@ -38,6 +39,7 @@ const DASHBOARD_FILTERS: readonly FilterKey[] = ["cohort", "year"]
 
 export function DashboardPage() {
   useLogVisit("Dashboard", "Visited Dashboard")
+  const { isAdmin } = useAuth()
   const { filters, setFilter, scope, options } = useAttendanceFilters()
   const { params: scopeParams, ready: scopeReady } = scope(DASHBOARD_FILTERS)
 
@@ -92,20 +94,24 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <AttendanceFilterBar
-        filters={filters}
-        setFilter={setFilter}
-        options={options}
-        keys={DASHBOARD_FILTERS}
-      />
-
-      <div className="flex justify-end">
-        <DownloadPdfButton
-          path="/dashboard/report-pdf/"
-          params={queryParams}
-          filename="AGILE_Programme_overview.pdf"
-          missing={scopeReady ? null : "Loading the filters…"}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <AttendanceFilterBar
+            filters={filters}
+            setFilter={setFilter}
+            options={options}
+            keys={DASHBOARD_FILTERS}
+          />
+        </div>
+        {isAdmin && (
+          <DownloadPdfButton
+            path="/dashboard/report-pdf/"
+            params={queryParams}
+            filename="AGILE_Programme_overview.pdf"
+            missing={scopeReady ? null : "Loading the filters…"}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        )}
       </div>
 
       {(isSummaryError || isLgaError) && <QueryError />}

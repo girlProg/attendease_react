@@ -13,7 +13,7 @@ export function DownloadPdfButton({
   params,
   filename,
   missing,
-  label = "Download PDF",
+  label = "Download report",
   className,
 }: {
   path: string
@@ -32,7 +32,7 @@ export function DownloadPdfButton({
     <button
       type="button"
       disabled={busy || Boolean(missing)}
-      title={missing ?? "A PDF of this page with charts, for the filters chosen"}
+      title={missing ?? "A report of this page with charts (PDF), for the filters chosen"}
       onClick={async () => {
         setBusy(true)
         try {
@@ -47,7 +47,7 @@ export function DownloadPdfButton({
       }
     >
       <FileDown className="size-4" />
-      {busy ? "Making PDF…" : label}
+      {busy ? "Making report…" : label}
     </button>
   )
 }
