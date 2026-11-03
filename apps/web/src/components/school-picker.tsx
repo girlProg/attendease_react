@@ -120,12 +120,13 @@ export function SchoolPicker({
           <div className="absolute top-[calc(100%+10px)] right-0 z-40 w-[480px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-2.5 shadow-[0_22px_50px_rgb(33_29_82/0.20),0_2px_6px_rgb(33_29_82/0.08)]">
             <label className="flex h-10 items-center gap-2 rounded-[11px] border-[1.5px] border-sidebar/25 px-3">
               <Search className="size-[18px] shrink-0 text-sidebar" />
+              {/* Not focused on open: on a phone that raised the keyboard and
+                  zoomed in. 16px on phones so tapping in doesn't zoom either. */}
               <input
-                autoFocus
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={`Search ${ordered.length} school${ordered.length === 1 ? "" : "s"}${lga ? ` in ${lga}` : ""}`}
-                className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground/70 focus:outline-none sm:text-[13px]"
               />
             </label>
             <div className="flex items-center px-2 pt-2.5 pb-1.5 text-[11px] text-muted-foreground">
