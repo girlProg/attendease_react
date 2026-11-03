@@ -236,6 +236,8 @@ function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliati
             : "The statement and our records agree."}
           {totals.unreadable_lines > 0 &&
             ` ${totals.unreadable_lines} AGILE line(s) on the statement couldn't be read and were left out.`}
+          {(totals.sent_on_neighbouring_days ?? 0) > 0 &&
+            ` ${totals.sent_on_neighbouring_days} transfer(s) sent the day before or after were posted on these dates and are counted.`}
           {" "}A transfer sent on the last day can show as not debited if the bank posted it the next day.
         </p>
       </div>

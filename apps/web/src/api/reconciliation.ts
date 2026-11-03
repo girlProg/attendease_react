@@ -24,6 +24,9 @@ export interface ReconciliationTotals {
   recorded_not_debited: number
   // Lines starting "AGILE" that didn't read as a transfer.
   unreadable_lines: number
+  // Transfers sent the day before or after that the bank posted on these
+  // dates (not in reconciliations from before 2026-11-03).
+  sent_on_neighbouring_days?: number
 }
 
 export interface ReconciliationFinding {
