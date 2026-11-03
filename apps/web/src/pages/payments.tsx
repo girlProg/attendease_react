@@ -47,7 +47,8 @@ import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-fil
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { getConfig } from "@/api/config"
-import { pollPendingDisbursements } from "@/api/payments"
+import { getCurrentDisbursement, pollPendingDisbursements } from "@/api/payments"
+import { runInProgress } from "@/lib/payout-run"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
@@ -83,6 +84,17 @@ export function PaymentsPage() {
   const cohortPayee: Payee =
     cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.payee ?? "caregiver"
 
+  // The school being disbursed (the strip above reads the same query). Its
+  // rows reach the bank a few seconds after Disburse, so follow them from the
+  // press, not only once a row shows a bank status.
+  const current = useQuery({
+    queryKey: ["disbursement-current"],
+    queryFn: getCurrentDisbursement,
+    refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
+    refetchIntervalInBackground: true,
+  })
+  const running = runInProgress(current.data?.run)
+
   const { data, isError, isLoading } = useQuery({
     queryKey: ["term-averages", scopeParams, appliedSearch, page, pageSize],
     queryFn: () => getTermAverages({
@@ -104,14 +116,14 @@ export function PaymentsPage() {
         (record.payments ?? []).some(
           (payment) =>
             !payment.disbursed &&
-            ["pending", "submitted", "processing", "unknown"].includes(
+            ["pending", "sending", "submitted", "processing", "unknown"].includes(
               payment.disbursement_status ?? "",
             ),
         ),
       )
       // 5s matches the server's poll cadence, so a SUCCESS lands on
       // the page within seconds of the bank confirming it.
-      return inFlight ? 5000 : false
+      return inFlight || running ? 5000 : false
     },
     // Keep refetching even when this tab is in the background (e.g. while the
     // admin is open in another tab), so the badges are current on return —
@@ -126,6 +138,7 @@ export function PaymentsPage() {
     mutationFn: pollPendingDisbursements,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["term-averages"] })
+      queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
     },
   })
 

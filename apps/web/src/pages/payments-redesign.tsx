@@ -261,6 +261,7 @@ export function NewPaymentsPage() {
     queryKey: ["disbursement-current"],
     queryFn: getCurrentDisbursement,
     refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
+    refetchIntervalInBackground: true,
   })
   const run = current.data?.run ?? null
   const running = runInProgress(run)
