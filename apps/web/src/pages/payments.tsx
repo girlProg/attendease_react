@@ -49,6 +49,7 @@ import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
 import { getConfig } from "@/api/config"
 import { pollPendingDisbursements } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
 import { DisbursementStatusStrip } from "@/components/disbursement-status-strip"
 import { formatNaira, getTermLabel } from "@/lib/formatters"
@@ -330,6 +331,17 @@ export function PaymentsPage() {
           <Download className="size-4" />
           Download Data
         </Button>
+        <DownloadPdfButton
+          path="/student/payments-pdf/"
+          params={{ ...scopeParams, ...(appliedSearch && { name: appliedSearch }) }}
+          filename="AGILE_Payments.pdf"
+          missing={
+            scopeParams.cohort && scopeParams.year && scopeParams.term
+              ? null
+              : "Choose a cohort, year and term first"
+          }
+          className="inline-flex h-11 items-center gap-2 rounded-full border border-sidebar !bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50"
+        />
       </div>
 
       {/* Disbursement switch + Refresh Status + No Objection — centered on one row */}

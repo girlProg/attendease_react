@@ -6,6 +6,7 @@ import { BarChart } from "@/components/bar-chart"
 import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { formatNaira } from "@/lib/formatters"
@@ -97,6 +98,15 @@ export function DashboardPage() {
         options={options}
         keys={DASHBOARD_FILTERS}
       />
+
+      <div className="flex justify-end">
+        <DownloadPdfButton
+          path="/dashboard/report-pdf/"
+          params={queryParams}
+          filename="AGILE_Programme_overview.pdf"
+          missing={scopeReady ? null : "Loading the filters…"}
+        />
+      </div>
 
       {(isSummaryError || isLgaError) && <QueryError />}
 

@@ -27,6 +27,7 @@ import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
 import { StatCardSkeleton } from "@/components/skeleton"
 import { TableEmptyState } from "@/components/table-empty-state"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import {
   exportMonthlyReport,
@@ -134,6 +135,14 @@ export function ReportsPage() {
               <Download className="size-4" />
               Download CSV
             </Button>
+          )}
+          {report && (
+            <DownloadPdfButton
+              path={`/monthly-report/${report.period}/pdf/`}
+              params={{}}
+              filename={`monthly-report-${report.period}.pdf`}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-sidebar !bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50"
+            />
           )}
           <Button
             variant="outline"

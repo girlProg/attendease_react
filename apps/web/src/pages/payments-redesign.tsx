@@ -45,6 +45,7 @@ import {
   type DisbursementSettings,
 } from "@/api/payments"
 import { DisburseDialog } from "@/components/disburse-dialog"
+import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { NoObjectionDialog } from "@/components/no-objection-dialog"
 import { PayoutOutcome, PayoutTracker } from "@/components/payout-tracker"
 import { PercentageBadge } from "@/components/percentage-badge"
@@ -673,6 +674,18 @@ export function NewPaymentsPage() {
                       <Download className="size-[18px] text-muted-foreground" />
                       Download data
                     </button>
+                    <DownloadPdfButton
+                      path="/student/payments-pdf/"
+                      params={{ ...scopeParams, ...(appliedSearch && { name: appliedSearch }) }}
+                      filename="AGILE_Payments.pdf"
+                      label="Download PDF report"
+                      missing={
+                        scopeParams.cohort && scopeParams.year && scopeParams.term
+                          ? null
+                          : "Choose a cohort, session and term first"
+                      }
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-accent-foreground hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-[18px] [&_svg]:text-muted-foreground"
+                    />
                     {settings.data && (isSuperuser || settings.data.poll_logging) && (
                       <>
                         <div className="mx-1 my-1.5 h-px bg-border/40" />
