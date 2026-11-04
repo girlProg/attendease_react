@@ -73,7 +73,7 @@ export interface CreateDisbursementBatchParams {
   payment_ids: number[]
   // A Disburse pays one school; every payment must be in it.
   school: number
-  amount: number
+  // No amount: each term is paid what Settings › Payments says.
   use_single_debit?: boolean
   payee?: Payee
 }
@@ -103,6 +103,43 @@ export interface DisbursementSettings {
   updated_at: string | null
   updated_by: string | null
 }
+
+// The payment guard: a cohort, year and term open for payment, and what each
+// student is paid for it. Disburse sends nothing else.
+export interface PayableTerm {
+  id: number
+  cohort: number
+  cohort_name: string
+  year: number
+  term: number
+  amount: string
+  updated_at: string
+  updated_by: string | null
+}
+
+export const getPayableTerms = () =>
+  api.get<PayableTerm[]>("/payable-terms/").then((response) => response.data)
+
+/** The open term for this cohort/year/term, if any. */
+export function findPayableTerm(
+  terms: PayableTerm[] | undefined,
+  cohort?: number,
+  year?: string | number,
+  term?: string | number,
+): PayableTerm | undefined {
+  return terms?.find(
+    (open) => open.cohort === cohort && open.year === Number(year) && open.term === Number(term),
+  )
+}
+
+/** Superusers only; every change goes to the payment audit trail. */
+export const createPayableTerm = (term: Pick<PayableTerm, "cohort" | "year" | "term" | "amount">) =>
+  api.post<PayableTerm>("/payable-terms/", term).then((response) => response.data)
+
+export const updatePayableTerm = (id: number, amount: string) =>
+  api.patch<PayableTerm>(`/payable-terms/${id}/`, { amount }).then((response) => response.data)
+
+export const deletePayableTerm = (id: number) => api.delete(`/payable-terms/${id}/`)
 
 /** Read the disbursement and status-check logging switches (admins). */
 export const getDisbursementSettings = () =>

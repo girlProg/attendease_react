@@ -19,13 +19,6 @@ import { useAuth } from "@/contexts/auth-context"
 import { NoObjectionDialog } from "@/components/no-objection-dialog"
 import { Button } from "@workspace/ui/components/button"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -46,8 +39,12 @@ import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
-import { getConfig } from "@/api/config"
-import { getCurrentDisbursement, pollPendingDisbursements } from "@/api/payments"
+import {
+  findPayableTerm,
+  getCurrentDisbursement,
+  getPayableTerms,
+  pollPendingDisbursements,
+} from "@/api/payments"
 import { runInProgress } from "@/lib/payout-run"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
@@ -67,18 +64,16 @@ export function PaymentsPage() {
   const { params: scopeParams, ready: scopeReady } = scope(PAYMENT_FILTERS)
 
   const [appliedSearch, setAppliedSearch] = useState("")
-  const [amountPerStudent, setAmountPerStudent] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters], 300)
 
   // Payee defaults to the selected cohort's setting (Niger=student, Kaduna=
   // caregiver) and can be overridden per disbursement. The override is keyed to
   // the cohort so switching cohorts falls back to that cohort's default.
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
-  // The amounts a student can be paid, chosen from a list and never typed (a
-  // slip like 100000 for 10000 would pay a whole school ten times over). The
-  // server sends the list and refuses any other amount.
-  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
-  const disburseAmounts = config?.disburse_amounts ?? []
+  // The payment guard: what each student is paid is the selected term's
+  // amount on Settings › Payments; a term not opened there can't be paid.
+  const { data: payableTerms } = useQuery({ queryKey: ["payable-terms"], queryFn: getPayableTerms })
+  const openTerm = findPayableTerm(payableTerms, scopeParams.cohort, scopeParams.year, scopeParams.term)
   // Default payee for the selected cohort (Niger=student, Kaduna=caregiver); the
   // Disburse dialog lets you override it per disbursement.
   const cohortPayee: Payee =
@@ -289,30 +284,20 @@ export function PaymentsPage() {
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        {/* Amount dropdown with the Disburse button embedded inside it */}
+        {/* The term's amount (Settings › Payments) with the Disburse button inside */}
         <div className="relative flex items-center">
-          <Select
-            value={amountPerStudent || null}
-            onValueChange={(value) => setAmountPerStudent(value ?? "")}
+          <span
+            className="flex h-11 w-72 items-center rounded-full border border-sidebar/30 bg-white pr-32 pl-4 text-sm shadow-sm"
+            title="Set per cohort, year and term on Settings › Payments"
           >
-            <SelectTrigger
-              aria-label="Amount Per Student"
-              className="h-11 w-72 rounded-full border-sidebar/30 !bg-white pr-32 pl-4 shadow-sm focus-visible:border-sidebar/30 focus-visible:ring-0"
-            >
-              <SelectValue placeholder="Amount Per Student">
-                {amountPerStudent
-                  ? formatNaira(Number(amountPerStudent))
-                  : "Amount Per Student"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {disburseAmounts.map((amount) => (
-                <SelectItem key={amount} value={amount}>
-                  {formatNaira(Number(amount))}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {openTerm ? (
+              <span className="text-foreground">{formatNaira(Number(openTerm.amount))} per student</span>
+            ) : (
+              <span className="text-muted-foreground">
+                {termSelected ? "Term not open for payment" : "Amount per student"}
+              </span>
+            )}
+          </span>
           <DisburseDialog
             cohort={scopeParams.cohort}
             year={scopeParams.year}
@@ -321,7 +306,6 @@ export function PaymentsPage() {
             lga={scopeParams.lga}
             scopeReady={scopeReady}
             name={appliedSearch || undefined}
-            amount={amountPerStudent}
             defaultPayee={cohortPayee}
             termLabel={termSelected ? getTermLabel(filters.term) : null}
             termSelected={termSelected}

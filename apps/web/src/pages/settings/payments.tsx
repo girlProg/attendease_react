@@ -3,15 +3,21 @@ import { AlertCircle, Info } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import { LabeledInput } from "@/components/form-fields"
+import { LabeledInput, LabeledSelect } from "@/components/form-fields"
 import { QueryError } from "@/components/query-error"
 import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { getCohorts } from "@/api/attendance"
+import { formatNaira } from "@/lib/formatters"
 import {
+  createPayableTerm,
+  deletePayableTerm,
   getDisbursementSettings,
+  getPayableTerms,
   getPaymentNotifications,
   setDisbursementSettings,
   setPaymentNotifications,
+  updatePayableTerm,
   type DisbursementSettings,
   type PaymentNotifications,
 } from "@/api/payments"
@@ -54,13 +60,198 @@ export function PaymentSettingsPage() {
   if (!settings.data) return null
   return (
     <div className="space-y-5">
+      <PayableTermsSection canEdit={isSuperuser} />
       <UploadLimitForm key={settings.data.updated_at ?? "new"} settings={settings.data} />
       {isSuperuser && isStaffuser && <NotificationsSection />}
     </div>
   )
 }
 
-const MOMENTS: { field: keyof Omit<PaymentNotifications, "recipients">; label: string; hint: string }[] = [
+const TERMS = ["1", "2", "3"]
+
+/**
+ * The payment guard: Disburse pays only a cohort, year and term listed here,
+ * and every student gets its amount. Superusers open, re-price and close
+ * terms; every change goes to the payment audit trail.
+ */
+function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
+  const queryClient = useQueryClient()
+  const terms = useQuery({ queryKey: ["payable-terms"], queryFn: getPayableTerms })
+  const { data: cohorts = [] } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  const [cohort, setCohort] = useState("")
+  const [year, setYear] = useState(String(new Date().getFullYear()))
+  const [term, setTerm] = useState("")
+  const [amount, setAmount] = useState("")
+  const [editing, setEditing] = useState<{ id: number; amount: string } | null>(null)
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["payable-terms"] })
+    queryClient.invalidateQueries({ queryKey: ["payment-audit"] })
+  }
+  const add = useMutation({
+    mutationFn: () =>
+      createPayableTerm({ cohort: Number(cohort), year: Number(year), term: Number(term), amount }),
+    onSuccess: () => {
+      setAmount("")
+      refresh()
+    },
+  })
+  const reprice = useMutation({
+    mutationFn: (change: { id: number; amount: string }) => updatePayableTerm(change.id, change.amount),
+    onSuccess: () => {
+      setEditing(null)
+      refresh()
+    },
+  })
+  const close = useMutation({ mutationFn: deletePayableTerm, onSuccess: refresh })
+
+  const amountValid = Number(amount) > 0
+  const canAdd = Boolean(cohort && term && Number(year) > 2000 && amountValid) && !add.isPending
+  const cohortName = (id: string) => cohorts.find((option) => String(option.id) === id)?.name ?? id
+  const failure = add.error ?? reprice.error ?? close.error
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-2xl">
+      <div>
+        <h2 className="text-base font-bold text-foreground">Terms open for payment</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Disburse pays only the cohort, year and term combinations listed here, and every student
+          gets the amount shown. A term not listed can&apos;t be paid. Closing a term stops any
+          payment for it that hasn&apos;t reached the bank yet.
+        </p>
+      </div>
+
+      {terms.isError ? (
+        <QueryError />
+      ) : (
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr>
+              <th className="py-1.5 font-medium">Cohort</th>
+              <th className="py-1.5 font-medium">Year</th>
+              <th className="py-1.5 font-medium">Term</th>
+              <th className="py-1.5 font-medium">Per student</th>
+              {canEdit && <th />}
+            </tr>
+          </thead>
+          <tbody>
+            {(terms.data ?? []).length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-3 text-sm text-amber-700">
+                  No term is open: nothing can be paid until one is added.
+                </td>
+              </tr>
+            )}
+            {(terms.data ?? []).map((open) => (
+              <tr key={open.id} className="border-t border-border/40">
+                <td className="py-2">{open.cohort_name}</td>
+                <td className="py-2">{open.year}</td>
+                <td className="py-2">{open.term}</td>
+                <td className="py-2">
+                  {editing?.id === open.id ? (
+                    <input
+                      type="number"
+                      value={editing.amount}
+                      onChange={(event) => setEditing({ id: open.id, amount: event.target.value })}
+                      className="h-8 w-28 rounded-lg border border-border px-2"
+                    />
+                  ) : (
+                    <span title={open.updated_by ? `Last changed by ${open.updated_by}` : undefined}>
+                      {formatNaira(Number(open.amount))}
+                    </span>
+                  )}
+                </td>
+                {canEdit && (
+                  <td className="space-x-3 py-2 text-right text-xs font-semibold">
+                    {editing?.id === open.id ? (
+                      <>
+                        <button
+                          type="button"
+                          className="text-sidebar hover:underline disabled:opacity-50"
+                          disabled={!(Number(editing.amount) > 0) || reprice.isPending}
+                          onClick={() => reprice.mutate(editing)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:underline"
+                          onClick={() => setEditing(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="text-sidebar hover:underline"
+                          onClick={() => setEditing({ id: open.id, amount: open.amount })}
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          className="text-red-600 hover:underline disabled:opacity-50"
+                          disabled={close.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Close cohort ${open.cohort_name} · ${open.year} · term ${open.term} for payment?`,
+                              )
+                            ) {
+                              close.mutate(open.id)
+                            }
+                          }}
+                        >
+                          Close
+                        </button>
+                      </>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {canEdit && (
+        <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-5">
+          <LabeledSelect
+            label="Cohort"
+            value={cohort}
+            onValueChange={(value) => setCohort(value ?? "")}
+            items={cohorts.map((option) => String(option.id))}
+            placeholder="Cohort"
+            formatItem={cohortName}
+          />
+          <LabeledInput label="Year" type="number" value={year} onChange={setYear} />
+          <LabeledSelect
+            label="Term"
+            value={term}
+            onValueChange={(value) => setTerm(value ?? "")}
+            items={TERMS}
+            placeholder="Term"
+          />
+          <LabeledInput label="Amount per student (₦)" type="number" value={amount} onChange={setAmount} />
+          <Button className="h-11 rounded-full px-6" disabled={!canAdd} onClick={() => add.mutate()}>
+            {add.isPending ? "Opening…" : "Open term"}
+          </Button>
+        </div>
+      )}
+
+      {failure && (
+        <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="size-4 shrink-0" />
+          {errorText(failure, "Could not save the payable term.")}
+        </p>
+      )}
+    </section>
+  )
+}
+
+const MOMENTS:{ field: keyof Omit<PaymentNotifications, "recipients">; label: string; hint: string }[] = [
   {
     field: "notify_coming",
     label: "Payments coming",

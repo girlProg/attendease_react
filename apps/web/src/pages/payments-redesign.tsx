@@ -35,10 +35,11 @@ import { useLogVisit } from "@/hooks/use-log-visit"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { exportPayments, getCohorts, getNoObjectionStatus, getTermAverages } from "@/api/attendance"
-import { getConfig } from "@/api/config"
 import {
+  findPayableTerm,
   getCurrentDisbursement,
   getDisbursementSettings,
+  getPayableTerms,
   getSchoolPayouts,
   pollPendingDisbursements,
   setDisbursementSettings,
@@ -227,7 +228,6 @@ export function NewPaymentsPage() {
 
   const [searchText, setSearchText] = useState("")
   const [appliedSearch, setAppliedSearch] = useState("")
-  const [amountPerStudent, setAmountPerStudent] = useState("")
   const [tab, setTab] = useState<RowStatus | "all">("all")
   const [menuOpen, setMenuOpen] = useState(false)
   const [dismissedRun, setDismissedRun] = useState<number | null>(readDismissed)
@@ -236,8 +236,10 @@ export function NewPaymentsPage() {
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters], 1000)
 
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
-  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
-  const disburseAmounts = config?.disburse_amounts ?? []
+  // The payment guard: each student is paid the selected term's amount on
+  // Settings › Payments; a term not opened there can't be paid.
+  const { data: payableTerms } = useQuery({ queryKey: ["payable-terms"], queryFn: getPayableTerms })
+  const openTerm = findPayableTerm(payableTerms, scopeParams.cohort, scopeParams.year, scopeParams.term)
   // Cohorts read 1st, 2nd, 3rd left to right, whatever order they were made in.
   const cohortOptions = [...options.cohorts].sort(
     (first, second) => Number(first) - Number(second) || first.localeCompare(second),
@@ -550,23 +552,16 @@ export function NewPaymentsPage() {
       ) : (
         <div className="relative z-10 flex flex-wrap items-center gap-3 rounded-2xl bg-white py-3 pr-3.5 pl-[18px] shadow-[0_4px_14px_rgb(75_63_214/0.06)]">
           <span className="whitespace-nowrap text-[13px] text-muted-foreground">Amount per student</span>
-          <Select value={amountPerStudent || null} onValueChange={(value) => setAmountPerStudent(value ?? "")}>
-            <SelectTrigger
-              aria-label="Amount per student"
-              className="h-10 w-36 rounded-xl border-border/60 bg-white px-3 text-sm font-semibold text-sidebar-accent-foreground shadow-none"
-            >
-              <SelectValue placeholder="Choose">
-                {amountPerStudent ? formatNaira(Number(amountPerStudent)) : undefined}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {disburseAmounts.map((amount) => (
-                <SelectItem key={amount} value={amount}>
-                  {formatNaira(Number(amount))}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span
+            className="flex h-10 items-center rounded-xl border border-border/60 bg-white px-3 text-sm font-semibold text-sidebar-accent-foreground"
+            title="Set per cohort, year and term on Settings › Payments"
+          >
+            {openTerm
+              ? formatNaira(Number(openTerm.amount))
+              : termSelected
+                ? "Term not open for payment"
+                : "Choose a term"}
+          </span>
           <DisburseDialog
             cohort={scopeParams.cohort}
             year={scopeParams.year}
@@ -575,7 +570,6 @@ export function NewPaymentsPage() {
             lga={scopeParams.lga}
             scopeReady={scopeReady}
             name={appliedSearch || undefined}
-            amount={amountPerStudent}
             defaultPayee={cohortPayee}
             termLabel={termSelected ? `${ordinal(filters.term)} Term` : null}
             termSelected={termSelected}

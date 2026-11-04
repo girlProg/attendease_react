@@ -224,9 +224,6 @@ export interface DeploymentConfig {
     // (Settings > Display).
     new_payments_page?: boolean;
   };
-  // What a student can be paid per Disburse (e.g. "10000.00"): the Payments
-  // page's amount dropdown offers exactly these, and Disburse refuses others.
-  disburse_amounts?: string[];
   // How SC-INS terms read (Settings > Display). Anything but "label" means
   // counts and tier names stop using the word SC-INS.
   sc_ins_display?: ScInsDisplayMode;

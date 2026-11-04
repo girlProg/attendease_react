@@ -19,7 +19,9 @@ import {
 import { PrimaryButton } from "@/components/primary-button"
 import {
   createDisbursementBatch,
+  findPayableTerm,
   getCurrentDisbursement,
+  getPayableTerms,
   getPendingPayments,
   generatePayments,
   type DisbursementRun,
@@ -169,7 +171,6 @@ export function DisburseDialog({
   lga,
   scopeReady = true,
   name,
-  amount,
   defaultPayee,
   termLabel,
   termSelected,
@@ -186,7 +187,6 @@ export function DisburseDialog({
   // IDs — disbursing then would target a wider scope than the one on screen.
   scopeReady?: boolean
   name?: string
-  amount: string
   defaultPayee: Payee
   termLabel: string | null
   termSelected: boolean
@@ -202,8 +202,16 @@ export function DisburseDialog({
   const [payeeOverride, setPayeeOverride] = useState<Payee | null>(null)
   const payee = payeeOverride ?? defaultPayee
 
-  const amountNum = parseFloat(amount)
-  const amountValid = Number.isFinite(amountNum) && amountNum > 0
+  // The payment guard: the term must be open on Settings › Payments, and
+  // every student is paid its amount.
+  const payableTerms = useQuery({
+    queryKey: ["payable-terms"],
+    queryFn: getPayableTerms,
+    enabled: open,
+  })
+  const openTerm = findPayableTerm(payableTerms.data, cohort, year, term)
+  const amountNum = openTerm ? parseFloat(openTerm.amount) : 0
+  const amountValid = amountNum > 0
   const ready =
     scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
 
@@ -247,7 +255,6 @@ export function DisburseDialog({
       return createDisbursementBatch({
         payment_ids: paymentIds,
         school: school as number,
-        amount: amountNum,
         payee,
       })
     },
@@ -342,10 +349,11 @@ export function DisburseDialog({
             </div>
           )}
 
-          {!amountValid && (
+          {cohort && year && termSelected && payableTerms.data && !openTerm && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
-              Choose an “Amount Per Student” on the page first.
+              {termLabel ?? "This term"} of {year} is not open for payment for this cohort. A
+              superuser opens it, with the amount per student, on Settings › Payments.
             </div>
           )}
 
