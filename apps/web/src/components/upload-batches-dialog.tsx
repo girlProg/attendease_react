@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { History, AlertCircle, Undo2 } from "lucide-react"
+import { History, AlertCircle, Undo2, Trash2 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { useAuth } from "@/contexts/auth-context"
 import { formatDateTime } from "@/lib/formatters"
 
 import {
@@ -26,16 +27,37 @@ import {
   type UploadBatch,
 } from "@/api/beneficiary-upload"
 
+type ReverseErrorBody = {
+  error?: string
+  detail?: string
+  // {kind of record: created students with one}, when that blocked it.
+  records?: Record<string, number>
+}
+
+function errorBody(error: unknown): ReverseErrorBody {
+  return (error as { response?: { data?: ReverseErrorBody } })?.response?.data ?? {}
+}
+
 function errorMessage(error: unknown): string {
-  const data = (error as { response?: { data?: { error?: string; detail?: string } } })
-    ?.response?.data
-  return data?.error ?? data?.detail ?? "Could not reverse this batch."
+  const data = errorBody(error)
+  return data.error ?? data.detail ?? "Could not reverse this batch."
+}
+
+const STATUS_LABELS: Record<UploadBatch["status"], string> = {
+  committed: "committed",
+  reversed: "reversed",
+  partly_reversed: "partly reversed",
 }
 
 export function UploadBatchesDialog() {
   const queryClient = useQueryClient()
+  const { isSuperuser } = useAuth()
   const [open, setOpen] = useState(false)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  // The batch whose reversal was refused for records, and the typed batch
+  // number that confirms deleting attendance.
+  const [blockedId, setBlockedId] = useState<number | null>(null)
+  const [typedNumber, setTypedNumber] = useState("")
 
   const { data: batches = [], isLoading } = useQuery({
     queryKey: ["upload-batches"],
@@ -47,11 +69,21 @@ export function UploadBatchesDialog() {
     mutationFn: reverseUploadBatch,
     onSuccess: () => {
       setConfirmingId(null)
+      setBlockedId(null)
+      setTypedNumber("")
       queryClient.invalidateQueries({ queryKey: ["upload-batches"] })
       queryClient.invalidateQueries({ queryKey: ["students-summary"] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
     },
+    onError: (error, variables) => {
+      const records = errorBody(error).records
+      if (records && Object.keys(records).length > 0) setBlockedId(variables.id)
+    },
   })
+  const blockedRecords = blockedId !== null ? errorBody(reverse.error).records ?? {} : {}
+  const keptCount = Object.entries(blockedRecords)
+    .filter(([kind]) => kind !== "attendance")
+    .reduce((sum, [, count]) => sum + count, 0)
 
   return (
     <Dialog
@@ -60,6 +92,8 @@ export function UploadBatchesDialog() {
         setOpen(next)
         if (!next) {
           setConfirmingId(null)
+          setBlockedId(null)
+          setTypedNumber("")
           reverse.reset()
         }
       }}
@@ -76,9 +110,59 @@ export function UploadBatchesDialog() {
         </DialogDescription>
 
         {reverse.isError && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-            <AlertCircle className="size-4 shrink-0" />
-            {errorMessage(reverse.error)}
+          <div className="mt-4 space-y-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <p className="flex items-center gap-2">
+              <AlertCircle className="size-4 shrink-0" />
+              {errorMessage(reverse.error)}
+            </p>
+            {blockedId !== null && (
+              <div className="space-y-3 border-t border-red-100 pt-3 text-xs text-foreground">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-white px-3 font-medium hover:bg-muted/50 disabled:opacity-50"
+                    disabled={reverse.isPending}
+                    onClick={() => reverse.mutate({ id: blockedId, mode: "keep" })}
+                  >
+                    <Undo2 className="size-3.5" />
+                    Reverse the rest, keep these students
+                  </button>
+                  <span className="text-muted-foreground">
+                    They keep their attendance and payments; the batch shows as partly reversed.
+                  </span>
+                </div>
+                {isSuperuser && "attendance" in blockedRecords && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      value={typedNumber}
+                      onChange={(event) => setTypedNumber(event.target.value)}
+                      placeholder={`Type ${blockedId}`}
+                      className="h-8 w-24 rounded-full border border-border bg-white px-3"
+                    />
+                    <button
+                      type="button"
+                      className="inline-flex h-8 items-center gap-1 rounded-full bg-destructive px-3 font-medium text-white hover:bg-destructive/90 disabled:opacity-50"
+                      disabled={reverse.isPending || typedNumber.trim() !== String(blockedId)}
+                      onClick={() =>
+                        reverse.mutate({
+                          id: blockedId,
+                          mode: "delete_attendance",
+                          confirm: typedNumber.trim(),
+                        })
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                      Delete their attendance and reverse
+                    </button>
+                    <span className="text-muted-foreground">
+                      Cannot be undone.
+                      {keptCount > 0 &&
+                        " Students with payments, a replacement or a No Objection entry are still kept."}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -138,13 +222,28 @@ export function UploadBatchesDialog() {
                     <TableCell className="text-center">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          batch.status === "reversed"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-emerald-50 text-emerald-700"
+                          batch.status === "committed"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-muted text-muted-foreground"
                         }`}
+                        title={
+                          batch.status === "partly_reversed"
+                            ? `Kept ${batch.kept_student_ids.length} students who had records: ${batch.kept_student_ids.join(", ")}`
+                            : undefined
+                        }
                       >
-                        {batch.status}
+                        {STATUS_LABELS[batch.status]}
                       </span>
+                      {batch.status === "partly_reversed" && (
+                        <span className="block text-[10px] text-muted-foreground">
+                          kept {batch.kept_student_ids.length}
+                        </span>
+                      )}
+                      {batch.attendance_deleted > 0 && (
+                        <span className="block text-[10px] text-muted-foreground">
+                          {batch.attendance_deleted} attendance rows deleted
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {batch.status === "committed" &&
@@ -153,7 +252,7 @@ export function UploadBatchesDialog() {
                             type="button"
                             className="inline-flex h-8 items-center gap-1 rounded-full bg-destructive px-3 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-50"
                             disabled={reverse.isPending}
-                            onClick={() => reverse.mutate(batch.id)}
+                            onClick={() => reverse.mutate({ id: batch.id })}
                           >
                             {reverse.isPending ? "Reversing…" : "Confirm reverse"}
                           </button>

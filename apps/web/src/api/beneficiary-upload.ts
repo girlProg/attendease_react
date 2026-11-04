@@ -65,8 +65,11 @@ export interface UploadBatch {
   purpose: UploadPurpose;
   created_count: number;
   updated_count: number;
-  status: "committed" | "reversed";
+  status: "committed" | "reversed" | "partly_reversed";
   reversed_at: string | null;
+  // Created students a partial reversal kept (they had records by then).
+  kept_student_ids: number[];
+  attendance_deleted: number;
   created_at: string;
 }
 
@@ -178,9 +181,26 @@ export const getUploadBatches = () =>
     })
     .then((response) => response.data.results);
 
-export const reverseUploadBatch = (id: number) =>
+// What to do with created students that have records by now: "" refuses,
+// "keep" keeps them, "delete_attendance" (superuser, confirm = the batch
+// number) deletes their attendance with them.
+export type ReverseMode = "" | "keep" | "delete_attendance";
+
+export const reverseUploadBatch = ({
+  id,
+  mode = "",
+  confirm,
+}: {
+  id: number;
+  mode?: ReverseMode;
+  confirm?: string;
+}) =>
   api
-    .post<{ batch_id: number; deleted: number; restored: number }>(
-      `/beneficiary-upload/${id}/reverse/`,
-    )
+    .post<{
+      batch_id: number;
+      deleted: number;
+      restored: number;
+      kept: number;
+      attendance_deleted: number;
+    }>(`/beneficiary-upload/${id}/reverse/`, { mode, confirm })
     .then((response) => response.data);
