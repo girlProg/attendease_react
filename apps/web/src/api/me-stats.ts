@@ -33,6 +33,7 @@ export interface MeStatsCohort {
 }
 
 export interface MeStatsTable {
+  this_year: number
   columns: string[]
   cohorts: MeStatsCohort[]
   rows: MeStatsRow[]

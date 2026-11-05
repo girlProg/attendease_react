@@ -2,7 +2,7 @@ import { AlertCircle, Download } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import { MeStatsGrid, SourceTag } from "@/components/me-stats-table"
+import { MeStatsGrid, MeStatsLegend, MeStatsSummary } from "@/components/me-stats-table"
 import { QueryError } from "@/components/query-error"
 import { useColumnDownload } from "@/hooks/use-column-download"
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -24,22 +24,23 @@ export function MeStatsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          For each year, how many students were paid and the class they were in, until they
-          graduate. Each number says where it came from: <SourceTag source="entered" /> was typed in
-          from the programme&apos;s own records, and <SourceTag source="system" /> is counted from
-          payments marked as paid.
-        </p>
-        <Button
-          variant="outline"
-          className="h-11 shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          {...download.press}
-        >
-          <Download className="size-4" />
-          Download
-        </Button>
-        {download.dialog}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Cohort payments by year</h2>
+          {data && <MeStatsSummary data={data} />}
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <MeStatsLegend />
+          <Button
+            variant="outline"
+            className="h-11 shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            {...download.press}
+          >
+            <Download className="size-4" />
+            Download
+          </Button>
+          {download.dialog}
+        </div>
       </div>
 
       {cohortsWithoutYear.length > 0 && (
@@ -59,6 +60,12 @@ export function MeStatsPage() {
       )}
 
       <MeStatsGrid data={data} isLoading={isLoading} />
+
+      <p className="text-xs text-muted-foreground">
+        Figures as recorded. &quot;No payments&quot; means none are on record for that year. A cell
+        marked Entered was typed in from the programme&apos;s own records; the rest are counted from
+        payments marked as paid.
+      </p>
     </div>
   )
 }
