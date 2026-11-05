@@ -18,6 +18,7 @@ import {
 } from "@workspace/ui/components/select"
 import { PrimaryButton } from "@/components/primary-button"
 import { getConfig } from "@/api/config"
+import { useAuth } from "@/contexts/auth-context"
 import {
   createDisbursementBatch,
   findPayableTerm,
@@ -216,16 +217,18 @@ export function DisburseDialog({
   const amountIsChosen = openTerm != null && openTerm.amount === null
   const amountNum = openTerm ? parseFloat(openTerm.amount ?? chosenAmount) || 0 : 0
   const amountValid = amountNum > 0
+  // Every request behind Disburse is refused for any role but admin.
+  const { isAdmin, role } = useAuth()
   const ready =
-    scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
+    isAdmin && scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
 
   // The last school disbursed: its progress, and whether the next can start.
   // Followed every few seconds while the dialog is open.
   const current = useQuery({
     queryKey: ["disbursement-current"],
     queryFn: getCurrentDisbursement,
-    enabled: open,
-    refetchInterval: open ? 3000 : false,
+    enabled: open && isAdmin,
+    refetchInterval: open && isAdmin ? 3000 : false,
   })
   const refusal = current.data?.refusal ?? null
 
@@ -315,6 +318,14 @@ export function DisburseDialog({
         </DialogDescription>
 
         <div className="mt-6 space-y-4">
+          {!isAdmin && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              Only admins can pay. Your account&apos;s role is {role}, so you can&apos;t disburse
+              from it. Ask an admin to pay, or to change your role.
+            </div>
+          )}
+
           {!school && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
