@@ -44,7 +44,7 @@ function LayoutInner() {
             >
               <Menu className="size-5" />
             </button>
-            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+            <h1 className="text-2xl font-bold text-sidebar">{title}</h1>
           </div>
           <AccountMenu />
         </header>
