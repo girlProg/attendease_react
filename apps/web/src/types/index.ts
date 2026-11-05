@@ -234,6 +234,8 @@ export interface DeploymentConfig {
     // (Settings > Display).
     new_payments_page?: boolean;
   };
+  // The Disburse window's dropdown, for a term with no fixed amount.
+  disburse_amounts?: string[];
   // How SC-INS terms read (Settings > Display). Anything but "label" means
   // counts and tier names stop using the word SC-INS.
   sc_ins_display?: ScInsDisplayMode;

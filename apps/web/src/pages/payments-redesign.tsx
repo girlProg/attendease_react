@@ -557,7 +557,9 @@ export function NewPaymentsPage() {
             title="Set per cohort, year and term on Settings › Payments"
           >
             {openTerm
-              ? formatNaira(Number(openTerm.amount))
+              ? openTerm.amount === null
+                ? "Chosen at Disburse"
+                : formatNaira(Number(openTerm.amount))
               : termSelected
                 ? "Term not open for payment"
                 : "Choose a term"}

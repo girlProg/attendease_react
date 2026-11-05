@@ -71,8 +71,9 @@ const TERMS = ["1", "2", "3"]
 
 /**
  * The payment guard: Disburse pays only a cohort, year and term listed here,
- * and every student gets its amount. Superusers open, re-price and close
- * terms; every change goes to the payment audit trail.
+ * and every student gets its amount, or one picked at Disburse if it has none.
+ * Superusers open, re-price and close terms; every change goes to the payment
+ * audit trail.
  */
 function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient()
@@ -90,14 +91,20 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
   }
   const add = useMutation({
     mutationFn: () =>
-      createPayableTerm({ cohort: Number(cohort), year: Number(year), term: Number(term), amount }),
+      createPayableTerm({
+        cohort: Number(cohort),
+        year: Number(year),
+        term: Number(term),
+        amount: amount || null,
+      }),
     onSuccess: () => {
       setAmount("")
       refresh()
     },
   })
   const reprice = useMutation({
-    mutationFn: (change: { id: number; amount: string }) => updatePayableTerm(change.id, change.amount),
+    mutationFn: (change: { id: number; amount: string }) =>
+      updatePayableTerm(change.id, change.amount || null),
     onSuccess: () => {
       setEditing(null)
       refresh()
@@ -105,7 +112,8 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
   })
   const close = useMutation({ mutationFn: deletePayableTerm, onSuccess: refresh })
 
-  const amountValid = Number(amount) > 0
+  // Blank is allowed: the amount is then chosen when Disburse is pressed.
+  const amountValid = amount === "" || Number(amount) > 0
   const canAdd = Boolean(cohort && term && Number(year) > 2000 && amountValid) && !add.isPending
   const cohortName = (id: string) => cohorts.find((option) => String(option.id) === id)?.name ?? id
   const failure = add.error ?? reprice.error ?? close.error
@@ -116,7 +124,8 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
         <h2 className="text-base font-bold text-foreground">Terms open for payment</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Disburse pays only the cohort, year and term combinations listed here, and every student
-          gets the amount shown. A term not listed can&apos;t be paid. Closing a term stops any
+          gets the amount shown. Leave the amount blank to choose it from a dropdown each time
+          Disburse is pressed. A term not listed can&apos;t be paid. Closing a term stops any
           payment for it that hasn&apos;t reached the bank yet.
         </p>
       </div>
@@ -157,7 +166,9 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
                     />
                   ) : (
                     <span title={open.updated_by ? `Last changed by ${open.updated_by}` : undefined}>
-                      {formatNaira(Number(open.amount))}
+                      {open.amount === null
+                        ? "Chosen at Disburse"
+                        : formatNaira(Number(open.amount))}
                     </span>
                   )}
                 </td>
@@ -168,7 +179,10 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
                         <button
                           type="button"
                           className="text-sidebar hover:underline disabled:opacity-50"
-                          disabled={!(Number(editing.amount) > 0) || reprice.isPending}
+                          disabled={
+                            !(editing.amount === "" || Number(editing.amount) > 0) ||
+                            reprice.isPending
+                          }
                           onClick={() => reprice.mutate(editing)}
                         >
                           Save
@@ -186,7 +200,7 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
                         <button
                           type="button"
                           className="text-sidebar hover:underline"
-                          onClick={() => setEditing({ id: open.id, amount: open.amount })}
+                          onClick={() => setEditing({ id: open.id, amount: open.amount ?? "" })}
                         >
                           Change
                         </button>
@@ -234,7 +248,12 @@ function PayableTermsSection({ canEdit }: { canEdit: boolean }) {
             items={TERMS}
             placeholder="Term"
           />
-          <LabeledInput label="Amount per student (₦)" type="number" value={amount} onChange={setAmount} />
+          <LabeledInput
+            label="Amount per student (₦, optional)"
+            type="number"
+            value={amount}
+            onChange={setAmount}
+          />
           <Button className="h-11 rounded-full px-6" disabled={!canAdd} onClick={() => add.mutate()}>
             {add.isPending ? "Opening…" : "Open term"}
           </Button>

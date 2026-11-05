@@ -291,7 +291,11 @@ export function PaymentsPage() {
             title="Set per cohort, year and term on Settings › Payments"
           >
             {openTerm ? (
-              <span className="text-foreground">{formatNaira(Number(openTerm.amount))} per student</span>
+              <span className="text-foreground">
+                {openTerm.amount === null
+                  ? "Amount chosen at Disburse"
+                  : `${formatNaira(Number(openTerm.amount))} per student`}
+              </span>
             ) : (
               <span className="text-muted-foreground">
                 {termSelected ? "Term not open for payment" : "Amount per student"}

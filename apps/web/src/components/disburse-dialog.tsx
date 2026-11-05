@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { PrimaryButton } from "@/components/primary-button"
+import { getConfig } from "@/api/config"
 import {
   createDisbursementBatch,
   findPayableTerm,
@@ -203,14 +204,17 @@ export function DisburseDialog({
   const payee = payeeOverride ?? defaultPayee
 
   // The payment guard: the term must be open on Settings › Payments, and
-  // every student is paid its amount.
+  // every student is paid its amount, or one picked here if it has none.
   const payableTerms = useQuery({
     queryKey: ["payable-terms"],
     queryFn: getPayableTerms,
     enabled: open,
   })
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig, enabled: open })
+  const [chosenAmount, setChosenAmount] = useState("")
   const openTerm = findPayableTerm(payableTerms.data, cohort, year, term)
-  const amountNum = openTerm ? parseFloat(openTerm.amount) : 0
+  const amountIsChosen = openTerm != null && openTerm.amount === null
+  const amountNum = openTerm ? parseFloat(openTerm.amount ?? chosenAmount) || 0 : 0
   const amountValid = amountNum > 0
   const ready =
     scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
@@ -256,6 +260,7 @@ export function DisburseDialog({
         payment_ids: paymentIds,
         school: school as number,
         payee,
+        ...(amountIsChosen ? { amount: chosenAmount } : {}),
       })
     },
     onSettled: () => {
@@ -276,6 +281,7 @@ export function DisburseDialog({
     if (!next) {
       disburse.reset()
       setPayeeOverride(null)
+      setChosenAmount("")
     }
   }
 
@@ -353,7 +359,30 @@ export function DisburseDialog({
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
               {termLabel ?? "This term"} of {year} is not open for payment for this cohort. A
-              superuser opens it, with the amount per student, on Settings › Payments.
+              superuser opens it on Settings › Payments.
+            </div>
+          )}
+
+          {amountIsChosen && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Amount per student</span>
+              <Select
+                value={chosenAmount}
+                onValueChange={(value) => setChosenAmount(value ?? "")}
+              >
+                <SelectTrigger className="h-10 w-44 rounded-full border-sidebar/30 !bg-white px-4">
+                  <SelectValue placeholder="Choose amount">
+                    {chosenAmount ? formatNaira(Number(chosenAmount)) : "Choose amount"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(config?.disburse_amounts ?? []).map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatNaira(Number(option))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

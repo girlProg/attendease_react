@@ -73,7 +73,9 @@ export interface CreateDisbursementBatchParams {
   payment_ids: number[]
   // A Disburse pays one school; every payment must be in it.
   school: number
-  // No amount: each term is paid what Settings › Payments says.
+  // Only for a term with no fixed amount on Settings › Payments: the one
+  // chosen from the dropdown.
+  amount?: string
   use_single_debit?: boolean
   payee?: Payee
 }
@@ -112,7 +114,8 @@ export interface PayableTerm {
   cohort_name: string
   year: number
   term: number
-  amount: string
+  // null: chosen from the dropdown when Disburse is pressed.
+  amount: string | null
   updated_at: string
   updated_by: string | null
 }
@@ -136,7 +139,7 @@ export function findPayableTerm(
 export const createPayableTerm = (term: Pick<PayableTerm, "cohort" | "year" | "term" | "amount">) =>
   api.post<PayableTerm>("/payable-terms/", term).then((response) => response.data)
 
-export const updatePayableTerm = (id: number, amount: string) =>
+export const updatePayableTerm = (id: number, amount: string | null) =>
   api.patch<PayableTerm>(`/payable-terms/${id}/`, { amount }).then((response) => response.data)
 
 export const deletePayableTerm = (id: number) => api.delete(`/payable-terms/${id}/`)
