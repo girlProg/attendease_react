@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getCohorts, getLGAs, getSchools, getAttendanceYears } from "@/api/attendance"
 
@@ -27,6 +27,38 @@ export interface FilterScope {
   week?: string
 }
 
+const SAVED_FILTERS_KEY = "attendance-filters"
+const FILTERS_CHOSEN_EVENT = "attendance-filters-chosen"
+
+function readSavedFilters(): Record<string, string> {
+  try {
+    const raw = sessionStorage.getItem(SAVED_FILTERS_KEY)
+    const saved: Record<string, string> = raw ? JSON.parse(raw) : {}
+    // A school is chosen within an LGA. One saved without its LGA is
+    // invisible (the school box is disabled until an LGA is picked) yet would
+    // still filter every page to that one school — drop it.
+    if (!saved.lga) delete saved.school
+    return saved
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Choose several filters from outside the bar: the next page to open reads
+ * them, and a page already open follows. A null clears that filter; filters
+ * not named keep their value.
+ */
+export function chooseFilters(choices: Record<string, string | null>) {
+  const next = readSavedFilters()
+  for (const [key, value] of Object.entries(choices)) {
+    if (value === null) delete next[key]
+    else next[key] = value
+  }
+  sessionStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(next))
+  window.dispatchEvent(new Event(FILTERS_CHOSEN_EVENT))
+}
+
 /**
  * The attendance filter bar's state, shared by every page that shows it.
  *
@@ -43,19 +75,13 @@ export interface FilterScope {
  *   cleared from the bar rather than silently ignored.
  */
 export function useAttendanceFilters() {
-  const [savedFilters, setFilters] = useState<Record<string, string>>(() => {
-    try {
-      const raw = sessionStorage.getItem("attendance-filters")
-      const saved: Record<string, string> = raw ? JSON.parse(raw) : {}
-      // A school is chosen within an LGA. One saved without its LGA is
-      // invisible (the school box is disabled until an LGA is picked) yet would
-      // still filter every page to that one school — drop it.
-      if (!saved.lga) delete saved.school
-      return saved
-    } catch {
-      return {}
-    }
-  })
+  const [savedFilters, setFilters] = useState<Record<string, string>>(readSavedFilters)
+
+  useEffect(() => {
+    const follow = () => setFilters(readSavedFilters())
+    window.addEventListener(FILTERS_CHOSEN_EVENT, follow)
+    return () => window.removeEventListener(FILTERS_CHOSEN_EVENT, follow)
+  }, [])
 
   const { data: cohorts } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
   const { data: attendanceYears } = useQuery({ queryKey: ["attendance-years"], queryFn: getAttendanceYears })
@@ -114,7 +140,7 @@ export function useAttendanceFilters() {
         next[key] = value
       }
       if (key === "lga") delete next.school
-      sessionStorage.setItem("attendance-filters", JSON.stringify(next))
+      sessionStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(next))
       return next
     })
 

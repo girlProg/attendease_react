@@ -60,7 +60,7 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { formatAcademicYear, formatNaira, ordinal } from "@/lib/formatters"
 import { paymentStatusBadge } from "@/lib/payment-status"
-import { runInProgress, shortWhen } from "@/lib/payout-run"
+import { runInProgress, selectRun, shortWhen } from "@/lib/payout-run"
 import type { Payee } from "@/types"
 
 const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
@@ -269,7 +269,13 @@ export function NewPaymentsPage() {
   const run = current.data?.run ?? null
   const running = runInProgress(run)
   if (run && running && !watchedRuns.includes(run.id)) setWatchedRuns((ids) => [...ids, run.id])
-  const runIsHere = Boolean(run && scopeParams.school && run.school === scopeParams.school)
+  const runIsHere = Boolean(
+    run &&
+      scopeParams.school &&
+      run.school === scopeParams.school &&
+      String(run.year) === scopeParams.year &&
+      String(run.term) === scopeParams.term,
+  )
 
   // Each school of the LGA with where its payout is, for the school picker.
   const payoutScope =
@@ -539,6 +545,7 @@ export function NewPaymentsPage() {
         <PayoutTracker
           run={run}
           otherSchool={!runIsHere}
+          onSelect={() => selectRun(run)}
           onRefresh={() => refreshStatuses.mutate()}
           refreshing={refreshStatuses.isPending}
         />

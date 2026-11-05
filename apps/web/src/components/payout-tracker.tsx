@@ -246,12 +246,15 @@ function UploadCard({ tile }: { tile: UploadTile }) {
 export function PayoutTracker({
   run,
   otherSchool,
+  onSelect,
   onRefresh,
   refreshing,
 }: {
   run: DisbursementRun
-  // The run is paying a school other than the one on the page.
+  // The run is paying a school, term or year other than the page's.
   otherSchool: boolean
+  // Pressing the card, outside its buttons: show the run's school on the page.
+  onSelect: () => void
   onRefresh: () => void
   refreshing: boolean
 }) {
@@ -262,7 +265,14 @@ export function PayoutTracker({
   const summary = (tile: UploadTile) => !open && tile.state === "sent"
 
   return (
-    <div className="rounded-2xl bg-white p-3.5 shadow-[0_0_0_1.5px_rgb(75_63_214/0.2),0_8px_24px_rgb(75_63_214/0.10)]">
+    <div
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest("button")) onSelect()
+      }}
+      className={`rounded-2xl bg-white p-3.5 shadow-[0_0_0_1.5px_rgb(75_63_214/0.2),0_8px_24px_rgb(75_63_214/0.10)] ${
+        otherSchool ? "cursor-pointer" : ""
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex min-w-0 max-w-full items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sidebar/10">
@@ -272,13 +282,19 @@ export function PayoutTracker({
             </span>
           </div>
           {/* Wraps on a phone rather than running off the card. */}
-          <div className="min-w-0 break-words leading-tight">
-            <p className="text-sm font-bold text-sidebar-accent-foreground">{headline(run, tiles)}</p>
-            <p className="text-xs text-muted-foreground">
-              {otherSchool && <span className="font-medium text-foreground">{run.school_name} · </span>}
+          <button
+            type="button"
+            onClick={onSelect}
+            title={otherSchool ? `Show ${run.school_name}` : undefined}
+            className="min-w-0 break-words text-left leading-tight"
+          >
+            <span className="block text-sm font-bold text-sidebar-accent-foreground">{headline(run, tiles)}</span>
+            <span className="block text-xs text-muted-foreground">
+              {otherSchool && <span className="font-medium text-foreground underline">{run.school_name}</span>}
+              {otherSchool && " · "}
               {inFlight} in flight · started {shortWhen(run.started_at ?? run.created_at)} by {run.created_by}
-            </p>
-          </div>
+            </span>
+          </button>
         </div>
 
         {tiles.length > 0 && (

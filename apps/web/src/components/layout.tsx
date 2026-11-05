@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom"
 import { User, LogOut, Menu } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { PayoutBanner } from "@/components/payout-banner"
 import { useAuth } from "@/contexts/auth-context"
 import { usePageTitle } from "@/hooks/use-page-title"
 import { getInitials } from "@/lib/formatters"
@@ -35,7 +36,7 @@ function LayoutInner() {
     <div className="flex min-h-svh">
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border/40 bg-background px-4 py-8 md:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-y-3 border-b border-border/40 bg-background px-4 py-8 md:flex-nowrap md:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -46,6 +47,7 @@ function LayoutInner() {
             </button>
             <h1 className="text-2xl font-bold text-sidebar">{title}</h1>
           </div>
+          <PayoutBanner />
           <AccountMenu />
         </header>
         <main className="min-w-0 flex-1 p-4 md:p-8">

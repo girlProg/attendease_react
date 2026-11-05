@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { RunProgress } from "@/components/disburse-dialog"
 import { getCurrentDisbursement } from "@/api/payments"
 import { formatDateTime } from "@/lib/formatters"
+import { selectRun } from "@/lib/payout-run"
 
 /**
  * Payments page, admins: the last school disbursed (its progress while it is
@@ -30,7 +31,14 @@ export function DisbursementStatusStrip() {
   if (!run) return null
 
   return inProgress ? (
-    <RunProgress run={run} />
+    <button
+      type="button"
+      title={`Show ${run.school_name}`}
+      onClick={() => selectRun(run)}
+      className="block w-full text-left"
+    >
+      <RunProgress run={run} />
+    </button>
   ) : (
     <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
       <Send className="size-3.5" />

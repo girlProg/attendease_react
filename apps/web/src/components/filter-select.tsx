@@ -22,7 +22,7 @@ export function FilterSelect({
   formatItem?: (value: string) => string
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled || items.length === 0}>
+    <Select value={value ?? null} onValueChange={onValueChange} disabled={disabled || items.length === 0}>
       <SelectTrigger className="h-11 w-full rounded-full border-border/60 bg-white px-4 font-light shadow-sm">
         <SelectValue placeholder={placeholder}>
           {value && value !== "__clear__" && formatItem ? formatItem(value) : undefined}

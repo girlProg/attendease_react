@@ -32,7 +32,9 @@ export interface DisbursementRun {
   id: number
   school: number
   school_name: string
+  lga_name: string
   cohort: number | null
+  cohort_name: string | null
   year: number | null
   term: number | null
   amount: string

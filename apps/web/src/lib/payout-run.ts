@@ -1,4 +1,16 @@
 import type { DisbursementRun } from "@/api/payments"
+import { chooseFilters } from "@/hooks/use-attendance-filters"
+
+/** Set the filters to this run's school, term and year. */
+export function selectRun(run: DisbursementRun) {
+  chooseFilters({
+    cohort: run.cohort_name,
+    lga: run.lga_name,
+    school: run.school_name,
+    year: run.year === null ? null : String(run.year),
+    term: run.term === null ? null : String(run.term),
+  })
+}
 
 /** A run is still moving money: being sent, or transfers the bank hasn't answered. */
 export function runInProgress(run: DisbursementRun | null | undefined): boolean {
