@@ -62,11 +62,13 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
 function YearCell({
   cell,
   students,
+  dueStudents,
   thisYear,
   onEdit,
 }: {
   cell: MeStatsCell
   students: number
+  dueStudents: number
   thisYear: number
   onEdit?: () => void
 }) {
@@ -120,7 +122,7 @@ function YearCell({
         <span className="block text-[11px] font-semibold text-sidebar">{cell.class_name}</span>
         <span className="block text-sm font-bold text-sidebar">Due</span>
         <span className="block truncate text-[11px] text-muted-foreground">
-          {students.toLocaleString()} eligible
+          {dueStudents.toLocaleString()} eligible
         </span>
       </>
     )
@@ -307,6 +309,7 @@ export function MeStatsGrid({
                     key={year}
                     cell={cell}
                     students={row.students}
+                    dueStudents={row.due_students}
                     thisYear={thisYear}
                     onEdit={onEdit ? () => onEdit(row, cell) : undefined}
                   />

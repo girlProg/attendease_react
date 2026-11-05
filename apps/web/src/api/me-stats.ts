@@ -23,6 +23,8 @@ export interface MeStatsRow {
   entry_class: string
   details: string
   students: number
+  // Who is due this year: the students Settings > Cohorts shows.
+  due_students: number
   cells: MeStatsCell[]
 }
 
