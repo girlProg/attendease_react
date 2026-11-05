@@ -36,6 +36,17 @@ function cell(value: string | number | null | undefined): string {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
+/** Named like the files the server makes, with the uploaded file's own name. */
+export function previewFilename(state: string | undefined, uploaded: string | undefined): string {
+  const date = new Date().toISOString().slice(0, 10)
+  const parts = ["AGILE", state ?? "", "Upload preview", (uploaded ?? "").replace(/\.[^.]+$/, "")]
+  const name = parts
+    .map((part) => part.toUpperCase().replace(/[^A-Z0-9-]+/g, "_").replace(/^_+|_+$/g, ""))
+    .filter(Boolean)
+    .join("_")
+  return `${name}_${date}.csv`
+}
+
 export function downloadPreviewCsv(report: UploadReport, filename: string) {
   const reasons = new Map<number, string>()
   for (const warning of report.warnings ?? []) {

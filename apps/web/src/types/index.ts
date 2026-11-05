@@ -226,6 +226,8 @@ export interface DeploymentConfig {
   active_days: DayName[];
   day_labels: Partial<Record<DayName, string>>;
   qualifying_attendance_average: number;
+  // For naming files the browser makes itself.
+  state?: string;
   // Per-deployment feature switches. One build serves every state, so a page
   // only some states have is advertised here rather than guessed from the URL.
   features?: {

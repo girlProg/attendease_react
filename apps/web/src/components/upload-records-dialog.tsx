@@ -21,6 +21,7 @@ import {
 } from "@workspace/ui/components/select"
 import { PrimaryButton } from "@/components/primary-button"
 import { createCohort, getCohorts } from "@/api/attendance"
+import { getConfig } from "@/api/config"
 import type { Payee } from "@/types"
 import {
   inspectUploadRecords,
@@ -31,7 +32,7 @@ import {
   type UploadPurpose,
   type UploadRowType,
 } from "@/api/beneficiary-upload"
-import { describeChanges, downloadPreviewCsv, foundWith } from "@/lib/upload-preview-csv"
+import { describeChanges, downloadPreviewCsv, foundWith, previewFilename } from "@/lib/upload-preview-csv"
 
 const PAYEE_DEFAULT = "__default__"
 // Matched rows listed on screen; the CSV download has every row.
@@ -127,6 +128,7 @@ export function UploadRecordsDialog() {
   const [matchOn, setMatchOn] = useState<string[]>([])
 
   const { data: cohorts = [] } = useQuery({ queryKey: ["cohorts"], queryFn: getCohorts })
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: getConfig })
 
   const addCohort = useMutation({
     mutationFn: () =>
@@ -770,7 +772,7 @@ export function UploadRecordsDialog() {
                     onClick={() =>
                       downloadPreviewCsv(
                         report,
-                        `preview-${(file?.name ?? "upload").replace(/\.[^.]+$/, "")}.csv`,
+                        previewFilename(config?.state, file?.name),
                       )
                     }
                   >
