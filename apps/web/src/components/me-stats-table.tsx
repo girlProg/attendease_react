@@ -36,7 +36,7 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
       <span className="block text-[11px] font-semibold text-muted-foreground">{cell.class_name}</span>
       <span
         className={`block text-base font-bold ${tooMany ? "text-amber-700" : "text-emerald-900"}`}
-        title={tooMany ? "More than the students enrolled in this row" : undefined}
+        title={tooMany ? "More than the eligible students in this row" : undefined}
       >
         {paid.toLocaleString()}
       </span>
@@ -62,13 +62,11 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
 function YearCell({
   cell,
   students,
-  dueStudents,
   thisYear,
   onEdit,
 }: {
   cell: MeStatsCell
   students: number
-  dueStudents: number
   thisYear: number
   onEdit?: () => void
 }) {
@@ -122,7 +120,7 @@ function YearCell({
         <span className="block text-[11px] font-semibold text-sidebar">{cell.class_name}</span>
         <span className="block text-sm font-bold text-sidebar">Due</span>
         <span className="block truncate text-[11px] text-muted-foreground">
-          {dueStudents.toLocaleString()} eligible
+          {students.toLocaleString()} eligible
         </span>
       </>
     )
@@ -160,10 +158,10 @@ function YearCell({
 function rowSummary(row: MeStatsRow): string {
   const paidCells = row.cells.filter((cell) => cell.paid !== null)
   const amount = paidCells.reduce((total, cell) => total + Number(cell.amount ?? 0), 0)
-  const enrolled = `${row.students.toLocaleString()} enrolled`
-  if (paidCells.length === 0) return `${enrolled} · nothing paid yet`
-  if (amount === 0) return `${enrolled} · paid, amount not given`
-  return `${enrolled} · ${shortNaira(amount)} paid`
+  const eligible = `${row.students.toLocaleString()} eligible`
+  if (paidCells.length === 0) return `${eligible} · nothing paid yet`
+  if (amount === 0) return `${eligible} · paid, amount not given`
+  return `${eligible} · ${shortNaira(amount)} paid`
 }
 
 function YearTotal({ year, rows, thisYear }: { year: number; rows: MeStatsRow[]; thisYear: number }) {
@@ -206,14 +204,14 @@ function LegendItem({ swatch, style, label }: { swatch: string; style?: CSSPrope
 }
 
 export function MeStatsSummary({ data }: { data: Stats }) {
-  const enrolled = data.rows.reduce((total, row) => total + row.students, 0)
+  const eligible = data.rows.reduce((total, row) => total + row.students, 0)
   const amount = data.rows
     .flatMap((row) => row.cells)
     .reduce((total, cell) => total + Number(cell.amount ?? 0), 0)
   return (
     <p className="text-sm text-muted-foreground">
       {plural(data.cohorts.length, "cohort")} · {plural(data.rows.length, "class group")} ·{" "}
-      {enrolled.toLocaleString()} enrolled · {shortNaira(amount)} paid
+      {eligible.toLocaleString()} eligible · {shortNaira(amount)} paid
     </p>
   )
 }
@@ -221,7 +219,7 @@ export function MeStatsSummary({ data }: { data: Stats }) {
 export function MeStatsLegend() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <LegendItem swatch="border border-emerald-200 bg-emerald-50" label="Paid (bar = share of enrolled)" />
+      <LegendItem swatch="border border-emerald-200 bg-emerald-50" label="Paid (bar = share of eligible)" />
       <LegendItem swatch="border border-orange-200" style={NO_PAYMENTS_STRIPES} label="No payments" />
       <LegendItem swatch="border-2 border-dashed border-sidebar/70 bg-sidebar/5" label="Due this year" />
       <LegendItem swatch="bg-muted" label="Upcoming" />
@@ -250,7 +248,7 @@ export function MeStatsGrid({
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl border border-border/40 bg-white p-8 text-center text-sm text-muted-foreground">
-        No students enrolled yet.
+        No eligible students yet.
       </div>
     )
   }
@@ -309,7 +307,6 @@ export function MeStatsGrid({
                     key={year}
                     cell={cell}
                     students={row.students}
-                    dueStudents={row.due_students}
                     thisYear={thisYear}
                     onEdit={onEdit ? () => onEdit(row, cell) : undefined}
                   />

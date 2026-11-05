@@ -22,9 +22,8 @@ export interface MeStatsRow {
   cohort: number
   entry_class: string
   details: string
+  // The students Settings > Cohorts shows, in this row.
   students: number
-  // Who is due this year: the students Settings > Cohorts shows.
-  due_students: number
   cells: MeStatsCell[]
 }
 
