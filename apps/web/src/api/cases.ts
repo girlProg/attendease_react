@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import { downloadFile } from "../lib/blob-download";
+import type { ExportSpec } from "../lib/blob-download";
 import type { PaginatedResponse } from "@/types";
 
 export type CaseStatus = "flagged" | "open" | "treated" | "closed" | "dropped";
@@ -244,5 +244,8 @@ export const getAssignees = () =>
 export const setDroppedOut = (studentId: number, dropped: boolean) =>
   api.post(`/case/${studentId}/drop-out/`, { dropped }).then((r) => r.data);
 
-export const exportCases = (filters: CaseFilters = {}) =>
-  downloadFile("/case/export/", "case_management.csv", { params: toParams(filters) });
+export const casesExport = (filters: CaseFilters = {}): ExportSpec => ({
+  path: "/case/export/",
+  filename: "case_management.csv",
+  params: toParams(filters),
+});

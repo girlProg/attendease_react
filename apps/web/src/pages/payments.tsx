@@ -38,7 +38,7 @@ import { StatCard } from "@/components/stat-card"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getTermAverages, getCohorts, exportPayments } from "@/api/attendance"
+import { getTermAverages, getCohorts, paymentsExport } from "@/api/attendance"
 import {
   findPayableTerm,
   getCurrentDisbursement,
@@ -46,6 +46,7 @@ import {
   pollPendingDisbursements,
 } from "@/api/payments"
 import { runInProgress } from "@/lib/payout-run"
+import { useColumnDownload } from "@/hooks/use-column-download"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { DisbursementSwitch } from "@/components/disbursement-switch"
@@ -65,6 +66,14 @@ export function PaymentsPage() {
 
   const [appliedSearch, setAppliedSearch] = useState("")
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters], 300)
+  const paymentsDownload = useColumnDownload(
+    paymentsExport({
+      ...scopeParams,
+      ...(appliedSearch && { name: appliedSearch }),
+      graduated: "false",
+      qualifying: "true",
+    }),
+  )
 
   // Payee defaults to the selected cohort's setting (Niger=student, Kaduna=
   // caregiver) and can be overridden per disbursement. The override is keyed to
@@ -320,18 +329,12 @@ export function PaymentsPage() {
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          onClick={() =>
-            exportPayments({
-              ...scopeParams,
-              ...(appliedSearch && { name: appliedSearch }),
-              graduated: "false",
-              qualifying: "true",
-            })
-          }
+          {...paymentsDownload.press}
         >
           <Download className="size-4" />
           Download Data
         </Button>
+        {paymentsDownload.dialog}
         <DownloadPdfButton
           path="/student/payments-pdf/"
           params={{ ...scopeParams, ...(appliedSearch && { name: appliedSearch }) }}

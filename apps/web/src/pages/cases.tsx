@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
+import { useColumnDownload } from "@/hooks/use-column-download"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { StudentPhoto } from "@/components/student-photo"
@@ -28,7 +29,7 @@ import {
   getCases,
   openCase,
   setDroppedOut,
-  exportCases,
+  casesExport,
   type CaseRow,
   type CaseStatus,
 } from "@/api/cases"
@@ -77,6 +78,7 @@ export function CaseManagementPage() {
     status: view,
   }
   const { page, setPage, pageSize, handleRowsChange } = usePagination([view, filters])
+  const casesDownload = useColumnDownload(casesExport(caseFilters))
 
   const { data, isError, isLoading: isFetchingFirst } = useQuery({
     queryKey: ["cases", view, page, pageSize, scopeParams],
@@ -138,12 +140,13 @@ export function CaseManagementPage() {
           <Button
             variant="outline"
             className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-            onClick={() => exportCases(caseFilters)}
+            {...casesDownload.press}
           >
             <Download className="size-4" />
             Download
           </Button>
         )}
+        {casesDownload.dialog}
       </div>
 
       <p className="text-xs text-muted-foreground">{SECTION_HINT[view]}</p>

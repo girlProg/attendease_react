@@ -22,6 +22,13 @@ export function downloadBlobFromResponse(response: AxiosResponse, defaultFilenam
   return filename
 }
 
+/** A CSV download whose columns can be chosen (see useColumnDownload). */
+export interface ExportSpec {
+  path: string
+  filename: string
+  params: Record<string, string | number>
+}
+
 /**
  * Fetch a file and save it, with a notice in the corner from the click until
  * the file is saved (or the download fails). Every download button goes

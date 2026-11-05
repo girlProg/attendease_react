@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { useColumnDownload } from "@/hooks/use-column-download"
 import { FilterSelect } from "@/components/filter-select"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
@@ -27,8 +28,8 @@ import { usePagination } from "@/hooks/use-pagination"
 import {
   AUDIT_EVENT_LABELS,
   AUDIT_EVENT_TYPES,
-  exportPaymentAudit,
   getPaymentAuditEvents,
+  paymentAuditExport,
   type AuditEventType,
   type AuditSource,
   type PaymentAuditEvent,
@@ -161,6 +162,7 @@ export function PaymentAuditPage() {
   }
 
   const { page, setPage, pageSize, handleRowsChange } = usePagination([filters], 50)
+  const auditDownload = useColumnDownload(paymentAuditExport(filters))
 
   const { data, isError, isFetching, isLoading } = useQuery({
     queryKey: ["payment-audit", filters, page, pageSize],
@@ -291,12 +293,12 @@ export function PaymentAuditPage() {
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          onClick={() => exportPaymentAudit(filters)}
-          title="Download the events matching the current filters as CSV"
+          {...auditDownload.press}
         >
           <Download className="size-4" />
           Download CSV
         </Button>
+        {auditDownload.dialog}
       </div>
 
       <PaginationBar

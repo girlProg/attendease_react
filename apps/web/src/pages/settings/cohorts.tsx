@@ -9,20 +9,79 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import { QueryError } from "@/components/query-error"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
-import { getCohortVisibility, setCohortHidden, type CohortVisibility } from "@/api/cohort-visibility"
+import {
+  getCohortVisibility,
+  setCohortHidden,
+  setCohortShown,
+  type CohortNinRule,
+  type CohortShows,
+  type CohortVisibility,
+} from "@/api/cohort-visibility"
 
 // Cohorts are often named by number ("1"); say "Cohort 1" so it reads as one.
 function cohortLabel(name: string) {
   return /^\d+$/.test(name) ? `Cohort ${name}` : name
 }
 
+const SHOWS_LABELS: Record<CohortShows, string> = {
+  enrolled: "Enrolled",
+  verified: "Verified",
+}
+
+const NIN_LABELS: Record<CohortNinRule, string> = {
+  all: "With or without",
+  with_nin: "With NIN",
+  without_nin: "Without NIN",
+}
+
+function ChoiceCell<Choice extends string>({
+  label,
+  value,
+  labels,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: Choice
+  labels: Record<Choice, string>
+  disabled: boolean
+  onChange: (value: Choice) => void
+}) {
+  return (
+    <Select
+      value={value}
+      disabled={disabled}
+      onValueChange={(next) => next && next !== value && onChange(next as Choice)}
+    >
+      <SelectTrigger aria-label={label} className="h-9 w-36 rounded-full border-sidebar/30 !bg-white px-3 text-xs">
+        <SelectValue>{labels[value]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {(Object.keys(labels) as Choice[]).map((option) => (
+          <SelectItem key={option} value={option}>
+            {labels[option]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
 /**
  * Hide a cohort (e.g. a test cohort) from everyone: it and all its students'
  * data drop out of every page, total, export and dropdown. Nothing is deleted;
- * showing it again brings everything back. Superusers only.
+ * showing it again brings everything back. Show and NIN do the same for some
+ * of a cohort's students. Superusers only.
  */
 export function CohortSettingsPage() {
   useLogVisit("Settings", "Visited Cohort Settings")
@@ -36,17 +95,34 @@ export function CohortSettingsPage() {
       queryClient.invalidateQueries()
     },
   })
+  const choose = useMutation({
+    mutationFn: (change: { id: number; shows?: CohortShows; nin_rule?: CohortNinRule }) => {
+      const { id, ...choice } = change
+      return setCohortShown(id, choice)
+    },
+    onSuccess: () => {
+      // Who shows changes every list, total and dropdown in the app.
+      queryClient.invalidateQueries()
+    },
+  })
 
   if (cohorts.isError) return <QueryError />
 
   return (
-    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-3xl">
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-6xl">
       <div>
         <h2 className="text-base font-bold text-foreground">Cohorts</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Hide a cohort, such as a test cohort, from everyone: it and all its students&apos; data
           drop out of every page, total, export and dropdown. Nothing is deleted, and showing it again
           brings everything back. Disbursement batches and the payment audit trail are never hidden.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          <span className="font-semibold">Show</span> and <span className="font-semibold">Student NIN</span>{" "}
+          choose which of a cohort&apos;s students count: verified students or everyone enrolled, and
+          those with a NIN, without one, or both. Students left out drop out of every page, total,
+          download and attendance template, can&apos;t go on a No Objection list and can&apos;t be
+          paid. Their records are kept, and changing the choice brings them back.
         </p>
       </div>
 
@@ -56,15 +132,21 @@ export function CohortSettingsPage() {
             <TableHead>Cohort</TableHead>
             <TableHead>Year</TableHead>
             <TableHead className="text-right">Students</TableHead>
+            <TableHead className="text-right">Verified</TableHead>
+            <TableHead className="text-right">With NIN</TableHead>
+            <TableHead>Show</TableHead>
+            <TableHead>Student NIN</TableHead>
+            <TableHead className="text-right">Showing</TableHead>
             <TableHead className="text-right">Shown to everyone</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {cohorts.isLoading ? (
-            <TableSkeletonRows columns={4} rows={3} />
+            <TableSkeletonRows columns={9} rows={3} />
           ) : (
             (cohorts.data ?? []).map((cohort) => {
               const busy = toggle.isPending && toggle.variables?.id === cohort.id
+              const choosing = choose.isPending && choose.variables?.id === cohort.id
               return (
                 <TableRow key={cohort.id} className={cohort.hidden ? "bg-muted/30" : undefined}>
                   <TableCell className="font-medium">
@@ -80,6 +162,33 @@ export function CohortSettingsPage() {
                   </TableCell>
                   <TableCell>{cohort.year}</TableCell>
                   <TableCell className="text-right">{cohort.students.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{cohort.verified.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{cohort.with_nin.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <ChoiceCell
+                      label={`Which students ${cohortLabel(cohort.name)} shows`}
+                      value={cohort.shows}
+                      labels={SHOWS_LABELS}
+                      disabled={choosing}
+                      onChange={(shows) => choose.mutate({ id: cohort.id, shows })}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <ChoiceCell
+                      label={`Which student NINs ${cohortLabel(cohort.name)} shows`}
+                      value={cohort.nin_rule}
+                      labels={NIN_LABELS}
+                      disabled={choosing}
+                      onChange={(nin_rule) => choose.mutate({ id: cohort.id, nin_rule })}
+                    />
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-semibold ${
+                      cohort.shown === 0 && cohort.students > 0 ? "text-amber-700" : ""
+                    }`}
+                  >
+                    {cohort.shown.toLocaleString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <button
                       type="button"
@@ -106,7 +215,7 @@ export function CohortSettingsPage() {
         </TableBody>
       </Table>
 
-      {toggle.isError && (
+      {(toggle.isError || choose.isError) && (
         <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="size-4 shrink-0" />
           Could not change the cohort. Please try again.

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api"
-import { downloadFile } from "@/lib/blob-download"
+import type { ExportSpec } from "@/lib/blob-download"
 import type { PaginatedResponse } from "@/types"
 
 export type AuditEventType =
@@ -133,5 +133,8 @@ export const getPaymentAuditEvents = (filters: PaymentAuditFilters, page: number
     })
     .then((response) => response.data)
 
-export const exportPaymentAudit = (filters: PaymentAuditFilters) =>
-  downloadFile("/payment-audit/export/", "payment_audit.csv", { params: cleanParams(filters) })
+export const paymentAuditExport = (filters: PaymentAuditFilters): ExportSpec => ({
+  path: "/payment-audit/export/",
+  filename: "payment_audit.csv",
+  params: cleanParams(filters),
+})

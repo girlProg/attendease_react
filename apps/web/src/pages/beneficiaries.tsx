@@ -26,7 +26,8 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { getStudents, exportStudents, bulkChangeClass } from "@/api/attendance"
+import { useColumnDownload } from "@/hooks/use-column-download"
+import { getStudents, studentsExport, bulkChangeClass } from "@/api/attendance"
 
 function classChangeError(error: unknown): string {
   const data = (error as { response?: { data?: { error?: string; detail?: string } } })
@@ -48,6 +49,9 @@ export function BeneficiariesPage() {
   const { page, setPage, pageSize, handleRowsChange } = usePagination([appliedSearch, filters])
   const [targetClass, setTargetClass] = useState<string | undefined>()
   const [destinationClass, setDestinationClass] = useState<string | undefined>()
+  const studentsDownload = useColumnDownload(
+    studentsExport({ cohort: scopeParams.cohort, lga: scopeParams.lga }),
+  )
 
   const updateClass = useMutation({
     mutationFn: bulkChangeClass,
@@ -102,15 +106,13 @@ export function BeneficiariesPage() {
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          onClick={() =>
-            scopeParams.cohort &&
-            exportStudents({ cohort: scopeParams.cohort, lga: scopeParams.lga })
-          }
+          {...studentsDownload.press}
           disabled={!scopeReady || !scopeParams.cohort}
         >
           <Download className="size-4" />
           Download
         </Button>
+        {studentsDownload.dialog}
         {isStaffuser && (
           <SchoolMergeDialog
             lga={scopeParams.lga}

@@ -34,7 +34,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
-import { exportPayments, getCohorts, getNoObjectionStatus, getTermAverages } from "@/api/attendance"
+import { getCohorts, getNoObjectionStatus, getTermAverages, paymentsExport } from "@/api/attendance"
 import {
   findPayableTerm,
   getCurrentDisbursement,
@@ -45,6 +45,7 @@ import {
   setDisbursementSettings,
   type DisbursementSettings,
 } from "@/api/payments"
+import { useColumnDownload } from "@/hooks/use-column-download"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
 import { NoObjectionDialog } from "@/components/no-objection-dialog"
@@ -404,6 +405,7 @@ export function NewPaymentsPage() {
     graduated: "false",
     qualifying: "true",
   }
+  const paymentsDownload = useColumnDownload(paymentsExport(exportScope), () => setMenuOpen(false))
 
   const openAuditTrail = () => {
     // Carry the page's scope across so the trail opens on the same term,
@@ -662,10 +664,7 @@ export function NewPaymentsPage() {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
-                        setMenuOpen(false)
-                        exportPayments(exportScope)
-                      }}
+                      {...paymentsDownload.press}
                       className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-accent-foreground hover:bg-sidebar/5"
                     >
                       <Download className="size-[18px] text-muted-foreground" />
@@ -777,13 +776,13 @@ export function NewPaymentsPage() {
             </label>
             <button
               type="button"
-              title="Download data"
               aria-label="Download data"
-              onClick={() => exportPayments(exportScope)}
+              {...paymentsDownload.press}
               className="flex size-[38px] shrink-0 items-center justify-center rounded-[11px] bg-sidebar/5 text-sidebar hover:bg-sidebar/10"
             >
               <Download className="size-[18px]" />
             </button>
+            {paymentsDownload.dialog}
           </div>
         </div>
 

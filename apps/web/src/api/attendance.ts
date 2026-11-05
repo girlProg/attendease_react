@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import { downloadFile } from "../lib/blob-download";
+import { downloadFile, type ExportSpec } from "../lib/blob-download";
 import type { FilterScope } from "@/hooks/use-attendance-filters";
 import type {
   PaginatedResponse,
@@ -531,17 +531,20 @@ export const mergeSchools = (input: { into_id: number; from_ids: number[]; force
 export const getAttendanceYears = () =>
   api.get<string[]>("/attendance/years/").then((response) => response.data);
 
-export const exportStudents = (scope: { cohort: number; lga?: number }) => {
-  return downloadFile("/student/export/", "students_export.xlsx", {
-    params: { cohort: scope.cohort, ...(scope.lga ? { lga: scope.lga } : {}) },
-  });
-};
+export const studentsExport = (scope: { cohort?: number; lga?: number }): ExportSpec => ({
+  path: "/student/export/",
+  filename: "students_export.csv",
+  params: {
+    ...(scope.cohort ? { cohort: scope.cohort } : {}),
+    ...(scope.lga ? { lga: scope.lga } : {}),
+  },
+});
 
-export const exportPayments = (params: Record<string, string | number>) => {
-  return downloadFile("/student/export-payments/", "payments_export.csv", {
-    params,
-  });
-};
+export const paymentsExport = (params: Record<string, string | number>): ExportSpec => ({
+  path: "/student/export-payments/",
+  filename: "payments_export.csv",
+  params,
+});
 
 export interface NoObjectionResult {
   id: number;
