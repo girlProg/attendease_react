@@ -157,6 +157,16 @@ export interface AttendanceOverview {
   approved_percentage: number | null;
   by_class: AttendanceOverviewClass[];
   submitted?: SubmittedAttendanceStats;
+  // Absent unless a superuser switched the cards on (Settings > Display).
+  enrolled_by_cohort?: CohortEnrolment[];
+}
+
+export interface CohortEnrolment {
+  cohort: number;
+  name: string;
+  year: number;
+  enrolled: number;
+  active: number;
 }
 
 export interface PaymentRecord {

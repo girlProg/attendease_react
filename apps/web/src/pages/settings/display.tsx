@@ -35,8 +35,87 @@ export function DisplaySettingsPage() {
   return (
     <div className="space-y-5">
       <PageDesignSection />
+      <EnrolledCardsSection />
       <ScInsDisplayForm display={display.data} />
     </div>
+  )
+}
+
+function SwitchButton({
+  label,
+  on,
+  disabled,
+  onToggle,
+}: {
+  label: string
+  on: boolean
+  disabled: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onToggle}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-60 ${
+        on ? "bg-emerald-600" : "bg-muted-foreground/40"
+      }`}
+    >
+      <span
+        className={`absolute size-5 rounded-full bg-white shadow transition ${
+          on ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  )
+}
+
+/** The Attendance Overview's enrolled-students cards, for every user at once. */
+function EnrolledCardsSection() {
+  const queryClient = useQueryClient()
+  const design = useQuery({ queryKey: ["page-design"], queryFn: getPageDesign })
+  const save = useMutation({
+    mutationFn: (on: boolean) => setPageDesign({ enrolled_cohort_cards: on }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(["page-design"], result)
+      queryClient.invalidateQueries({ queryKey: ["attendance-overview"] })
+    },
+  })
+
+  if (!design.data) return null
+  const on = design.data.enrolled_cohort_cards
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-2xl">
+      <div className="flex items-center gap-4">
+        <span className="flex-1">
+          <span className="block text-base font-bold text-foreground">
+            Enrolled students cards
+          </span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Shows every user one card per cohort on the Attendance Overview: students enrolled,
+            including graduated and dropped-out students but not replaced ones. The cards follow
+            the cohort, LGA and school filters.
+          </span>
+        </span>
+        <SwitchButton
+          label="Enrolled students cards"
+          on={on}
+          disabled={save.isPending}
+          onToggle={() => save.mutate(!on)}
+        />
+      </div>
+
+      {save.isError && (
+        <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="size-4 shrink-0" />
+          {errorText(save.error, "Could not save the setting.")}
+        </p>
+      )}
+    </section>
   )
 }
 
@@ -75,23 +154,12 @@ function PageDesignSection() {
             and the students sorted into tabs by where their payment is.
           </span>
         </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-label="New Payments page"
+        <SwitchButton
+          label="New Payments page"
+          on={on}
           disabled={save.isPending}
-          onClick={() => save.mutate(!on)}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-60 ${
-            on ? "bg-emerald-600" : "bg-muted-foreground/40"
-          }`}
-        >
-          <span
-            className={`absolute size-5 rounded-full bg-white shadow transition ${
-              on ? "translate-x-5" : "translate-x-0.5"
-            }`}
-          />
-        </button>
+          onToggle={() => save.mutate(!on)}
+        />
       </div>
 
       {save.isError && (

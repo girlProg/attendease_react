@@ -66,6 +66,7 @@ export function Overview({
   const graduated = data?.graduated_students ?? 0
   const schools = data?.total_schools ?? 0
   const submitted = data?.submitted
+  const enrolledByCohort = data?.enrolled_by_cohort
   // A No Objection list exists for the chosen cohort, year and term.
   const approved = data?.approved_students != null
 
@@ -186,6 +187,29 @@ export function Overview({
           <StatCard key={stat.label} {...stat} loading={isLoading} />
         ))}
       </div>
+
+      {/* Switched on by a superuser (Settings > Display). Follows the cohort, LGA
+          and school filters; the term doesn't change who is in a cohort. */}
+      {enrolledByCohort && enrolledByCohort.length > 0 && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-bold text-sidebar">
+            Enrolled students by cohort
+          </h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {enrolledByCohort.map((row) => (
+              <StatCard
+                key={row.cohort}
+                label={`Cohort ${row.name} (${row.year})`}
+                value={row.enrolled.toLocaleString()}
+                sub={`${row.active.toLocaleString()} active`}
+                icon={Users}
+                color="bg-sidebar"
+                loading={isLoading}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Staff only: the same three figures over the attendance that arrived in
           an uploaded register, so collected data can be told from keyed-in. */}
