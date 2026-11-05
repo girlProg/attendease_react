@@ -35,6 +35,7 @@ import { AskPage } from "@/pages/ask"
 import { SettingsLayout } from "@/pages/settings"
 import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { DisplaySettingsPage } from "@/pages/settings/display"
+import { MeStatsSettingsPage } from "@/pages/settings/me-stats"
 import { PaymentSettingsPage } from "@/pages/settings/payments"
 import { TermSettingsPage } from "@/pages/settings/term"
 
@@ -67,9 +68,13 @@ export function App() {
             <Route element={<SuperuserRoute />}>
               <Route path="payments" element={<PaymentSettingsPage />} />
               <Route path="cohorts" element={<CohortSettingsPage />} />
+              <Route path="me-stats" element={<MeStatsSettingsPage />} />
               <Route path="display" element={<DisplaySettingsPage />} />
             </Route>
           </Route>
+        </Route>
+        <Route element={<SuperuserRoute />}>
+          <Route path="me-stats" element={<MeStatsPage />} />
         </Route>
         <Route element={<CaseManagerRoute />}>
           <Route path="cases" element={<CaseManagementPage />} />
@@ -80,7 +85,6 @@ export function App() {
           <Route path="payments" element={<PaymentsRoute />} />
           <Route path="payments/audit" element={<PaymentAuditPage />} />
           <Route path="payments/reconciliation" element={<ReconciliationPage />} />
-          <Route path="me-stats" element={<MeStatsPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />
           <Route path="manage-users/:id" element={<EditUserPage />} />

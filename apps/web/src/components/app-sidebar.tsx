@@ -43,6 +43,7 @@ interface NavItem {
   caseManager?: boolean
   // Django is_staff accounts only, whatever their role.
   staffOnly?: boolean
+  superuserOnly?: boolean
   feature?: FeatureKey
 }
 
@@ -52,7 +53,7 @@ const navItems: NavItem[] = [
   { label: "Attendance", path: "/attendance", icon: ChartPie },
   { label: "Students", path: "/students", icon: Users },
   { label: "Payments", path: "/payments", icon: CreditCard, adminOnly: true },
-  { label: "M&E Stats", path: "/me-stats", icon: Table2, adminOnly: true },
+  { label: "M&E Stats", path: "/me-stats", icon: Table2, superuserOnly: true },
   { label: "Case Management", path: "/cases", icon: ClipboardList, caseManager: true },
   {
     label: "Reports",
@@ -70,7 +71,7 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin, isViewer, isSpiu, isCaseManager, isStaffuser } = useAuth()
+  const { isAdmin, isViewer, isSpiu, isCaseManager, isStaffuser, isSuperuser } = useAuth()
   // Feature switches are per deployment (one build serves every state), so a
   // page the state has not enabled must not appear in its sidebar.
   const { data: config } = useQuery({
@@ -82,6 +83,7 @@ export function AppSidebar() {
   const visibleItems = navItems.filter((item) => {
     if (item.feature && !config?.features?.[item.feature]) return false
     if (item.staffOnly) return isStaffuser
+    if (item.superuserOnly) return isSuperuser
     // SPIU is a case-management operator: only Case Management + Profile.
     if (isSpiu) return item.caseManager || item.path === "/profile"
     if (item.strictAdmin) return isAdmin

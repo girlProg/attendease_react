@@ -10,6 +10,8 @@ export interface MeStatsCell {
   year: number
   class_name: string
   graduated: boolean
+  // A year still to come: its class, and no count.
+  upcoming: boolean
   paid: number | null
   amount: string | null
   source: MeStatsSource

@@ -19,6 +19,7 @@ const titles: Record<string, string> = {
   "/settings/term": "Term Settings",
   "/settings/payments": "Payment Settings",
   "/settings/cohorts": "Cohort Settings",
+  "/settings/me-stats": "M&E Stats Settings",
   "/settings/display": "Display Settings",
 }
 
