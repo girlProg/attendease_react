@@ -34,17 +34,21 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
   return (
     <>
       <span className="block text-[11px] font-semibold text-muted-foreground">{cell.class_name}</span>
-      <span
-        className={`block text-base font-bold ${tooMany ? "text-amber-700" : "text-emerald-900"}`}
-        title={tooMany ? "More than the eligible students in this row" : undefined}
-      >
-        {paid.toLocaleString()}
-      </span>
       {cell.amount !== null && (
-        <span className="block text-[11px] text-muted-foreground">
+        <span className="block text-base font-bold text-emerald-900">
           {shortNaira(Number(cell.amount))}
         </span>
       )}
+      <span
+        className={
+          cell.amount !== null
+            ? `block text-[11px] ${tooMany ? "font-semibold text-amber-700" : "text-muted-foreground"}`
+            : `block text-base font-bold ${tooMany ? "text-amber-700" : "text-emerald-900"}`
+        }
+        title={tooMany ? "More than the eligible students in this row" : undefined}
+      >
+        {plural(paid, "student")}
+      </span>
       <span className="mt-1 block h-1 overflow-hidden rounded-full bg-emerald-100">
         <span
           className="block h-full rounded-full bg-emerald-700"
@@ -106,8 +110,20 @@ function YearCell({
     body = (
       <>
         <span className="block text-[11px] font-semibold text-muted-foreground">{cell.class_name}</span>
-        <span className="block text-sm font-bold text-orange-800">{paid.toLocaleString()} paid</span>
-        <span className="block text-[11px] text-muted-foreground">of {students.toLocaleString()}</span>
+        {cell.amount !== null && (
+          <span className="block text-sm font-bold text-orange-800">
+            {shortNaira(Number(cell.amount))}
+          </span>
+        )}
+        <span
+          className={
+            cell.amount !== null
+              ? "block text-[11px] text-muted-foreground"
+              : "block text-sm font-bold text-orange-800"
+          }
+        >
+          {paid.toLocaleString()} of {students.toLocaleString()} paid
+        </span>
         {cell.source === "entered" && (
           <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
         )}
