@@ -23,6 +23,7 @@ import { PaymentsPage } from "@/pages/payments"
 import { NewPaymentsPage } from "@/pages/payments-redesign"
 import { PaymentAuditPage } from "@/pages/payment-audit"
 import { ReconciliationPage } from "@/pages/reconciliation"
+import { MeStatsPage } from "@/pages/me-stats"
 import { StudentsPage } from "@/pages/students"
 import { ProfilePage } from "@/pages/profile"
 import { ManageUsersPage } from "@/pages/manage-users"
@@ -79,6 +80,7 @@ export function App() {
           <Route path="payments" element={<PaymentsRoute />} />
           <Route path="payments/audit" element={<PaymentAuditPage />} />
           <Route path="payments/reconciliation" element={<ReconciliationPage />} />
+          <Route path="me-stats" element={<MeStatsPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />
           <Route path="manage-users/:id" element={<EditUserPage />} />

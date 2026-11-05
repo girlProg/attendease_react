@@ -9,6 +9,7 @@ import {
   Settings,
   SlidersHorizontal,
   Sparkles,
+  Table2,
   User,
   Users,
 } from "lucide-react"
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
   { label: "Attendance", path: "/attendance", icon: ChartPie },
   { label: "Students", path: "/students", icon: Users },
   { label: "Payments", path: "/payments", icon: CreditCard, adminOnly: true },
+  { label: "M&E Stats", path: "/me-stats", icon: Table2, adminOnly: true },
   { label: "Case Management", path: "/cases", icon: ClipboardList, caseManager: true },
   {
     label: "Reports",
