@@ -24,7 +24,22 @@ function plural(count: number, word: string): string {
 }
 
 function isDue(cell: MeStatsCell, thisYear: number): boolean {
-  return cell.year === thisYear && cell.paid === null && !cell.graduated
+  return (
+    cell.year === thisYear && cell.paid === null && !cell.graduated && cell.ongoing_terms.length === 0
+  )
+}
+
+function OngoingTerms({ cell }: { cell: MeStatsCell }) {
+  return (
+    <>
+      {cell.ongoing_terms.map((entry) => (
+        <span key={entry.term} className="mt-1 block text-[11px] text-muted-foreground">
+          <span className="block font-bold text-sky-800">Term {entry.term} ongoing</span>
+          {entry.attempted.toLocaleString()} of {entry.students.toLocaleString()} attempted
+        </span>
+      ))}
+    </>
+  )
 }
 
 function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
@@ -58,6 +73,7 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
       {cell.source === "entered" && (
         <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
       )}
+      <OngoingTerms cell={cell} />
     </>
   )
 }
@@ -127,6 +143,15 @@ function YearCell({
         {cell.source === "entered" && (
           <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
         )}
+        <OngoingTerms cell={cell} />
+      </>
+    )
+  } else if (cell.ongoing_terms.length > 0) {
+    tone = "border-sky-300 bg-sky-50"
+    body = (
+      <>
+        <span className="block text-[11px] font-semibold text-muted-foreground">{cell.class_name}</span>
+        <OngoingTerms cell={cell} />
       </>
     )
   } else if (isDue(cell, thisYear)) {
@@ -185,6 +210,7 @@ function YearTotal({ year, rows, thisYear }: { year: number; rows: MeStatsRow[];
   const cells = rows.flatMap((row) => row.cells.filter((cell) => cell.year === year))
   const paidCells = cells.filter((cell) => cell.paid !== null)
   const due = cells.filter((cell) => isDue(cell, thisYear)).length
+  const ongoing = cells.filter((cell) => cell.ongoing_terms.length > 0).length
   const students = paidCells.reduce((total, cell) => total + (cell.paid ?? 0), 0)
   const amount = paidCells.reduce((total, cell) => total + Number(cell.amount ?? 0), 0)
 
@@ -197,9 +223,14 @@ function YearTotal({ year, rows, thisYear }: { year: number; rows: MeStatsRow[];
           </span>
           {amount > 0 && <span className="block text-muted-foreground">{plural(students, "student")}</span>}
         </>
-      ) : due === 0 ? (
+      ) : due === 0 && ongoing === 0 ? (
         <span className="block text-sm font-bold text-orange-800">None</span>
       ) : null}
+      {ongoing > 0 && (
+        <span className="block font-bold text-sky-800">
+          {ongoing} {ongoing === 1 ? "group" : "groups"} ongoing
+        </span>
+      )}
       {due > 0 && (
         <>
           <span className="block text-sm font-bold text-sidebar">{due} due</span>
@@ -237,6 +268,7 @@ export function MeStatsLegend() {
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
       <LegendItem swatch="border border-emerald-200 bg-emerald-50" label="Paid (bar = share of eligible)" />
       <LegendItem swatch="border border-orange-200" style={NO_PAYMENTS_STRIPES} label="No payments" />
+      <LegendItem swatch="border border-sky-300 bg-sky-50" label="Ongoing" />
       <LegendItem swatch="border-2 border-dashed border-sidebar/70 bg-sidebar/5" label="Due this year" />
       <LegendItem swatch="bg-muted" label="Upcoming" />
     </div>

@@ -64,7 +64,9 @@ export function MeStatsPage() {
       <p className="text-xs text-muted-foreground">
         Figures as recorded. &quot;No payments&quot; means none are on record for that year. A cell
         marked Entered was typed in from the programme&apos;s own records; the rest are counted from
-        payments marked as paid.
+        payments marked as paid. A term is ongoing while it is open for payment and someone it pays
+        hasn&apos;t had a payment attempt yet; a failed attempt counts, and students with no usable
+        account aren&apos;t waited for.
       </p>
     </div>
   )

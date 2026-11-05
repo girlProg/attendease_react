@@ -5,6 +5,13 @@ import type { ExportSpec } from "@/lib/blob-download"
 // the figure a superuser entered, else what the payment records say.
 export type MeStatsSource = "entered" | "system" | "none"
 
+// A term open for payment where someone it pays hasn't had an attempt yet.
+export interface MeStatsOngoingTerm {
+  term: number
+  attempted: number
+  students: number
+}
+
 export interface MeStatsCell {
   step: number
   year: number
@@ -16,6 +23,7 @@ export interface MeStatsCell {
   amount: string | null
   source: MeStatsSource
   paid_after_graduating: boolean
+  ongoing_terms: MeStatsOngoingTerm[]
 }
 
 export interface MeStatsRow {
