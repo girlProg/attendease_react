@@ -160,9 +160,7 @@ export function PaymentsPage() {
   const scopeNotes: string[] = []
   // Staff only: everyone else just sees the list.
   if (can("no_objection") && listScope?.source === "no_objection") {
-    scopeNotes.push(
-      "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
-    )
+    scopeNotes.push("No Objection list active.")
   }
   const emptyMessage =
     listScope?.eligible !== 0

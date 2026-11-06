@@ -2,41 +2,23 @@ import type { CSSProperties, ReactNode } from "react"
 import { AlertCircle } from "lucide-react"
 
 import type { MeStatsCell, MeStatsRow, MeStatsTable as Stats } from "@/api/me-stats"
-
-// Under this share of the row paid, a year reads as hardly paid at all.
-const HARDLY_PAID_SHARE = 0.01
-
-const NO_PAYMENTS_STRIPES: CSSProperties = {
-  backgroundImage:
-    "repeating-linear-gradient(135deg, rgb(251 214 190 / 0.75) 0 5px, rgb(255 247 240) 5px 11px)",
-}
+import {
+  HARDLY_PAID_SHARE,
+  NO_PAYMENTS_STRIPES,
+  isDue,
+  plural,
+  rowTitle,
+  shortNaira,
+  termName,
+  termsPaidText,
+} from "@/lib/me-stats"
 
 const CELL_CLASS = "block h-full min-h-[84px] w-full rounded-xl border p-2 text-left"
 
-function shortNaira(amount: number): string {
-  if (amount >= 1_000_000) return `₦${(amount / 1_000_000).toFixed(1)}M`
-  if (amount >= 1_000) return `₦${Math.round(amount / 1_000)}k`
-  return `₦${amount.toLocaleString()}`
-}
-
-function plural(count: number, word: string): string {
-  return `${count.toLocaleString()} ${word}${count === 1 ? "" : "s"}`
-}
-
-function isDue(cell: MeStatsCell, thisYear: number): boolean {
-  return (
-    cell.year === thisYear && cell.paid === null && !cell.graduated && cell.ongoing_terms.length === 0
-  )
-}
-
 function TermsPaid({ cell }: { cell: MeStatsCell }) {
   if (cell.terms.length === 0) return null
-  const [last, ...earlier] = [...cell.terms].reverse()
-  const names = earlier.length > 0 ? `${[...earlier].reverse().join(", ")} & ${last}` : `${last}`
   return (
-    <span className="block text-[11px] font-medium text-foreground/80">
-      {cell.terms.length === 1 ? "Term" : "Terms"} {names}
-    </span>
+    <span className="block text-[11px] font-medium text-foreground/80">{termsPaidText(cell)}</span>
   )
 }
 
@@ -45,7 +27,7 @@ function OngoingTerms({ cell }: { cell: MeStatsCell }) {
     <>
       {cell.ongoing_terms.map((entry) => (
         <span key={entry.term} className="mt-1 block text-[11px] text-muted-foreground">
-          <span className="block font-bold text-sky-800">Term {entry.term} ongoing</span>
+          <span className="block font-bold text-sky-800">{termName(cell.step, entry.term)} ongoing</span>
           {entry.attempted.toLocaleString()} of {entry.students.toLocaleString()} attempted
         </span>
       ))}
@@ -83,7 +65,7 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
         />
       </span>
       {cell.source === "entered" && (
-        <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
+        <span className="mt-1 block text-[10px] font-semibold text-sky-800">Historic</span>
       )}
       <OngoingTerms cell={cell} />
     </>
@@ -154,7 +136,7 @@ function YearCell({
         </span>
         <TermsPaid cell={cell} />
         {cell.source === "entered" && (
-          <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
+          <span className="mt-1 block text-[10px] font-semibold text-sky-800">Historic</span>
         )}
         <OngoingTerms cell={cell} />
       </>
@@ -293,10 +275,13 @@ export function MeStatsGrid({
   data,
   isLoading,
   onEdit,
+  onOpen,
 }: {
   data: Stats | undefined
   isLoading: boolean
   onEdit?: (row: MeStatsRow, cell: MeStatsCell) => void
+  // Pressing a row's name or any of its years opens that row's own card.
+  onOpen?: (row: MeStatsRow) => void
 }) {
   if (isLoading || !data) {
     return (
@@ -347,30 +332,53 @@ export function MeStatsGrid({
         ))}
 
         {rows.map((row) => {
-          const title = row.details.replace(/\s*\([^)]*\)$/, "")
+          const heading = (
+            <>
+              <span className="block text-sm">
+                <span className="font-bold text-foreground">{rowTitle(row)}</span>{" "}
+                <span className="text-foreground/80">({row.entry_class})</span>
+              </span>
+              <span className="block text-xs text-muted-foreground">{rowSummary(row)}</span>
+            </>
+          )
           return (
             <div key={`${row.cohort}-${row.entry_class}`} className="contents">
-              <div className="self-center pr-3">
-                <p className="text-sm">
-                  <span className="font-bold text-foreground">{title}</span>{" "}
-                  <span className="text-foreground/80">({row.entry_class})</span>
-                </p>
-                <p className="text-xs text-muted-foreground">{rowSummary(row)}</p>
-              </div>
+              {onOpen ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(row)}
+                  className="self-center pr-3 text-left hover:underline"
+                >
+                  {heading}
+                </button>
+              ) : (
+                <div className="self-center pr-3">{heading}</div>
+              )}
               {years.length === 0 && (
                 <div className="self-center text-xs text-muted-foreground">No enrolment year yet</div>
               )}
               {years.map((year) => {
                 const cell = row.cells.find((candidate) => candidate.year === year)
                 if (!cell) return <div key={year} />
-                return (
+                const yearCell = (
                   <YearCell
-                    key={year}
                     cell={cell}
                     students={row.students}
                     thisYear={thisYear}
                     onEdit={onEdit ? () => onEdit(row, cell) : undefined}
                   />
+                )
+                if (!onOpen) return <div key={year} className="contents">{yearCell}</div>
+                return (
+                  <button
+                    key={year}
+                    type="button"
+                    aria-label={`Open ${row.details}`}
+                    onClick={() => onOpen(row)}
+                    className="block h-full w-full rounded-xl text-left transition hover:ring-2 hover:ring-sidebar/40"
+                  >
+                    {yearCell}
+                  </button>
                 )
               })}
             </div>

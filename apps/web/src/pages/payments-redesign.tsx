@@ -503,10 +503,6 @@ export function NewPaymentsPage() {
           <p className="flex items-center gap-2 text-xs text-sidebar">
             <Info className="size-4 shrink-0" />
             No Objection list active
-            {filters.cohort && filters.term && filters.year
-              ? ` for ${ordinal(filters.cohort)} Cohort, ${ordinal(filters.term)} Term ${formatAcademicYear(filters.year)}`
-              : ""}
-            : only students on it are shown, even if others qualify.
           </p>
         )}
         <span

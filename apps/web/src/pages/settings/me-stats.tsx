@@ -15,6 +15,7 @@ import { MeStatsGrid } from "@/components/me-stats-table"
 import { PrimaryButton } from "@/components/primary-button"
 import { QueryError } from "@/components/query-error"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { termName } from "@/lib/me-stats"
 import {
   getMeStats,
   setEnrolmentYear,
@@ -71,8 +72,7 @@ function FigureDialog({
       <DialogPopup>
         <DialogTitle>{row.details}</DialogTitle>
         <DialogDescription>
-          Students paid in {cell.year}, when they were in {cell.class_name}. It shows as entered,
-          and the change goes to the logs.
+          Students paid in {cell.year}, in {cell.class_name}. Shows as historic.
         </DialogDescription>
 
         <div className="mt-4 space-y-4">
@@ -101,7 +101,7 @@ function FigureDialog({
                       )
                     }
                   />
-                  Term {term}
+                  {termName(cell.step, term)}
                 </label>
               ))}
             </div>
@@ -220,7 +220,7 @@ export function MeStatsSettingsPage() {
         <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
           <p className="flex items-center gap-2 font-semibold">
             <AlertCircle className="size-4 shrink-0" />
-            Entered figures the table has no place for
+            Historic figures the table has no place for
           </p>
           <ul className="mt-1 list-inside list-disc text-xs">
             {data.figures_not_shown.map((figure) => (
@@ -237,8 +237,8 @@ export function MeStatsSettingsPage() {
         <div>
           <h2 className="text-base font-bold text-foreground">Students paid</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Click a year to enter how many were paid. An entered figure shows instead of the payment
-            records, and is marked as entered. Years still to come and graduated years take no figure.
+            Click a year to enter how many were paid. It shows instead of the payment records, as
+            historic.
           </p>
         </div>
         <MeStatsGrid

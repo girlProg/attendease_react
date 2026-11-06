@@ -42,13 +42,13 @@ export function PayoutBanner() {
       }}
       className="order-last w-full min-w-0 rounded-xl bg-sidebar/5 px-3.5 py-2 text-left transition hover:bg-sidebar/10 md:order-none md:mx-6 md:w-auto md:max-w-xl md:flex-1"
     >
-      <span className="flex flex-wrap items-baseline gap-x-2 md:flex-nowrap">
+      <span className="flex flex-wrap items-baseline gap-x-2 xl:flex-nowrap">
         <span className="relative flex size-2 shrink-0 self-center">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-sidebar opacity-50" />
           <span className="relative inline-flex size-2 rounded-full bg-sidebar" />
         </span>
-        {/* On a phone the name has its own line; the rest wraps under it. */}
-        <span className="min-w-0 max-w-[calc(100%-1rem)] flex-1 basis-[calc(100%-1rem)] truncate text-[13px] font-bold text-sidebar md:max-w-none md:flex-initial md:basis-auto">
+        {/* Short of room the name has its own line; the rest wraps under it. */}
+        <span className="min-w-0 max-w-[calc(100%-1rem)] flex-1 basis-[calc(100%-1rem)] truncate text-[13px] font-bold text-sidebar xl:max-w-none xl:flex-initial xl:basis-auto">
 
           Paying {run.school_name}
         </span>
