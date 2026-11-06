@@ -50,6 +50,7 @@ function FigureDialog({
   const entered = cell.source === "entered"
   const [paid, setPaid] = useState(entered && cell.paid !== null ? String(cell.paid) : "")
   const [amount, setAmount] = useState(entered ? (cell.amount ?? "") : "")
+  const [terms, setTerms] = useState<number[]>(entered ? cell.terms : [])
 
   const save = useMutation({
     mutationFn: (clear: boolean) =>
@@ -59,6 +60,7 @@ function FigureDialog({
         year: cell.year,
         paid_students: clear ? null : Number(paid),
         amount: clear || amount === "" ? null : amount,
+        terms: clear ? [] : terms,
       }),
     onSuccess: onSaved,
   })
@@ -82,6 +84,28 @@ function FigureDialog({
           )}
           <LabeledInput label="Students paid" type="number" value={paid} onChange={setPaid} />
           <LabeledInput label="Amount paid (₦, optional)" type="number" value={amount} onChange={setAmount} />
+          <fieldset>
+            <legend className="text-sm font-medium text-foreground">Terms paid (optional)</legend>
+            <div className="mt-2 flex gap-4">
+              {[1, 2, 3].map((term) => (
+                <label key={term} className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-sidebar"
+                    checked={terms.includes(term)}
+                    onChange={(event) =>
+                      setTerms((current) =>
+                        event.target.checked
+                          ? [...current, term].sort()
+                          : current.filter((chosen) => chosen !== term),
+                      )
+                    }
+                  />
+                  Term {term}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           {save.isError && (
             <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">

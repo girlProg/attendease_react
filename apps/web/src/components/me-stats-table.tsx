@@ -29,6 +29,17 @@ function isDue(cell: MeStatsCell, thisYear: number): boolean {
   )
 }
 
+function TermsPaid({ cell }: { cell: MeStatsCell }) {
+  if (cell.terms.length === 0) return null
+  const [last, ...earlier] = [...cell.terms].reverse()
+  const names = earlier.length > 0 ? `${[...earlier].reverse().join(", ")} & ${last}` : `${last}`
+  return (
+    <span className="block text-[11px] font-medium text-foreground/80">
+      {cell.terms.length === 1 ? "Term" : "Terms"} {names}
+    </span>
+  )
+}
+
 function OngoingTerms({ cell }: { cell: MeStatsCell }) {
   return (
     <>
@@ -64,6 +75,7 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
       >
         {plural(paid, "student")}
       </span>
+      <TermsPaid cell={cell} />
       <span className="mt-1 block h-1 overflow-hidden rounded-full bg-emerald-100">
         <span
           className="block h-full rounded-full bg-emerald-700"
@@ -140,6 +152,7 @@ function YearCell({
         >
           {paid.toLocaleString()} of {students.toLocaleString()} paid
         </span>
+        <TermsPaid cell={cell} />
         {cell.source === "entered" && (
           <span className="mt-1 block text-[10px] font-semibold text-sky-800">Entered</span>
         )}

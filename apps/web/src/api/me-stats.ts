@@ -21,6 +21,8 @@ export interface MeStatsCell {
   upcoming: boolean
   paid: number | null
   amount: string | null
+  // Which terms of the year were paid; empty when a typed figure doesn't say.
+  terms: number[]
   source: MeStatsSource
   paid_after_graduating: boolean
   ongoing_terms: MeStatsOngoingTerm[]
@@ -64,6 +66,7 @@ export const setPaidFigure = (figure: {
   year: number
   paid_students: number | null
   amount: string | null
+  terms: number[]
 }) => api.put<MeStatsTable>("/me-stats/figure/", figure).then((response) => response.data)
 
 export const meStatsExport: ExportSpec = {
