@@ -126,19 +126,23 @@ export function BeneficiariesPage() {
       {/* Class Transfer. The "from" class is matched on the class at enrolment
           (the "Class" column), not the current one — see the note below. */}
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="flex items-center gap-3 rounded-full border-2 border-dashed border-brand/60 bg-brand/10 px-6 py-3">
-          <FilterSelect
-            placeholder="From class (at enrolment)"
-            items={CLASS_OPTIONS}
-            value={targetClass}
-            onValueChange={(value) => setTargetClass(value ?? undefined)}
-          />
-          <FilterSelect
-            placeholder="Move them to"
-            items={DESTINATION_OPTIONS}
-            value={destinationClass}
-            onValueChange={(value) => setDestinationClass(value ?? undefined)}
-          />
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-[2rem] border-2 border-dashed border-brand/60 bg-brand/10 px-6 py-3">
+          <div className="w-60 max-w-full">
+            <FilterSelect
+              placeholder="From class (at enrolment)"
+              items={CLASS_OPTIONS}
+              value={targetClass}
+              onValueChange={(value) => setTargetClass(value ?? undefined)}
+            />
+          </div>
+          <div className="w-44 max-w-full">
+            <FilterSelect
+              placeholder="Move them to"
+              items={DESTINATION_OPTIONS}
+              value={destinationClass}
+              onValueChange={(value) => setDestinationClass(value ?? undefined)}
+            />
+          </div>
           <Button
             className="h-11 rounded-full bg-brand px-6 text-white hover:bg-brand/90 disabled:opacity-50"
             disabled={

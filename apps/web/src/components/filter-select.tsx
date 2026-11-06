@@ -28,7 +28,7 @@ export function FilterSelect({
           {value && value !== "__clear__" && formatItem ? formatItem(value) : undefined}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="min-w-[var(--radix-select-trigger-width)]">
+      <SelectContent className="w-max min-w-(--anchor-width) max-w-[min(32rem,calc(100vw-2rem))]">
         <SelectItem value="__clear__" className="text-muted-foreground">
           Select {placeholder}
         </SelectItem>
