@@ -255,7 +255,8 @@ export function PayoutTracker({
   otherSchool: boolean
   // Pressing the card, outside its buttons: show the run's school on the page.
   onSelect: () => void
-  onRefresh: () => void
+  // Left out for someone who can't ask the bank (needs Disburse).
+  onRefresh?: () => void
   refreshing: boolean
 }) {
   const [open, setOpen] = useState(true)
@@ -341,6 +342,7 @@ export function PayoutTracker({
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {onRefresh && (
           <button
             type="button"
             onClick={onRefresh}
@@ -351,6 +353,7 @@ export function PayoutTracker({
             <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
             {refreshing ? "Checking…" : "Refresh"}
           </button>
+          )}
           {tiles.length > 0 && (
             <button
               type="button"

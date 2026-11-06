@@ -43,7 +43,7 @@ function formatLastActive(dateString: string | null) {
 
 export function ManageUsersPage() {
   useLogVisit("Manage Users", "Visited Manage Users")
-  const { canWrite } = useAuth()
+  const { can } = useAuth()
   const navigate = useNavigate()
   const { page, setPage, pageSize, handleRowsChange } = usePagination([], 10)
 
@@ -59,7 +59,7 @@ export function ManageUsersPage() {
   return (
     <div className="space-y-6">
       {/* Add New User */}
-      {canWrite && (
+      {can("manage_users") && (
         <div className="flex justify-end">
           <Button
             variant="outline"

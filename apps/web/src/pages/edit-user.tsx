@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
 import { LabeledInput, LabeledSelect } from "@/components/form-fields"
+import { PermissionsSection, ResetPasswordSection } from "@/components/user-access-sections"
+import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { getLGAs } from "@/api/attendance"
@@ -80,6 +82,7 @@ function EditUserForm({
   queryClient: ReturnType<typeof useQueryClient>
   navigate: ReturnType<typeof useNavigate>
 }) {
+  const { profile, isSuperuser } = useAuth()
   const [firstName, setFirstName] = useState(user.first_name)
   const [lastName, setLastName] = useState(user.last_name)
   const [phoneNumber, setPhoneNumber] = useState(user.phone_number)
@@ -201,6 +204,17 @@ function EditUserForm({
           {profileMutation.isPending ? "Saving..." : "Update User"}
         </Button>
       </Section>
+
+      {isSuperuser && (
+        <>
+          <Section title="Permissions">
+            <PermissionsSection user={user} />
+          </Section>
+          <Section title="Reset password">
+            <ResetPasswordSection user={user} isSelf={user.id === profile?.id} />
+          </Section>
+        </>
+      )}
     </div>
   )
 }

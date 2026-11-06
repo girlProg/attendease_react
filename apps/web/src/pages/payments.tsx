@@ -60,7 +60,7 @@ const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", 
 export function PaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
   const navigate = useNavigate()
-  const { isAdmin, isStaffuser } = useAuth()
+  const { can } = useAuth()
   const { filters, setFilter, scope, options } = useAttendanceFilters()
   const { params: scopeParams, ready: scopeReady } = scope(PAYMENT_FILTERS)
 
@@ -159,7 +159,7 @@ export function PaymentsPage() {
   // Why the list is short or empty, in the server's own counts.
   const scopeNotes: string[] = []
   // Staff only: everyone else just sees the list.
-  if (isStaffuser && listScope?.source === "no_objection") {
+  if (can("no_objection") && listScope?.source === "no_objection") {
     scopeNotes.push(
       "A No Objection list exists for this cohort, year and term, so only students on it are shown, even if others qualify.",
     )
@@ -351,17 +351,19 @@ export function PaymentsPage() {
       {/* Disbursement switch + Refresh Status + No Objection — centered on one row */}
       <div className="flex flex-wrap items-center justify-center gap-3">
         <DisbursementSwitch />
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
-          disabled={refreshStatuses.isPending}
-          onClick={() => refreshStatuses.mutate()}
-          title="Check the bank for the latest status of in-flight disbursements"
-        >
-          <RefreshCw className={`size-4 ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
-          {refreshStatuses.isPending ? "Checking…" : "Refresh Status"}
-        </Button>
-        {isStaffuser && (
+        {can("disburse") && (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+            disabled={refreshStatuses.isPending}
+            onClick={() => refreshStatuses.mutate()}
+            title="Check the bank for the latest status of in-flight disbursements"
+          >
+            <RefreshCw className={`size-4 ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
+            {refreshStatuses.isPending ? "Checking…" : "Refresh Status"}
+          </Button>
+        )}
+        {can("no_objection") && (
           <NoObjectionDialog
             cohort={scopeParams.cohort}
             cohortName={cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name}
@@ -369,7 +371,7 @@ export function PaymentsPage() {
             term={scopeParams.term}
           />
         )}
-        {isAdmin && (
+        {can("payment_audit") && (
           <Button
             variant="outline"
             className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
@@ -396,7 +398,7 @@ export function PaymentsPage() {
             Audit Trail
           </Button>
         )}
-        {isAdmin && (
+        {can("reconciliation") && (
           <Button
             variant="outline"
             className="h-11 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
@@ -409,7 +411,7 @@ export function PaymentsPage() {
         )}
       </div>
 
-      {isAdmin && <DisbursementStatusStrip />}
+      <DisbursementStatusStrip />
 
       {/* Pagination */}
       <PaginationBar

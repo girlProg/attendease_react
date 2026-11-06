@@ -1,7 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom"
 
 import { isAuthenticated } from "@/api/auth"
+import { PasswordGate } from "@/components/password-gate"
 import { AuthProvider, useAuth } from "@/contexts/auth-context"
+import type { CapabilityKey } from "@/types"
 
 export function ProtectedRoute() {
   if (!isAuthenticated()) {
@@ -9,24 +11,19 @@ export function ProtectedRoute() {
   }
   return (
     <AuthProvider>
-      <Outlet />
+      <PasswordGate>
+        <Outlet />
+      </PasswordGate>
     </AuthProvider>
   )
 }
 
-export function AdminRoute() {
-  const { isAdmin, isViewer, isLoading } = useAuth()
+/** Whoever has this permission (see users/capabilities.py on the server). */
+export function CapabilityRoute({ capability }: { capability: CapabilityKey }) {
+  const { can, isLoading } = useAuth()
 
   if (isLoading) return null
-  if (!isAdmin && !isViewer) return <Navigate to="/" replace />
-  return <Outlet />
-}
-
-export function CaseManagerRoute() {
-  const { isCaseManager, isLoading } = useAuth()
-
-  if (isLoading) return null
-  if (!isCaseManager) return <Navigate to="/" replace />
+  if (!can(capability)) return <Navigate to="/" replace />
   return <Outlet />
 }
 
@@ -36,14 +33,5 @@ export function SuperuserRoute() {
 
   if (isLoading) return null
   if (!isSuperuser) return <Navigate to="/" replace />
-  return <Outlet />
-}
-
-/** Staff accounts only (Django is_staff), whatever their role. */
-export function StaffRoute() {
-  const { isStaffuser, isLoading } = useAuth()
-
-  if (isLoading) return null
-  if (!isStaffuser) return <Navigate to="/" replace />
   return <Outlet />
 }

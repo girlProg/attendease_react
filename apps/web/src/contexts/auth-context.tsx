@@ -2,10 +2,12 @@ import { createContext, useContext } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
-import type { UserProfile } from "@/types"
+import type { CapabilityKey, UserProfile } from "@/types"
 
 interface AuthContextValue {
   profile: UserProfile | undefined
+  // What this person may do, as the server says; the server still enforces it.
+  can: (capability: CapabilityKey) => boolean
   role: string
   isAdmin: boolean
   isSuperuser: boolean
@@ -20,6 +22,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   profile: undefined,
+  can: () => false,
   role: "user",
   isAdmin: false,
   isSuperuser: false,
@@ -47,15 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // management screens, so it must not surface general write actions.
   const isSpiu = role === "spiu"
   const canWrite = !isViewer && !isSpiu
-  // Both mirror the server: cases are open to admin, SPIU and any staff
-  // account; registers to any role that can write, plus staff of any role.
-  const isCaseManager = isAdmin || isSpiu || isStaffuser
-  const canUploadRegisters = canWrite || isStaffuser
+  const can = (capability: CapabilityKey) => profile?.capabilities?.includes(capability) ?? false
+  const isCaseManager = can("case_management")
+  const canUploadRegisters = can("upload_registers")
 
   return (
     <AuthContext.Provider
       value={{
         profile,
+        can,
         role,
         isAdmin,
         isSuperuser,

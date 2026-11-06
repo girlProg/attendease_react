@@ -215,7 +215,7 @@ export function StudentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const studentId = Number(id)
   const navigate = useNavigate()
-  const { isViewer, isStaffuser } = useAuth()
+  const { isViewer, can } = useAuth()
   const { activeDays, labelFor } = useSchoolWeek()
   const [toggledYears, setToggledYears] = useState<Record<string, boolean>>({})
 
@@ -354,7 +354,7 @@ export function StudentDetailPage() {
               Open case
             </Button>
           )}
-          {isStaffuser && !student.replaced && !student.graduated && (
+          {can("replace_students") && !student.replaced && !student.graduated && (
             <>
               <ReplaceStudentDialog student={student} />
               <ReplaceCaregiverDialog student={student} />

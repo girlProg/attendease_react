@@ -277,6 +277,35 @@ export interface AttendanceSummary {
   years: AttendanceSummaryYear[];
 }
 
+// One per duty; users/capabilities.py on the server is the list.
+export type CapabilityKey =
+  | "view_payments"
+  | "disburse"
+  | "no_objection"
+  | "payment_audit"
+  | "reconciliation"
+  | "upload_records"
+  | "replace_students"
+  | "school_merge"
+  | "upload_registers"
+  | "edit_attendance"
+  | "case_management"
+  | "reports"
+  | "ask"
+  | "logs"
+  | "manage_users"
+  | "me_stats"
+  | "term_settings";
+
+export interface UserCapability {
+  key: CapabilityKey;
+  label: string;
+  group: string;
+  allowed: boolean;
+  // What the person's role gives without a tick being changed.
+  default: boolean;
+}
+
 export interface UserProfile {
   id: number;
   email: string;
@@ -290,6 +319,9 @@ export interface UserProfile {
   lgas?: string[];
   // Staff only: the Statistics tab counts only uploaded registers for them.
   statistics_uploaded_only?: boolean;
+  capabilities?: CapabilityKey[];
+  // Signed in with a password a superuser set: choose your own before going on.
+  must_change_password?: boolean;
 }
 
 export interface AppUser {
@@ -303,6 +335,7 @@ export interface AppUser {
   lgas: string[];
   last_active: string | null;
   is_active: boolean;
+  is_superuser: boolean;
 }
 
 export interface LoginCredentials {

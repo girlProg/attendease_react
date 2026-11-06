@@ -7,21 +7,22 @@ import { formatAcademicYear } from "@/lib/formatters"
 import { runInProgress, selectRun } from "@/lib/payout-run"
 
 /**
- * In the header of every page, for admins, while a school is being paid: how far
- * it has got. Pressing it opens Payments on that school, term and year.
+ * In the header of every page, for whoever can see Payments, while a school is
+ * being paid: how far it has got. Pressing it opens Payments on that school, term and year.
  */
 export function PayoutBanner() {
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
+  const canSee = can("view_payments")
   const current = useQuery({
     queryKey: ["disbursement-current"],
     queryFn: getCurrentDisbursement,
-    enabled: isAdmin,
+    enabled: canSee,
     refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
   })
   const run = current.data?.run
 
-  if (!isAdmin || !run || !runInProgress(run)) return null
+  if (!canSee || !run || !runInProgress(run)) return null
 
   const total = Math.max(run.payment_count - run.skipped_count, 0)
   const paid = run.uploads.reduce((sum, upload) => sum + upload.counts.successful, 0)

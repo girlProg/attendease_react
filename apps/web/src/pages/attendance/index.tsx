@@ -42,12 +42,13 @@ export function AttendancePage() {
   const navigate = useNavigate()
 
   useLogVisit("Attendance", "Visited Attendance")
-  const { canWrite, isAdmin } = useAuth()
+  const { can, isAdmin } = useAuth()
+  const canEditAttendance = can("edit_attendance")
   const { filters, setFilter, options, scope } = useAttendanceFilters()
   const tabFilters = TAB_FILTERS[activeTab]
   const { params: scopeParams, ready: scopeReady } = scope(tabFilters)
 
-  const newAttendanceButton = canWrite && (
+  const newAttendanceButton = canEditAttendance && (
     <Button
       variant="outline"
       className="h-11 w-full shrink-0 gap-2 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5 sm:w-auto"
@@ -93,7 +94,7 @@ export function AttendancePage() {
 
       {/* Per-tab actions now live BELOW the tabs, so they can't push the strip
           around. */}
-      {activeTab === "Overview" && (canWrite || isAdmin) && (
+      {activeTab === "Overview" && (canEditAttendance || isAdmin) && (
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           {isAdmin && (
             <DownloadPdfButton

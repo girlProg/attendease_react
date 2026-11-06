@@ -66,7 +66,7 @@ export function RealTime({
   const [pickedWeek, setPickedWeek] = useState<PickedWeek | null>(null)
   // The week whose closures are being marked (staff only).
   const [closureWeek, setClosureWeek] = useState<ClosureWeek | null>(null)
-  const { isStaffuser } = useAuth()
+  const { can } = useAuth()
 
   // The bar's school wins; a pick from By school narrows only when it has none.
   const narrowedTo = pickedSchool && !scope.school ? pickedSchool : null
@@ -214,7 +214,7 @@ export function RealTime({
           weeks={weeks.data}
           isLoading={(weeks.isLoading && !weeks.data) || !ready}
           qualifying={qualifying}
-          onMarkClosures={isStaffuser ? setClosureWeek : undefined}
+          onMarkClosures={can("term_settings") ? setClosureWeek : undefined}
           onPick={(week) => {
             setPickedWeek({ year: week.year, term: week.term, week: week.week })
             setView("rows")

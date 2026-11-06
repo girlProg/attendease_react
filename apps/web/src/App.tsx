@@ -6,9 +6,7 @@ import { getConfig } from "@/api/config"
 import { Layout } from "@/components/layout"
 import {
   ProtectedRoute,
-  AdminRoute,
-  CaseManagerRoute,
-  StaffRoute,
+  CapabilityRoute,
   SuperuserRoute,
 } from "@/components/protected-route"
 import { AttendancePage } from "@/pages/attendance"
@@ -59,9 +57,11 @@ export function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="analytics" element={<ReportsPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route element={<StaffRoute />}>
+        <Route element={<CapabilityRoute capability="reports" />}>
+          <Route path="analytics" element={<ReportsPage />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="term_settings" />}>
           <Route path="settings" element={<SettingsLayout />}>
             <Route index element={<Navigate to="term" replace />} />
             <Route path="term" element={<TermSettingsPage />} />
@@ -73,21 +73,31 @@ export function App() {
             </Route>
           </Route>
         </Route>
-        <Route element={<SuperuserRoute />}>
+        <Route element={<CapabilityRoute capability="me_stats" />}>
           <Route path="me-stats" element={<MeStatsPage />} />
         </Route>
-        <Route element={<CaseManagerRoute />}>
+        <Route element={<CapabilityRoute capability="case_management" />}>
           <Route path="cases" element={<CaseManagementPage />} />
           <Route path="cases/:id" element={<CaseDetailPage />} />
         </Route>
-        <Route element={<AdminRoute />}>
+        <Route element={<CapabilityRoute capability="ask" />}>
           <Route path="ask" element={<AskPage />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="view_payments" />}>
           <Route path="payments" element={<PaymentsRoute />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="payment_audit" />}>
           <Route path="payments/audit" element={<PaymentAuditPage />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="reconciliation" />}>
           <Route path="payments/reconciliation" element={<ReconciliationPage />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="manage_users" />}>
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-users/new" element={<NewUserPage />} />
           <Route path="manage-users/:id" element={<EditUserPage />} />
+        </Route>
+        <Route element={<CapabilityRoute capability="logs" />}>
           <Route path="logs" element={<LogsPage />} />
         </Route>
       </Route>

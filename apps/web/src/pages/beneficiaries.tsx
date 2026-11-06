@@ -41,7 +41,7 @@ export function BeneficiariesPage() {
   useLogVisit("Beneficiaries", "Visited Beneficiaries")
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isStaffuser } = useAuth()
+  const { can } = useAuth()
   const { filters, setFilter, scope, options } = useAttendanceFilters()
   const { params: scopeParams, ready: scopeReady } = scope(BENEFICIARY_FILTERS)
 
@@ -113,7 +113,7 @@ export function BeneficiariesPage() {
           Download
         </Button>
         {studentsDownload.dialog}
-        {isStaffuser && (
+        {can("school_merge") && (
           <SchoolMergeDialog
             lga={scopeParams.lga}
             lgaName={filters.lga}

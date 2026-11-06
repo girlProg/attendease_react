@@ -34,7 +34,7 @@ const STUDENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", 
 
 export function StudentsPage() {
   useLogVisit("Students", "Visited Students")
-  const { canWrite, isAdmin } = useAuth()
+  const { canWrite, can } = useAuth()
   const { filters, setFilter, scope, options } = useAttendanceFilters()
   const { params: scopeParams, ready: scopeReady } = scope(STUDENT_FILTERS)
 
@@ -64,7 +64,7 @@ export function StudentsPage() {
       {/* Search + Actions */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar onSearch={setAppliedSearch} />
-        {isAdmin && (
+        {can("upload_records") && (
           <>
             <UploadRecordsDialog />
             <UploadBatchesDialog />

@@ -223,7 +223,8 @@ export function NewPaymentsPage() {
   useLogVisit("Payments", "Visited Payments")
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isAdmin, isStaffuser, isSuperuser } = useAuth()
+  const { can, isSuperuser } = useAuth()
+  const canManageNoObjection = can("no_objection")
   const { filters, setFilter, scope, options } = useAttendanceFilters()
   const { params: scopeParams, ready: scopeReady } = scope(PAYMENT_FILTERS)
 
@@ -296,7 +297,7 @@ export function NewPaymentsPage() {
     queryKey: ["no-objection-status", scopeParams.cohort, scopeParams.year, scopeParams.term],
     queryFn: () =>
       getNoObjectionStatus({ cohort: scopeParams.cohort, year: scopeParams.year, term: scopeParams.term }),
-    enabled: isStaffuser && noObjectionReady,
+    enabled: canManageNoObjection && noObjectionReady,
   })
   const noObjectionExists = noObjection.data?.exists ?? false
 
@@ -498,7 +499,7 @@ export function NewPaymentsPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 px-1">
-        {isStaffuser && listScope?.source === "no_objection" && (
+        {canManageNoObjection && listScope?.source === "no_objection" && (
           <p className="flex items-center gap-2 text-xs text-sidebar">
             <Info className="size-4 shrink-0" />
             No Objection list active
@@ -546,7 +547,7 @@ export function NewPaymentsPage() {
           run={run}
           otherSchool={!runIsHere}
           onSelect={() => selectRun(run)}
-          onRefresh={() => refreshStatuses.mutate()}
+          onRefresh={can("disburse") ? () => refreshStatuses.mutate() : undefined}
           refreshing={refreshStatuses.isPending}
         />
       ) : run && showOutcome ? (
@@ -597,16 +598,18 @@ export function NewPaymentsPage() {
             <span className="min-w-0 break-words text-xs text-muted-foreground/80">{lastRunText}</span>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              disabled={refreshStatuses.isPending}
-              onClick={() => refreshStatuses.mutate()}
-              title="Ask the bank for the latest status of transfers still in flight"
-              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl bg-sidebar/5 px-4 text-[13px] font-semibold text-sidebar hover:bg-sidebar/10 disabled:opacity-60"
-            >
-              <RefreshCw className={`size-[18px] ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
-              {refreshStatuses.isPending ? "Checking…" : "Refresh status"}
-            </button>
+            {can("disburse") && (
+              <button
+                type="button"
+                disabled={refreshStatuses.isPending}
+                onClick={() => refreshStatuses.mutate()}
+                title="Ask the bank for the latest status of transfers still in flight"
+                className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl bg-sidebar/5 px-4 text-[13px] font-semibold text-sidebar hover:bg-sidebar/10 disabled:opacity-60"
+              >
+                <RefreshCw className={`size-[18px] ${refreshStatuses.isPending ? "animate-spin" : ""}`} />
+                {refreshStatuses.isPending ? "Checking…" : "Refresh status"}
+              </button>
+            )}
             <div className="relative">
               <button
                 type="button"
@@ -628,7 +631,7 @@ export function NewPaymentsPage() {
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="absolute top-12 right-0 z-20 w-[268px] rounded-[14px] bg-white p-2 shadow-[0_18px_44px_rgb(33_29_82/0.18),0_2px_6px_rgb(33_29_82/0.08)]">
-                    {isAdmin && (
+                    {can("reconciliation") && (
                       <button
                         type="button"
                         onClick={() => navigate("/payments/reconciliation")}
@@ -638,7 +641,7 @@ export function NewPaymentsPage() {
                         Reconciliation
                       </button>
                     )}
-                    {isAdmin && (
+                    {can("payment_audit") && (
                       <button
                         type="button"
                         onClick={openAuditTrail}
@@ -648,7 +651,7 @@ export function NewPaymentsPage() {
                         Audit trail
                       </button>
                     )}
-                    {isStaffuser && (
+                    {canManageNoObjection && (
                       <button
                         type="button"
                         disabled={!noObjectionReady}
@@ -725,7 +728,7 @@ export function NewPaymentsPage() {
         </div>
       )}
 
-      {isStaffuser && (
+      {canManageNoObjection && (
         <NoObjectionDialog
           cohort={scopeParams.cohort}
           cohortName={cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.name}

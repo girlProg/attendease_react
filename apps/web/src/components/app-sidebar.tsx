@@ -28,7 +28,7 @@ import { AppLogo } from "@/components/app-logo"
 import { appConfig } from "@/config/app-config"
 import { useAuth } from "@/contexts/auth-context"
 import { getConfig } from "@/api/config"
-import type { DeploymentConfig } from "@/types"
+import type { CapabilityKey, DeploymentConfig } from "@/types"
 
 /** A page some deployments have and others do not, keyed by the switch the
  *  backend reports through /api/config. */
@@ -38,12 +38,8 @@ interface NavItem {
   label: string
   path: string
   icon: LucideIcon
-  adminOnly?: boolean
-  strictAdmin?: boolean
-  caseManager?: boolean
-  // Django is_staff accounts only, whatever their role.
-  staffOnly?: boolean
-  superuserOnly?: boolean
+  // Only for whoever has this permission.
+  capability?: CapabilityKey
   feature?: FeatureKey
 }
 
@@ -52,26 +48,26 @@ const navItems: NavItem[] = [
   { label: "Beneficiaries", path: "/beneficiaries", icon: BookOpen },
   { label: "Attendance", path: "/attendance", icon: ChartPie },
   { label: "Students", path: "/students", icon: Users },
-  { label: "Payments", path: "/payments", icon: CreditCard, adminOnly: true },
-  { label: "M&E Stats", path: "/me-stats", icon: Table2, superuserOnly: true },
-  { label: "Case Management", path: "/cases", icon: ClipboardList, caseManager: true },
+  { label: "Payments", path: "/payments", icon: CreditCard, capability: "view_payments" },
+  { label: "M&E Stats", path: "/me-stats", icon: Table2, capability: "me_stats" },
+  { label: "Case Management", path: "/cases", icon: ClipboardList, capability: "case_management" },
   {
     label: "Reports",
     path: "/analytics",
     icon: BarChart3,
     feature: "monthly_reports",
-    adminOnly: true,
+    capability: "reports",
   },
-  { label: "Ask", path: "/ask", icon: Sparkles, strictAdmin: true },
+  { label: "Ask", path: "/ask", icon: Sparkles, capability: "ask" },
   { label: "Profile", path: "/profile", icon: User },
-  { label: "Manage Users", path: "/manage-users", icon: Settings, adminOnly: true },
-  { label: "Logs", path: "/logs", icon: CalendarDays, adminOnly: true },
-  { label: "Settings", path: "/settings", icon: SlidersHorizontal, staffOnly: true },
+  { label: "Manage Users", path: "/manage-users", icon: Settings, capability: "manage_users" },
+  { label: "Logs", path: "/logs", icon: CalendarDays, capability: "logs" },
+  { label: "Settings", path: "/settings", icon: SlidersHorizontal, capability: "term_settings" },
 ]
 
 export function AppSidebar() {
   const { setOpen } = useSidebar()
-  const { isAdmin, isViewer, isSpiu, isCaseManager, isStaffuser, isSuperuser } = useAuth()
+  const { can, isSpiu } = useAuth()
   // Feature switches are per deployment (one build serves every state), so a
   // page the state has not enabled must not appear in its sidebar.
   const { data: config } = useQuery({
@@ -82,13 +78,9 @@ export function AppSidebar() {
 
   const visibleItems = navItems.filter((item) => {
     if (item.feature && !config?.features?.[item.feature]) return false
-    if (item.staffOnly) return isStaffuser
-    if (item.superuserOnly) return isSuperuser
-    // SPIU is a case-management operator: only Case Management + Profile.
-    if (isSpiu) return item.caseManager || item.path === "/profile"
-    if (item.strictAdmin) return isAdmin
-    if (item.caseManager) return isCaseManager
-    return !item.adminOnly || isAdmin || isViewer
+    if (item.capability) return can(item.capability)
+    // SPIU is a case-management operator: none of the open pages but Profile.
+    return !isSpiu || item.path === "/profile"
   })
   const isFloating = appConfig.sidebar.style === "floating"
 
