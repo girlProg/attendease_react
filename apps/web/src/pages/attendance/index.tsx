@@ -100,7 +100,7 @@ export function AttendancePage() {
             <DownloadPdfButton
               path="/attendance/overview/report-pdf/"
               params={{ ...scopeParams }}
-              filename="AGILE_Attendance.pdf"
+              filename="Attendance.pdf"
               missing={scopeReady ? null : "Loading the filters…"}
               className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             />

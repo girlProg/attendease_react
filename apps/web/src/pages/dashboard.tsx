@@ -107,7 +107,7 @@ export function DashboardPage() {
           <DownloadPdfButton
             path="/dashboard/report-pdf/"
             params={queryParams}
-            filename="AGILE_Programme_overview.pdf"
+            filename="Programme_overview.pdf"
             missing={scopeReady ? null : "Loading the filters…"}
             className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5 disabled:cursor-not-allowed disabled:opacity-50"
           />

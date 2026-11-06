@@ -336,7 +336,7 @@ export function PaymentsPage() {
         <DownloadPdfButton
           path="/student/payments-pdf/"
           params={{ ...scopeParams, ...(appliedSearch && { name: appliedSearch }) }}
-          filename="AGILE_Payments.pdf"
+          filename="Payments.pdf"
           missing={
             scopeParams.cohort && scopeParams.year && scopeParams.term
               ? null
