@@ -1,7 +1,7 @@
 import { CountedWeek, WeekLabel } from "@/components/week-cell"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, ChevronRight, ExternalLink, FileText, MapPin } from "lucide-react"
+import { ArrowLeft, ChevronRight, ExternalLink, MapPin } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import {
@@ -14,6 +14,7 @@ import {
 } from "@workspace/ui/components/table"
 import { Button } from "@workspace/ui/components/button"
 import { AvatarPhoto } from "@/components/avatar-photo"
+import { ExpandablePhoto, PhotoCard } from "@/components/photo-viewer"
 import { Chip } from "@/components/chip"
 import { DetailField, DetailSection } from "@/components/detail-list"
 import { PercentageBadge } from "@/components/percentage-badge"
@@ -112,30 +113,46 @@ function CaregiverPhoto({ caregiverId, hasPhoto, name }: {
     caregiverId === undefined ? undefined : `/caregiver/${caregiverId}/photo/`,
     enabled,
   )
-  return <AvatarPhoto src={url} name={name} size="lg" loading={enabled && isLoading} />
+  return (
+    <ExpandablePhoto title="Caregiver photo" url={url}>
+      <AvatarPhoto src={url} name={name} size="lg" loading={enabled && isLoading} />
+    </ExpandablePhoto>
+  )
 }
 
-function ConsentForm({ enrolmentId, hasForm }: { enrolmentId?: number; hasForm?: boolean }) {
+/** Every photo the system holds for the student, each opening large when pressed. */
+function StudentPhotos({ student }: { student: Student }) {
   const { isAdmin } = useAuth()
-  // The signed form carries the caregiver's written identity details, so the
-  // server serves it to admins only. Don't even offer it to anyone else.
-  const enabled = isAdmin && Boolean(hasForm) && enrolmentId !== undefined
-  const { data: url } = useProtectedImage(
-    enrolmentId === undefined ? undefined : `/enrolments/${enrolmentId}/consent-form/`,
-    enabled,
-  )
-  if (!enabled || !url) return null
+  const caregiver = student.caregiver
+  const enrolment = student.enrolment
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-2 text-xs font-medium text-brand hover:underline"
-    >
-      <FileText className="size-4" />
-      View signed consent form
-      <ExternalLink className="size-3" />
-    </a>
+    <section className="space-y-2">
+      <h3 className="text-sm font-bold text-sidebar">Photos</h3>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <PhotoCard
+          title="Student photo"
+          path={`/student/${student.id}/photo/`}
+          saved={Boolean(student.has_photo)}
+          link={student.photo_url}
+        />
+        <PhotoCard
+          title="Caregiver photo"
+          path={caregiver ? `/caregiver/${caregiver.id}/photo/` : undefined}
+          saved={Boolean(caregiver?.has_photo)}
+          link={caregiver?.photo_url}
+        />
+        {/* The signed form carries the caregiver's written identity details, so
+            the server serves it to admins only. Don't even offer it to anyone else. */}
+        {isAdmin && (
+          <PhotoCard
+            title="Signed consent form"
+            path={enrolment ? `/enrolments/${enrolment.id}/consent-form/` : undefined}
+            saved={Boolean(enrolment?.has_consent_form)}
+            link={enrolment?.consent_form_photo_url}
+          />
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -200,13 +217,15 @@ function StudentPortrait({ student }: { student: Student }) {
     enabled,
   )
   return (
-    <AvatarPhoto
-      src={enabled && !isError ? url : student.photo_url}
-      name={student.name}
-      size="xl"
-      loading={enabled && isLoading}
-      className="rounded-2xl"
-    />
+    <ExpandablePhoto title="Student photo" url={enabled && !isError ? url : undefined}>
+      <AvatarPhoto
+        src={enabled && !isError ? url : student.photo_url}
+        name={student.name}
+        size="xl"
+        loading={enabled && isLoading}
+        className="rounded-2xl"
+      />
+    </ExpandablePhoto>
   )
 }
 
@@ -491,24 +510,20 @@ export function StudentDetailPage() {
         )}
       </div>
 
-      {(latitude || enrolment?.has_consent_form) && (
+      <StudentPhotos student={student} />
+
+      {latitude && longitude && (
         <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/40 bg-white px-5 py-4">
-          {latitude && longitude && (
-            <a
-              href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 text-xs font-medium text-brand hover:underline"
-            >
-              <MapPin className="size-4" />
-              {latitude}, {longitude}
-              <ExternalLink className="size-3" />
-            </a>
-          )}
-          <ConsentForm
-            enrolmentId={enrolment?.id}
-            hasForm={enrolment?.has_consent_form}
-          />
+          <a
+            href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-xs font-medium text-brand hover:underline"
+          >
+            <MapPin className="size-4" />
+            {latitude}, {longitude}
+            <ExternalLink className="size-3" />
+          </a>
         </section>
       )}
 
