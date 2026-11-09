@@ -75,6 +75,12 @@ export function StudentsPage() {
             >
               Kobo Review
             </Link>
+            <Link
+              to="/kobo-enrolments"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5"
+            >
+              Enrolment Holding List
+            </Link>
           </>
         )}
         {canWrite && (

@@ -20,6 +20,7 @@ import {
   getKoboForms,
   setKoboFormEnabled,
   type KoboForm,
+  type KoboPurpose,
 } from "@/api/kobo"
 
 function lastChecked(form: KoboForm): string {
@@ -29,7 +30,7 @@ function lastChecked(form: KoboForm): string {
 }
 
 /**
- * Verification forms read straight from Kobo every 15 minutes. Off until
+ * Verification and enrolment forms read from Kobo every 15 minutes. Off until
  * switched on; the first check brings in everything already submitted.
  * Superusers only, and every change goes to the activity log.
  */
@@ -63,9 +64,18 @@ function AddFormSection() {
   const [cohort, setCohort] = useState("")
   const [label, setLabel] = useState("")
   const [assetUid, setAssetUid] = useState("")
+  const [purpose, setPurpose] = useState<KoboPurpose>("verification")
+  const [householdCap, setHouseholdCap] = useState("3")
+  const capIsValid = purpose === "verification" || Number(householdCap) >= 1
   const add = useMutation({
     mutationFn: () =>
-      addKoboForm({ cohort: Number(cohort), label: label.trim(), asset_uid: assetUid.trim() }),
+      addKoboForm({
+        cohort: Number(cohort),
+        label: label.trim(),
+        asset_uid: assetUid.trim(),
+        purpose,
+        ...(purpose === "enrolment" ? { household_cap: Number(householdCap) } : {}),
+      }),
     onSuccess: () => {
       setLabel("")
       setAssetUid("")
@@ -76,12 +86,28 @@ function AddFormSection() {
 
   return (
     <section className="space-y-3 rounded-2xl border bg-white p-5">
-      <h2 className="font-semibold">Add a verification form</h2>
+      <h2 className="font-semibold">Add a form</h2>
       <p className="flex items-start gap-2 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />
-        The form ID is the part after /forms/ in the form's Kobo address. A new form starts off.
+        The form ID is the part after /forms/ in the form's Kobo address. A new form starts off. An
+        enrolment form only fills the Enrolment Holding List: nobody is enrolled from it yet.
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Type</label>
+          <Select
+            value={purpose}
+            onValueChange={(value) => setPurpose((value as KoboPurpose) ?? "verification")}
+          >
+            <SelectTrigger aria-label="Type" className="w-full">
+              <SelectValue>{purpose === "enrolment" ? "Enrolment" : "Verification"}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="verification">Verification</SelectItem>
+              <SelectItem value="enrolment">Enrolment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Cohort</label>
           <Select value={cohort} onValueChange={(value) => setCohort(value ?? "")}>
@@ -99,6 +125,13 @@ function AddFormSection() {
         </div>
         <LabeledInput label="Name" value={label} onChange={setLabel} />
         <LabeledInput label="Kobo form ID" value={assetUid} onChange={setAssetUid} />
+        {purpose === "enrolment" && (
+          <LabeledInput
+            label="Most students to a household"
+            value={householdCap}
+            onChange={setHouseholdCap}
+          />
+        )}
       </div>
       {add.isError && (
         <p className="text-sm text-destructive">
@@ -106,7 +139,7 @@ function AddFormSection() {
         </p>
       )}
       <Button
-        disabled={!cohort || !label.trim() || !assetUid.trim() || add.isPending}
+        disabled={!cohort || !label.trim() || !assetUid.trim() || !capIsValid || add.isPending}
         onClick={() => add.mutate()}
       >
         Add form
@@ -130,7 +163,8 @@ function FormCard({ form }: { form: KoboForm }) {
         <div>
           <h2 className="font-semibold">{form.label}</h2>
           <p className="text-sm text-muted-foreground">
-            Cohort {form.cohort_name} · {form.asset_uid}
+            Cohort {form.cohort_name} · {form.purpose === "enrolment" ? "Enrolment" : "Verification"} ·{" "}
+            {form.asset_uid}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -149,7 +183,9 @@ function FormCard({ form }: { form: KoboForm }) {
         </div>
       </div>
       <p className="text-sm">
-        {form.applied} applied · {form.held} need review · {form.waiting} waiting
+        {form.purpose === "enrolment"
+          ? `${form.passed} passed · ${form.review} need review · ${form.out} out`
+          : `${form.applied} applied · ${form.held} need review · ${form.waiting} waiting`}
       </p>
       <p className="text-sm text-muted-foreground">
         {form.enabled ? "On" : "Off"} · {lastChecked(form)}

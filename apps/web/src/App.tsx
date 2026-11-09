@@ -34,6 +34,7 @@ import { SettingsLayout } from "@/pages/settings"
 import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { DisplaySettingsPage } from "@/pages/settings/display"
 import { KoboSettingsPage } from "@/pages/settings/kobo"
+import { KoboEnrolmentsPage } from "@/pages/kobo-enrolments"
 import { KoboReviewPage } from "@/pages/kobo-review"
 import { MeStatsSettingsPage } from "@/pages/settings/me-stats"
 import { PaymentSettingsPage } from "@/pages/settings/payments"
@@ -78,6 +79,7 @@ export function App() {
         </Route>
         <Route element={<CapabilityRoute capability="upload_records" />}>
           <Route path="kobo-review" element={<KoboReviewPage />} />
+          <Route path="kobo-enrolments" element={<KoboEnrolmentsPage />} />
         </Route>
         <Route element={<CapabilityRoute capability="me_stats" />}>
           <Route path="me-stats" element={<MeStatsPage />} />

@@ -23,6 +23,7 @@ const titles: Record<string, string> = {
   "/settings/kobo": "Kobo Settings",
   "/settings/display": "Display Settings",
   "/kobo-review": "Kobo Review",
+  "/kobo-enrolments": "Enrolment Holding List",
 }
 
 export function usePageTitle() {
