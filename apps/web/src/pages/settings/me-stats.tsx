@@ -50,7 +50,9 @@ function FigureDialog({
 }) {
   const entered = cell.source === "entered"
   const [paid, setPaid] = useState(entered && cell.paid !== null ? String(cell.paid) : "")
-  const [amount, setAmount] = useState(entered ? (cell.amount ?? "") : "")
+  const [amount, setAmount] = useState(
+    entered && !cell.amount_from_historic ? (cell.amount ?? "") : "",
+  )
   const [terms, setTerms] = useState<number[]>(entered ? cell.terms : [])
 
   const save = useMutation({
@@ -76,7 +78,7 @@ function FigureDialog({
         </DialogDescription>
 
         <div className="mt-4 space-y-4">
-          {cell.source === "system" && (
+          {(cell.source === "system" || cell.source === "historic") && (
             <p className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
               The payment records say {cell.paid?.toLocaleString()} students. What you enter here
               shows instead.

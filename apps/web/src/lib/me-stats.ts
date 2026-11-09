@@ -20,6 +20,10 @@ export function plural(count: number, word: string): string {
   return `${count.toLocaleString()} ${word}${count === 1 ? "" : "s"}`
 }
 
+export function isHistoric(cell: MeStatsCell): boolean {
+  return cell.source === "entered" || cell.source === "historic"
+}
+
 export function isDue(cell: MeStatsCell, thisYear: number): boolean {
   return (
     cell.year === thisYear && cell.paid === null && !cell.graduated && cell.ongoing_terms.length === 0

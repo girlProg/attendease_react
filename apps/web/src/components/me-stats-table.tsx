@@ -6,6 +6,7 @@ import {
   HARDLY_PAID_SHARE,
   NO_PAYMENTS_STRIPES,
   isDue,
+  isHistoric,
   plural,
   rowTitle,
   shortNaira,
@@ -64,7 +65,7 @@ function PaidBody({ cell, students }: { cell: MeStatsCell; students: number }) {
           style={{ width: `${Math.min(100, share * 100)}%` }}
         />
       </span>
-      {cell.source === "entered" && (
+      {isHistoric(cell) && (
         <span className="mt-1 block text-[10px] font-semibold text-sky-800">Historic</span>
       )}
       <OngoingTerms cell={cell} />
@@ -135,7 +136,7 @@ function YearCell({
           {paid.toLocaleString()} of {students.toLocaleString()} paid
         </span>
         <TermsPaid cell={cell} />
-        {cell.source === "entered" && (
+        {isHistoric(cell) && (
           <span className="mt-1 block text-[10px] font-semibold text-sky-800">Historic</span>
         )}
         <OngoingTerms cell={cell} />

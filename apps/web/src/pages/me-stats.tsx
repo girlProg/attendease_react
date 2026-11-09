@@ -9,6 +9,7 @@ import { QueryError } from "@/components/query-error"
 import { useColumnDownload } from "@/hooks/use-column-download"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { getMeStats, meStatsExport, type MeStatsRow } from "@/api/me-stats"
+import { plural } from "@/lib/me-stats"
 
 type View = { kind: "table" } | { kind: "summary" } | { kind: "row"; cohort: number; entryClass: string }
 
@@ -95,6 +96,20 @@ export function MeStatsPage() {
       )}
 
       <MeStatsGrid data={data} isLoading={isLoading} onOpen={openRow} />
+
+      {data && data.historic_not_placed.length > 0 && (
+        <div className="text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Historic payments not in a class row</p>
+          <ul className="mt-1 space-y-0.5">
+            {data.historic_not_placed.map((entry) => (
+              <li key={`${entry.cohort}-${entry.year}`}>
+                {entry.title}, {entry.year}: {plural(entry.students, "student")}, ₦
+                {Number(entry.amount).toLocaleString()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">
         Historic: from the programme&apos;s records. Ongoing: open for payment, with students not yet

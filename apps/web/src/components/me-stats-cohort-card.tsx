@@ -6,6 +6,7 @@ import {
   NO_PAYMENTS_STRIPES,
   hasNoPayments,
   isDue,
+  isHistoric,
   plural,
   rowTitle,
   shortNaira,
@@ -75,7 +76,7 @@ function YearSegment({
       ))}
       {due && <p className="text-[11px] font-bold text-sidebar">Due now</p>}
       {noPayments && <p className="text-[11px] font-bold text-orange-800">No payments</p>}
-      {cell.source === "entered" && (
+      {isHistoric(cell) && (
         <p className="text-[10px] font-semibold text-sky-800">Historic</p>
       )}
     </div>
