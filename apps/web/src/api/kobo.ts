@@ -22,6 +22,8 @@ export interface KoboForm {
   passed: number
   review: number
   out: number
+  kept: number
+  removed: number
   enrolled: number
   // Whether this server has the token it needs. The token itself never leaves it.
   token_configured: boolean

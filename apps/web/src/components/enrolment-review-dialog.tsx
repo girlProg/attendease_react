@@ -97,7 +97,7 @@ export function EnrolmentReviewDialog({
   const schoolProblem = SCHOOL_PROBLEMS.some((problem) => enrolment.reason.includes(problem))
   const canKeep = enrolment.outcome !== "passed" && enrolment.step !== NO_STUDENT_NIN_STEP
   // Going against what the rules decided has to say why.
-  const keepNeedsNote = enrolment.outcome === "out"
+  const keepNeedsNote = canKeep && enrolment.outcome === "out"
   const removeNeedsNote = enrolment.outcome === "passed"
   const hasNote = note.trim() !== ""
 
@@ -121,7 +121,8 @@ export function EnrolmentReviewDialog({
           </div>
         )}
 
-        <div className="mt-4 space-y-3 border-t pt-4">
+        {/* Stays in view while the photos above are scrolled through. */}
+        <div className="sticky -bottom-6 -mx-6 -mb-6 mt-4 space-y-3 border-t bg-white px-6 py-4">
           {enrolment.is_enrolled ? (
             <p className="text-sm">
               Enrolled as {enrolment.beneficiary_id}. To change this, reverse the upload in Upload
