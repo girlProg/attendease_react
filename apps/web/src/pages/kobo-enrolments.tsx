@@ -12,6 +12,7 @@ import {
 } from "@workspace/ui/components/table"
 import { EnrolmentReviewDialog } from "@/components/enrolment-review-dialog"
 import { PaginationBar } from "@/components/pagination-bar"
+import { PillTabs } from "@/components/pill-tabs"
 import { QueryError } from "@/components/query-error"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
@@ -69,18 +70,11 @@ export function KoboEnrolmentsPage() {
   return (
     <div className="space-y-5">
       {forms.data.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {forms.data.map((item) => (
-            <Button
-              key={item.id}
-              size="sm"
-              variant={item.id === form.id ? "default" : "outline"}
-              onClick={() => setFormId(item.id)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
+        <PillTabs
+          tabs={forms.data.map((item) => ({ value: String(item.id), label: item.label }))}
+          active={String(form.id)}
+          onChange={(value) => setFormId(Number(value))}
+        />
       )}
       <FormResults key={form.id} form={form} />
     </div>
@@ -102,6 +96,11 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
 
   return (
     <div className="space-y-5">
+      <PillTabs
+        tabs={STATES.map((item) => ({ ...item, count: form[item.value] }))}
+        active={state}
+        onChange={setState}
+      />
       <p className="text-sm text-muted-foreground">
         Cohort {form.cohort_name} · at most {form.household_cap} students to a household ·{" "}
         {form.last_checked_at
@@ -109,17 +108,6 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
           : "Not checked yet"}
         . Nobody here is enrolled yet, and a result can change as more arrive.
       </p>
-      <div className="flex flex-wrap gap-2">
-        {STATES.map((item) => (
-          <Button
-            key={item.value}
-            variant={item.value === state ? "default" : "outline"}
-            onClick={() => setState(item.value)}
-          >
-            {item.label}: {form[item.value].toLocaleString()}
-          </Button>
-        ))}
-      </div>
       <PaginationBar
         totalPages={totalPages}
         currentPage={page}
