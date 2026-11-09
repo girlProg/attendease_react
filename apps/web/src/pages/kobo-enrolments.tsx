@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { EnrolmentReviewDialog } from "@/components/enrolment-review-dialog"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableSkeletonRows } from "@/components/skeleton"
@@ -20,19 +21,29 @@ import {
   getKoboEnrolments,
   type KoboEnrolment,
   type KoboEnrolmentForm,
-  type KoboEnrolmentOutcome,
+  type KoboEnrolmentState,
 } from "@/api/kobo"
 
-const COLUMN_COUNT = 5
-const OUTCOMES: { value: Exclude<KoboEnrolmentOutcome, "waiting">; label: string }[] = [
+const COLUMN_COUNT = 6
+const STATES: { value: KoboEnrolmentState; label: string }[] = [
   { value: "review", label: "Needs review" },
   { value: "out", label: "Out" },
   { value: "passed", label: "Passed" },
+  { value: "kept", label: "Kept" },
+  { value: "removed", label: "Removed" },
 ]
 
 function matchesText(enrolment: KoboEnrolment): string {
   const all = [...enrolment.matches, ...enrolment.compare_photos_with]
   return all.length ? `Matched with ${all.join(", ")}` : ""
+}
+
+function decisionText(enrolment: KoboEnrolment): string {
+  if (!enrolment.decision) return ""
+  const who = enrolment.decided_by_name ? ` by ${enrolment.decided_by_name}` : ""
+  return `${enrolment.decision === "keep" ? "Kept" : "Removed"}${who}${
+    enrolment.decision_note ? `: ${enrolment.decision_note}` : ""
+  }`
 }
 
 /**
@@ -77,11 +88,12 @@ export function KoboEnrolmentsPage() {
 }
 
 function FormResults({ form }: { form: KoboEnrolmentForm }) {
-  const [outcome, setOutcome] = useState<Exclude<KoboEnrolmentOutcome, "waiting">>("review")
-  const { page, setPage, pageSize, handleRowsChange } = usePagination([outcome])
+  const [state, setState] = useState<KoboEnrolmentState>("review")
+  const [reviewing, setReviewing] = useState<KoboEnrolment | null>(null)
+  const { page, setPage, pageSize, handleRowsChange } = usePagination([state])
   const enrolments = useQuery({
-    queryKey: ["kobo-enrolments", form.id, outcome, page, pageSize],
-    queryFn: () => getKoboEnrolments(form.id, outcome, page, pageSize),
+    queryKey: ["kobo-enrolments", form.id, state, page, pageSize],
+    queryFn: () => getKoboEnrolments(form.id, state, page, pageSize),
   })
 
   if (enrolments.isError) return <QueryError />
@@ -98,11 +110,11 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
         . Nobody here is enrolled yet, and a result can change as more arrive.
       </p>
       <div className="flex flex-wrap gap-2">
-        {OUTCOMES.map((item) => (
+        {STATES.map((item) => (
           <Button
             key={item.value}
-            variant={item.value === outcome ? "default" : "outline"}
-            onClick={() => setOutcome(item.value)}
+            variant={item.value === state ? "default" : "outline"}
+            onClick={() => setState(item.value)}
           >
             {item.label}: {form[item.value].toLocaleString()}
           </Button>
@@ -124,6 +136,7 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
               <TableHead>Officer</TableHead>
               <TableHead>Why</TableHead>
               <TableHead>Numbers not used</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,8 +157,14 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
                 <TableCell className="max-w-sm whitespace-normal">
                   <div>{enrolment.reason}</div>
                   <div className="text-xs text-muted-foreground">{matchesText(enrolment)}</div>
+                  <div className="text-xs font-medium">{decisionText(enrolment)}</div>
                 </TableCell>
                 <TableCell>{enrolment.blanked.join(", ")}</TableCell>
+                <TableCell>
+                  <Button size="sm" variant="outline" onClick={() => setReviewing(enrolment)}>
+                    Review
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {enrolments.data && rows.length === 0 && (
@@ -158,6 +177,9 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
           </TableBody>
         </Table>
       </div>
+      {reviewing && (
+        <EnrolmentReviewDialog enrolment={reviewing} onClose={() => setReviewing(null)} />
+      )}
     </div>
   )
 }

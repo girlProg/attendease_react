@@ -1,14 +1,6 @@
-import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
 import {
   Table,
   TableBody,
@@ -17,12 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { KoboSchoolChoice } from "@/components/kobo-school-choice"
 import { PaginationBar } from "@/components/pagination-bar"
 import { QueryError } from "@/components/query-error"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
-import { getLGAs, getSchools } from "@/api/attendance"
 import {
   getHeldKoboSubmissions,
   resolveKoboSubmission,
@@ -32,12 +24,6 @@ import {
 
 const COLUMN_COUNT = 5
 const SCHOOL_NOT_ON_MIS = "School not on the MIS"
-
-// Kobo sends an LGA as its form code ("BIRNIN_GWARI"), the MIS as a name.
-function sameLga(first: string, second: string): boolean {
-  const letters = (text: string) => text.toLowerCase().replace(/[^a-z]/g, "")
-  return letters(first) === letters(second)
-}
 
 /**
  * Kobo verification submissions that need a person: the student wasn't found, a
@@ -100,21 +86,12 @@ export function KoboReviewPage() {
 
 function HeldRow({ submission }: { submission: KoboSubmission }) {
   const queryClient = useQueryClient()
-  const [school, setSchool] = useState("")
   const resolve = useMutation({
     mutationFn: ({ action, schoolId }: { action: KoboResolution; schoolId?: number }) =>
       resolveKoboSubmission(submission.id, action, schoolId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kobo-held"] }),
   })
   const schoolProblem = submission.reason.startsWith(SCHOOL_NOT_ON_MIS)
-  const lgas = useQuery({ queryKey: ["lgas"], queryFn: getLGAs, enabled: schoolProblem })
-  const lga = lgas.data?.find((item) => sameLga(item.name, submission.lga))
-  const schools = useQuery({
-    queryKey: ["schools", lga?.id],
-    queryFn: () => getSchools(lga?.id),
-    enabled: Boolean(lga),
-  })
-  const chosen = schools.data?.find((item) => String(item.id) === school)
 
   return (
     <TableRow>
@@ -125,35 +102,12 @@ function HeldRow({ submission }: { submission: KoboSubmission }) {
       <TableCell>
         <div className="flex min-w-56 flex-col gap-2">
           {schoolProblem && (
-            <>
-              <Select value={school} onValueChange={(value) => setSchool(value ?? "")}>
-                <SelectTrigger aria-label="School on the MIS" className="w-full">
-                  <SelectValue>{chosen?.name ?? "Choose a school on the MIS"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {schools.data?.map((item) => (
-                    <SelectItem key={item.id} value={String(item.id)}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                disabled={!school || resolve.isPending}
-                onClick={() => resolve.mutate({ action: "use_school", schoolId: Number(school) })}
-              >
-                Use this school
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={resolve.isPending}
-                onClick={() => resolve.mutate({ action: "add_school" })}
-              >
-                Add as a new school
-              </Button>
-            </>
+            <KoboSchoolChoice
+              lga={submission.lga}
+              disabled={resolve.isPending}
+              onUse={(schoolId) => resolve.mutate({ action: "use_school", schoolId })}
+              onAdd={() => resolve.mutate({ action: "add_school" })}
+            />
           )}
           <div className="flex gap-2">
             <Button
