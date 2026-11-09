@@ -23,6 +23,16 @@ export interface KoboForm {
   out: number
   // Whether this server has the token it needs. The token itself never leaves it.
   token_configured: boolean
+  // Submissions are saved: its type, cohort and Kobo form ID are then fixed.
+  has_records: boolean
+}
+
+export interface KoboFormDetails {
+  cohort: number
+  asset_uid: string
+  label: string
+  purpose: KoboPurpose
+  household_cap?: number
 }
 
 export type KoboStatus = "pending" | "applied" | "held" | "replaced" | "dismissed"
@@ -50,13 +60,15 @@ export const getKoboForms = () =>
     .get<PaginatedResponse<KoboForm>>("/kobo-forms/", { params: { page_size: 100 } })
     .then((response) => response.data.results)
 
-export const addKoboForm = (form: {
-  cohort: number
-  asset_uid: string
-  label: string
-  purpose: KoboPurpose
-  household_cap?: number
-}) => api.post<KoboForm>("/kobo-forms/", form).then((response) => response.data)
+export const addKoboForm = (form: KoboFormDetails) =>
+  api.post<KoboForm>("/kobo-forms/", form).then((response) => response.data)
+
+export const updateKoboForm = (id: number, form: KoboFormDetails) =>
+  api.patch<KoboForm>(`/kobo-forms/${id}/`, form).then((response) => response.data)
+
+// `confirm` is the form's name, needed once it has saved submissions.
+export const deleteKoboForm = (id: number, confirm: string) =>
+  api.delete(`/kobo-forms/${id}/`, { data: { confirm } })
 
 export const setKoboFormEnabled = (id: number, enabled: boolean) =>
   api.patch<KoboForm>(`/kobo-forms/${id}/`, { enabled }).then((response) => response.data)
