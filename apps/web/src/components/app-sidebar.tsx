@@ -1,4 +1,5 @@
 import {
+  Archive,
   BarChart3,
   BookOpen,
   CalendarDays,
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
   { label: "Attendance", path: "/attendance", icon: ChartPie },
   { label: "Students", path: "/students", icon: Users },
   { label: "Payments", path: "/payments", icon: CreditCard, capability: "view_payments" },
+  { label: "Historic", path: "/historic", icon: Archive },
   { label: "M&E Stats", path: "/me-stats", icon: Table2, capability: "me_stats" },
   { label: "Case Management", path: "/cases", icon: ClipboardList, capability: "case_management" },
   {

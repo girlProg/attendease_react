@@ -32,6 +32,7 @@ import {
   getStudentPayments,
 } from "@/api/attendance"
 import { getCaseDetail } from "@/api/cases"
+import { StudentHistoricRecords } from "@/components/historic-records"
 import { ReplaceCaregiverDialog } from "@/components/replace-caregiver-dialog"
 import { ReplaceStudentDialog } from "@/components/replace-student-dialog"
 import type { HistoryEvent } from "@/api/attendance"
@@ -684,6 +685,8 @@ export function StudentDetailPage() {
           </Table>
         </div>
       </section>
+
+      <StudentHistoricRecords studentId={student.id} />
 
       {/* Everything that has happened to this student, oldest first */}
       <section className="space-y-2">

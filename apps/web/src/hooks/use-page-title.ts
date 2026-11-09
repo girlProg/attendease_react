@@ -24,6 +24,7 @@ const titles: Record<string, string> = {
   "/settings/display": "Display Settings",
   "/kobo-review": "Kobo Review",
   "/kobo-enrolments": "Enrolment Holding List",
+  "/historic": "Historic Records",
 }
 
 export function usePageTitle() {
