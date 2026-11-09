@@ -33,6 +33,8 @@ import { AskPage } from "@/pages/ask"
 import { SettingsLayout } from "@/pages/settings"
 import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { DisplaySettingsPage } from "@/pages/settings/display"
+import { KoboSettingsPage } from "@/pages/settings/kobo"
+import { KoboReviewPage } from "@/pages/kobo-review"
 import { MeStatsSettingsPage } from "@/pages/settings/me-stats"
 import { PaymentSettingsPage } from "@/pages/settings/payments"
 import { TermSettingsPage } from "@/pages/settings/term"
@@ -69,9 +71,13 @@ export function App() {
               <Route path="payments" element={<PaymentSettingsPage />} />
               <Route path="cohorts" element={<CohortSettingsPage />} />
               <Route path="me-stats" element={<MeStatsSettingsPage />} />
+              <Route path="kobo" element={<KoboSettingsPage />} />
               <Route path="display" element={<DisplaySettingsPage />} />
             </Route>
           </Route>
+        </Route>
+        <Route element={<CapabilityRoute capability="upload_records" />}>
+          <Route path="kobo-review" element={<KoboReviewPage />} />
         </Route>
         <Route element={<CapabilityRoute capability="me_stats" />}>
           <Route path="me-stats" element={<MeStatsPage />} />

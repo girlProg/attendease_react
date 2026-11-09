@@ -20,7 +20,9 @@ const titles: Record<string, string> = {
   "/settings/payments": "Payment Settings",
   "/settings/cohorts": "Cohort Settings",
   "/settings/me-stats": "M&E Stats Settings",
+  "/settings/kobo": "Kobo Settings",
   "/settings/display": "Display Settings",
+  "/kobo-review": "Kobo Review",
 }
 
 export function usePageTitle() {

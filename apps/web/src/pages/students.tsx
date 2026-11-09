@@ -1,5 +1,6 @@
 import { StudentLink } from "@/components/student-link"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
@@ -68,6 +69,12 @@ export function StudentsPage() {
           <>
             <UploadRecordsDialog />
             <UploadBatchesDialog />
+            <Link
+              to="/kobo-review"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-sidebar bg-white px-5 text-sm font-medium text-sidebar hover:bg-sidebar/5"
+            >
+              Kobo Review
+            </Link>
           </>
         )}
         {canWrite && (

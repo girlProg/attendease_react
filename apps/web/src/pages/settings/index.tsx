@@ -10,6 +10,7 @@ const PAGES = [
   { label: "Payments", path: "/settings/payments", superuserOnly: true },
   { label: "Cohorts", path: "/settings/cohorts", superuserOnly: true },
   { label: "M&E Stats", path: "/settings/me-stats", superuserOnly: true },
+  { label: "Kobo", path: "/settings/kobo", superuserOnly: true },
   { label: "Display", path: "/settings/display", superuserOnly: true },
 ] as const
 
