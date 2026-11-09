@@ -179,7 +179,8 @@ function AddFormSection() {
       <p className="flex items-start gap-2 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />
         The form ID is the part after /forms/ in the form's Kobo address. A new form starts off. An
-        enrolment form only fills the Enrolment Holding List: nobody is enrolled from it yet.
+        enrolment form fills the Enrolment Holding List, and students are made from it at Close and
+        enrol.
       </p>
       <FormFields draft={draft} onChange={(changes) => setDraft({ ...draft, ...changes })} />
       {add.isError && (
@@ -329,7 +330,7 @@ function FormCard({ form }: { form: KoboForm }) {
       {open === "delete" && <DeleteFormDialog form={form} onClose={() => setOpen(null)} />}
       <p className="text-sm">
         {form.purpose === "enrolment"
-          ? `${form.passed} passed · ${form.review} need review · ${form.out} out`
+          ? `${form.passed} passed · ${form.review} need review · ${form.out} out · ${form.enrolled} enrolled`
           : `${form.applied} applied · ${form.held} need review · ${form.waiting} waiting`}
       </p>
       <p className="text-sm text-muted-foreground">

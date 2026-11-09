@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import { downloadFile } from "@/lib/blob-download"
 import type { PaginatedResponse } from "@/types"
 
 export type KoboPurpose = "verification" | "enrolment"
@@ -21,6 +22,7 @@ export interface KoboForm {
   passed: number
   review: number
   out: number
+  enrolled: number
   // Whether this server has the token it needs. The token itself never leaves it.
   token_configured: boolean
   // Submissions are saved: its type, cohort and Kobo form ID are then fixed.
@@ -118,9 +120,25 @@ export interface KoboEnrolment {
   decision_note: string
   decided_at: string | null
   decided_by_name: string
+  is_enrolled: boolean
+  beneficiary_id: string
 }
 
-export type KoboEnrolmentState = "review" | "out" | "passed" | "kept" | "removed"
+export type KoboEnrolmentState = "review" | "out" | "passed" | "kept" | "removed" | "enrolled"
+
+// What closing a form would do, and once done, what it did.
+export interface EnrolmentCloseResult {
+  to_enrol: number
+  review: number
+  out: number
+  removed: number
+  enrolled: number
+  new_schools: string[]
+  problems: string[]
+  problem_count: number
+  can_close: boolean
+  batch_id?: number
+}
 
 export interface KoboEnrolmentForm extends Record<KoboEnrolmentState, number> {
   id: number
@@ -180,6 +198,26 @@ export const getEnrolmentComparison = (id: number) =>
   api
     .get<EnrolmentComparison>(`/kobo-enrolments/${id}/compare/`)
     .then((response) => response.data)
+
+export const previewEnrolmentClose = (form: number) =>
+  api
+    .post<EnrolmentCloseResult>("/kobo-enrolments/close/", { form })
+    .then((response) => response.data)
+
+export const closeEnrolmentForm = (form: number, verified: boolean, confirm: string) =>
+  api
+    .post<EnrolmentCloseResult>("/kobo-enrolments/close/", {
+      form,
+      commit: true,
+      verified,
+      confirm,
+    })
+    .then((response) => response.data)
+
+export const downloadEnrolmentRemovalList = (form: number) =>
+  downloadFile("/kobo-enrolments/removal-list/", "Enrolment removal list.csv", {
+    params: { form },
+  })
 
 export const decideKoboEnrolment = (
   id: number,

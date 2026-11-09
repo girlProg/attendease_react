@@ -122,7 +122,12 @@ export function EnrolmentReviewDialog({
         )}
 
         <div className="mt-4 space-y-3 border-t pt-4">
-          {decided ? (
+          {enrolment.is_enrolled ? (
+            <p className="text-sm">
+              Enrolled as {enrolment.beneficiary_id}. To change this, reverse the upload in Upload
+              History.
+            </p>
+          ) : decided ? (
             <>
               <p className="text-sm">
                 {enrolment.decision === "keep" ? "Kept" : "Removed"}

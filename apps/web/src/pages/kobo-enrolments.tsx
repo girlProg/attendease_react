@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { CloseEnrolmentDialog } from "@/components/close-enrolment-dialog"
 import { EnrolmentReviewDialog } from "@/components/enrolment-review-dialog"
 import { PaginationBar } from "@/components/pagination-bar"
 import { PillTabs } from "@/components/pill-tabs"
@@ -18,6 +19,7 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { usePagination } from "@/hooks/use-pagination"
 import {
+  downloadEnrolmentRemovalList,
   getKoboEnrolmentForms,
   getKoboEnrolments,
   type KoboEnrolment,
@@ -32,6 +34,7 @@ const STATES: { value: KoboEnrolmentState; label: string }[] = [
   { value: "passed", label: "Passed" },
   { value: "kept", label: "Kept" },
   { value: "removed", label: "Removed" },
+  { value: "enrolled", label: "Enrolled" },
 ]
 
 function matchesText(enrolment: KoboEnrolment): string {
@@ -49,7 +52,7 @@ function decisionText(enrolment: KoboEnrolment): string {
 
 /**
  * Enrolment submissions from Kobo, checked by the cleaning rules every 15 minutes.
- * Nobody here is a student yet. A result can change as more submissions arrive.
+ * They become students at Close and enrol. A result can change as more arrive.
  */
 export function KoboEnrolmentsPage() {
   useLogVisit("Beneficiaries", "Visited Enrolment Holding List")
@@ -84,6 +87,7 @@ export function KoboEnrolmentsPage() {
 function FormResults({ form }: { form: KoboEnrolmentForm }) {
   const [state, setState] = useState<KoboEnrolmentState>("review")
   const [reviewing, setReviewing] = useState<KoboEnrolment | null>(null)
+  const [closing, setClosing] = useState(false)
   const { page, setPage, pageSize, handleRowsChange } = usePagination([state])
   const enrolments = useQuery({
     queryKey: ["kobo-enrolments", form.id, state, page, pageSize],
@@ -106,8 +110,20 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
         {form.last_checked_at
           ? `Last checked ${new Date(form.last_checked_at).toLocaleString()}`
           : "Not checked yet"}
-        . Nobody here is enrolled yet, and a result can change as more arrive.
+        . Nobody becomes a student until Close and enrol, and a result can change as more arrive.
       </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          className="h-11 rounded-full border-sidebar !bg-white px-5 text-sidebar hover:bg-sidebar/5"
+          onClick={() => downloadEnrolmentRemovalList(form.id)}
+        >
+          Download removal list
+        </Button>
+        <Button className="h-11 rounded-full px-5" onClick={() => setClosing(true)}>
+          Close and enrol
+        </Button>
+      </div>
       <PaginationBar
         totalPages={totalPages}
         currentPage={page}
@@ -134,7 +150,10 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
                 <TableCell>
                   <div>{enrolment.student_name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {enrolment.class_level} · KOBO-{enrolment.submission_id}
+                    {enrolment.class_level} ·{" "}
+                    {enrolment.is_enrolled
+                      ? enrolment.beneficiary_id
+                      : `KOBO-${enrolment.submission_id}`}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -168,6 +187,7 @@ function FormResults({ form }: { form: KoboEnrolmentForm }) {
       {reviewing && (
         <EnrolmentReviewDialog enrolment={reviewing} onClose={() => setReviewing(null)} />
       )}
+      {closing && <CloseEnrolmentDialog form={form} onClose={() => setClosing(false)} />}
     </div>
   )
 }
