@@ -68,7 +68,6 @@ function TermRow({
   schoolName,
   year,
   totalEnrolled,
-  cohort,
   onCellClick,
 }: {
   term: AttendanceSummaryTerm
@@ -76,7 +75,6 @@ function TermRow({
   schoolName: string
   year: string
   totalEnrolled: number
-  cohort?: string
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   const termAverage = term.weeks.length > 0
@@ -92,7 +90,7 @@ function TermRow({
             key={week.week}
             week={week.week}
             coverage={week.coverage}
-            onClick={() => onCellClick({ schoolId, schoolName, year, term: term.term, week: week.week, totalEnrolled, cohort })}
+            onClick={() => onCellClick({ schoolId, schoolName, year, term: term.term, week: week.week, totalEnrolled })}
           />
         ))}
       </div>
@@ -103,11 +101,9 @@ function TermRow({
 
 function SchoolHeatmap({
   summary,
-  cohort,
   onCellClick,
 }: {
   summary: AttendanceSummary
-  cohort?: string
   onCellClick: (cell: AttendanceDialogCell) => void
 }) {
   return (
@@ -125,7 +121,6 @@ function SchoolHeatmap({
               schoolName={summary.school.name}
               year={year.year}
               totalEnrolled={summary.total_enrolled}
-              cohort={cohort}
               onCellClick={onCellClick}
             />
           ))}
@@ -209,7 +204,7 @@ function SchoolSummaryRow({
 }: {
   schoolId: number
   index: number
-  cohort?: string
+  cohort?: number
   // The server applies the viewer's own choice; keyed here so a switch refetches.
   uploadedOnly: boolean
   onCellClick: (cell: AttendanceDialogCell) => void
@@ -253,7 +248,7 @@ function SchoolSummaryRow({
         </div>
       </TableCell>
       <TableCell>
-        <SchoolHeatmap summary={summary} cohort={cohort} onCellClick={onCellClick} />
+        <SchoolHeatmap summary={summary} onCellClick={onCellClick} />
       </TableCell>
     </TableRow>
   )
@@ -262,12 +257,9 @@ function SchoolSummaryRow({
 export function Statistics({
   scope,
   ready,
-  cohortName,
 }: {
   scope: FilterScope
   ready: boolean
-  // The capture summary endpoint matches the cohort by its (exact) name.
-  cohortName?: string
 }) {
   const [selectedCell, setSelectedCell] = useState<AttendanceDialogCell | null>(null)
 
@@ -283,7 +275,6 @@ export function Statistics({
     enabled: ready,
   })
   const isLoading = isFetchingFirst || !ready
-  const summaryCohort = scope.cohort ? cohortName : undefined
 
   return (
     <div className="space-y-4">
@@ -327,7 +318,7 @@ export function Statistics({
                   key={school.id}
                   schoolId={school.id}
                   index={index}
-                  cohort={summaryCohort}
+                  cohort={scope.cohort}
                   uploadedOnly={uploadedOnly}
                   onCellClick={(cell) => setSelectedCell({ ...cell, cohortId: scope.cohort })}
                 />

@@ -116,7 +116,7 @@ export function AttendancePage() {
         <Registers scope={scopeParams} ready={scopeReady} schoolName={filters.school} />
       )}
       {activeTab === "Statistics" && (
-        <Statistics scope={scopeParams} ready={scopeReady} cohortName={filters.cohort} />
+        <Statistics scope={scopeParams} ready={scopeReady} />
       )}
     </div>
   )

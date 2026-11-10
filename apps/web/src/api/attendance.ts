@@ -777,9 +777,9 @@ export const getTermAverages = (params: {
     }[];
   }> & { summary?: TermAveragesSummary }>("/student/term-averages/", { params }).then((response) => response.data);
 
-export const getAttendanceSummary = (schoolId: number, cohort?: string, year?: string) => {
-  const params: Record<string, string> = {};
-  if (cohort) params.cohort = cohort;
+export const getAttendanceSummary = (schoolId: number, cohortId?: number, year?: string) => {
+  const params: Record<string, string | number> = {};
+  if (cohortId) params.cohort = cohortId;
   if (year) params.year = year;
   return api
     .get<AttendanceSummary>(`/school/${schoolId}/attendance-summary/`, { params })

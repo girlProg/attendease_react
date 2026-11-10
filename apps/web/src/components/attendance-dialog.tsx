@@ -21,7 +21,6 @@ export interface AttendanceDialogCell {
   term: number
   week: number
   totalEnrolled?: number
-  cohort?: string
   // The cohort shown on the page, by ID — attendance is filtered by it.
   cohortId?: number
 }
