@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { HistoricFigures } from "@/components/historic-panel"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
@@ -187,6 +188,8 @@ export function Overview({
           <StatCard key={stat.label} {...stat} loading={isLoading} />
         ))}
       </div>
+
+      <HistoricFigures scope={params} ready={ready} />
 
       {/* Switched on by a superuser (Settings > Display). Follows the cohort, LGA
           and school filters; the term doesn't change who is in a cohort. */}

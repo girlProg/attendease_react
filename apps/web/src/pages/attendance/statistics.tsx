@@ -13,6 +13,7 @@ import { getSchools, getAttendanceSummary } from "@/api/attendance"
 import { api } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
 import { AttendanceDialog } from "@/components/attendance-dialog"
+import { HistoricAttendanceByTerm } from "@/components/historic-panel"
 import type { AttendanceDialogCell } from "@/components/attendance-dialog"
 import { getTermLabel, formatAcademicYear, roundUpPercent } from "@/lib/formatters"
 import type { AttendanceSummary, AttendanceSummaryTerm, UserProfile } from "@/types"
@@ -335,6 +336,8 @@ export function Statistics({
           </Table>
         </div>
       )}
+
+      <HistoricAttendanceByTerm scope={scope} ready={ready} />
 
       {selectedCell && (
         <AttendanceDialog cell={selectedCell} onClose={() => setSelectedCell(null)} />

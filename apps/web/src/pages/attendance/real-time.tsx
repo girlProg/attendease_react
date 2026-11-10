@@ -12,6 +12,7 @@ import {
 } from "@workspace/ui/components/table"
 import { PaginationBar } from "@/components/pagination-bar"
 import { AttendanceTable } from "@/components/attendance-table"
+import { HistoricPanel } from "@/components/historic-panel"
 import { InactiveSchoolNotice } from "@/components/inactive-school-notice"
 import { SearchBar } from "@/components/search-bar"
 import { TableEmptyState } from "@/components/table-empty-state"
@@ -196,6 +197,8 @@ export function RealTime({
           </div>
         )}
       </div>
+
+      <HistoricPanel kind="attendance" scope={scope} ready={ready} />
 
       {view !== "weeks" && (
         <PaginationBar

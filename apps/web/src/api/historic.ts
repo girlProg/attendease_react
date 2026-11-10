@@ -49,5 +49,26 @@ const list = <Row>(path: string) => (params: HistoricParams) =>
 export const getHistoricAttendance = list<HistoricAttendance>("/historic-attendance/")
 export const getHistoricPayments = list<HistoricPayment>("/historic-payment/")
 
-export const downloadHistoric = (kind: "attendance" | "payment", params: HistoricParams) =>
+interface HistoricFigures {
+  records: number
+  students: number
+  // Attendance only.
+  average?: string | null
+  // Payments only.
+  amount?: string | null
+}
+
+export interface HistoricSummary extends HistoricFigures {
+  by_term: (HistoricFigures & { year: number; term: number })[]
+}
+
+export type HistoricKind = "attendance" | "payment"
+
+// Totals for a page's filters, shown marked Historic beside its own figures.
+export const getHistoricSummary = (kind: HistoricKind, params: HistoricParams) =>
+  api
+    .get<HistoricSummary>(`/historic-${kind}/summary/`, { params })
+    .then((response) => response.data)
+
+export const downloadHistoric = (kind: HistoricKind, params: HistoricParams) =>
   downloadFile(`/historic-${kind}/export/`, `Historic ${kind}.csv`, { params })

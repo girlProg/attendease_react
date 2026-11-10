@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
+import { HistoricFigures } from "@/components/historic-panel"
 import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
@@ -121,6 +122,8 @@ export function DashboardPage() {
           <StatCard key={stat.label} {...stat} loading={isSummaryLoading} />
         ))}
       </div>
+
+      <HistoricFigures scope={scopeParams} ready={scopeReady} />
 
       <div className="grid grid-cols-1 gap-4">
         <BarChart

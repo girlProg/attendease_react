@@ -34,7 +34,6 @@ import { SettingsLayout } from "@/pages/settings"
 import { CohortSettingsPage } from "@/pages/settings/cohorts"
 import { DisplaySettingsPage } from "@/pages/settings/display"
 import { KoboSettingsPage } from "@/pages/settings/kobo"
-import { HistoricPage } from "@/pages/historic"
 import { KoboEnrolmentsPage } from "@/pages/kobo-enrolments"
 import { KoboReviewPage } from "@/pages/kobo-review"
 import { MeStatsSettingsPage } from "@/pages/settings/me-stats"
@@ -61,7 +60,6 @@ export function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="attendance/new" element={<NewAttendancePage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="historic" element={<HistoricPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route element={<CapabilityRoute capability="reports" />}>
           <Route path="analytics" element={<ReportsPage />} />

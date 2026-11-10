@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
+import { HistoricPanel } from "@/components/historic-panel"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { SearchBar } from "@/components/search-bar"
 import { QueryError } from "@/components/query-error"
@@ -232,6 +233,8 @@ export function PaymentsPage() {
     <div className="space-y-6">
       {/* Filters */}
       <AttendanceFilterBar filters={filters} setFilter={setFilter} options={options} keys={PAYMENT_FILTERS} />
+
+      <HistoricPanel kind="payment" scope={scopeParams} ready={scopeReady} />
 
       {scopeNotes.length > 0 && (
         <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">

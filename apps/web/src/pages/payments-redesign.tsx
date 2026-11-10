@@ -32,6 +32,7 @@ import {
 } from "@workspace/ui/components/table"
 import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { HistoricPanel } from "@/components/historic-panel"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
 import { getCohorts, getNoObjectionStatus, getTermAverages, paymentsExport } from "@/api/attendance"
@@ -512,6 +513,8 @@ export function NewPaymentsPage() {
           {statusPill.label}
         </span>
       </div>
+
+      <HistoricPanel kind="payment" scope={scopeParams} ready={scopeReady} />
 
       {/* Stat strip */}
       <div className="grid grid-cols-2 rounded-2xl bg-white shadow-[0_4px_14px_rgb(75_63_214/0.06)] md:grid-cols-4">
