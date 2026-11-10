@@ -18,7 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { HistoricFigures } from "@/components/historic-panel"
 import { PercentageBadge } from "@/components/percentage-badge"
 import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
@@ -29,6 +28,7 @@ import { useScInsWord } from "@/hooks/use-sc-ins-word"
 import { getAttendanceOverview } from "@/api/attendance"
 import type { FilterScope } from "@/hooks/use-attendance-filters"
 import { formatNaira, roundUpPercent } from "@/lib/formatters"
+import { includesHistoric } from "@/lib/historic-format"
 
 function percentOf(part: number, whole: number): number {
   return whole > 0 ? roundUpPercent((part / whole) * 100) : 0
@@ -65,6 +65,12 @@ export function Overview({
   const active = data?.active_students ?? 0
   const recorded = data?.students_with_attendance ?? 0
   const graduated = data?.graduated_students ?? 0
+  // Part of the recorded and payment totals; the shares of today's students
+  // and of attempts are worked out without it.
+  const historic = data?.historic
+  const historicStudents = historic?.students ?? 0
+  const historicPayments = historic?.payments ?? 0
+  const paymentsOnMis = (data?.payments_made ?? 0) - historicPayments
   const schools = data?.total_schools ?? 0
   const submitted = data?.submitted
   const enrolledByCohort = data?.enrolled_by_cohort
@@ -91,14 +97,14 @@ export function Overview({
     {
       label: "Attendance Recorded",
       value: recorded.toLocaleString(),
-      sub: `${percentOf(recorded, active)}% of active`,
+      sub: includesHistoric(`${percentOf(recorded - historicStudents, active)}% of active`, historicStudents),
       icon: ClipboardCheck,
       color: "bg-[var(--stat-accent-1)]",
     },
     {
       label: "Average Attendance",
       value: `${data?.average_attendance ?? 0}%`,
-      sub: `across ${recorded.toLocaleString()} students`,
+      sub: includesHistoric(`across ${recorded.toLocaleString()} students`, historicStudents),
       icon: Percent,
       color: "bg-[var(--stat-accent-2)]",
     },
@@ -133,14 +139,17 @@ export function Overview({
     {
       label: "Payments Made",
       value: (data?.payments_made ?? 0).toLocaleString(),
-      sub: `${formatNaira(data?.total_disbursed_amount ?? 0)} disbursed`,
+      sub: includesHistoric(
+        `${formatNaira(data?.total_disbursed_amount ?? 0)} disbursed`,
+        historicPayments,
+      ),
       icon: Banknote,
       color: "bg-[var(--stat-accent-1)]",
     },
     {
       label: "Failed Payments",
       value: (data?.failed_payments ?? 0).toLocaleString(),
-      sub: `${percentOf(data?.failed_payments ?? 0, (data?.payments_made ?? 0) + (data?.failed_payments ?? 0))}% of attempts`,
+      sub: `${percentOf(data?.failed_payments ?? 0, paymentsOnMis + (data?.failed_payments ?? 0))}% of attempts`,
       icon: XCircle,
       color: "bg-[var(--stat-accent-2)]",
     },
@@ -188,8 +197,6 @@ export function Overview({
           <StatCard key={stat.label} {...stat} loading={isLoading} />
         ))}
       </div>
-
-      <HistoricFigures scope={params} ready={ready} />
 
       {/* Switched on by a superuser (Settings > Display). Follows the cohort, LGA
           and school filters; the term doesn't change who is in a cohort. */}

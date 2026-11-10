@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 
 import { AttendanceFilterBar } from "@/components/attendance-filter-bar"
 import { BarChart } from "@/components/bar-chart"
-import { HistoricFigures } from "@/components/historic-panel"
 import { QueryError } from "@/components/query-error"
 import { StatCard } from "@/components/stat-card"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
@@ -12,12 +11,15 @@ import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-fil
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { api } from "@/lib/api"
 import { formatNaira } from "@/lib/formatters"
+import { includesHistoric } from "@/lib/historic-format"
 
 interface DashboardSummary {
   total_students: number
   total_stipends_paid: number
   qualified_students: number
   cash_transfers: number
+  // How much of the stipends and transfers is from before the MIS.
+  historic: { payments: number; amount: number }
 }
 
 interface LgaSummary {
@@ -76,6 +78,7 @@ export function DashboardPage() {
     {
       label: "Total Stipends Paid",
       value: formatNaira(summary?.total_stipends_paid ?? 0),
+      sub: includesHistoric(undefined, summary?.historic.amount ?? 0, formatNaira(summary?.historic.amount ?? 0)),
       icon: Building2,
       color: "bg-[var(--stat-accent-1)]",
     },
@@ -88,6 +91,7 @@ export function DashboardPage() {
     {
       label: "No. Of Cash Transfers",
       value: (summary?.cash_transfers ?? 0).toLocaleString(),
+      sub: includesHistoric(undefined, summary?.historic.payments ?? 0),
       icon: Banknote,
       color: "bg-[var(--stat-accent-1)]",
     },
@@ -122,8 +126,6 @@ export function DashboardPage() {
           <StatCard key={stat.label} {...stat} loading={isSummaryLoading} />
         ))}
       </div>
-
-      <HistoricFigures scope={scopeParams} ready={scopeReady} />
 
       <div className="grid grid-cols-1 gap-4">
         <BarChart

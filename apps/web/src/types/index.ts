@@ -146,6 +146,8 @@ export interface AttendanceOverview {
   active_students: number;
   students_with_attendance: number;
   average_attendance: number;
+  // How much of those totals is from before the MIS.
+  historic: { payments: number; amount: number; students: number };
   qualifying_students: number;
   qualifying_percentage: number;
   // Of the qualifying, those closed all term who qualify as SC-INS.

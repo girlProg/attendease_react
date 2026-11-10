@@ -1,4 +1,17 @@
-import type { HistoricAttendance, HistoricPayment } from "@/api/historic"
+import type { HistoricAttendance, HistoricParams, HistoricPayment } from "@/api/historic"
+import type { FilterScope } from "@/hooks/use-attendance-filters"
+
+// The records have no weeks, so a page's week filter doesn't apply to them.
+export function historicScope({ cohort, lga, school, year, term }: FilterScope): HistoricParams {
+  return { cohort, lga, school, year, term }
+}
+
+/** Added after a total's own note: what part of it is from before the MIS. */
+export function includesHistoric(text: string | undefined, figure: number, shown?: string): string | undefined {
+  if (!figure) return text
+  const part = `incl. ${shown ?? figure.toLocaleString()} Historic`
+  return text ? `${text} · ${part}` : part
+}
 
 export function historicTerm(row: { year: number; term: number }): string {
   return `Term ${row.term}, ${row.year}`

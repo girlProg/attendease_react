@@ -104,7 +104,10 @@ function SidebarNav({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
       data-slot="sidebar-nav"
-      className={cn("flex flex-1 flex-col gap-2.5", className)}
+      className={cn(
+        "-mr-4 flex min-h-0 flex-1 flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pr-4 [scrollbar-width:none]",
+        className
+      )}
       {...props}
     />
   )

@@ -34,6 +34,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLogVisit } from "@/hooks/use-log-visit"
 import { HistoricPanel } from "@/components/historic-panel"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
+import { useHistoricPayments } from "@/hooks/use-historic-payments"
+import { includesHistoric } from "@/lib/historic-format"
 import { usePagination } from "@/hooks/use-pagination"
 import { getCohorts, getNoObjectionStatus, getTermAverages, paymentsExport } from "@/api/attendance"
 import {
@@ -384,6 +386,8 @@ export function NewPaymentsPage() {
   // What Disburse would do here, in words on the button.
   const students = summary?.students ?? totalCount
   const successful = summary?.successful ?? 0
+  // Only ever added to the strip: the school's progress reads the summary alone.
+  const historic = useHistoricPayments(scopeParams, scopeReady)
   const failed = summary?.failed ?? 0
   const notPaid = Math.max(students - successful, 0)
   const disburseLabel = !disbursementsOn
@@ -520,11 +524,17 @@ export function NewPaymentsPage() {
       <div className="grid grid-cols-2 rounded-2xl bg-white shadow-[0_4px_14px_rgb(75_63_214/0.06)] md:grid-cols-4">
         {[
           { label: "Students", value: students.toLocaleString(), className: "text-sidebar-accent-foreground" },
-          { label: "Successful", value: successful.toLocaleString(), className: "text-emerald-700" },
+          {
+            label: "Successful",
+            value: (successful + historic.payments).toLocaleString(),
+            note: includesHistoric(undefined, historic.payments),
+            className: "text-emerald-700",
+          },
           { label: "Failed", value: failed.toLocaleString(), className: "text-orange-600" },
           {
             label: "Total disbursed",
-            value: formatNaira(Number(summary?.total_amount ?? 0)),
+            value: formatNaira(Number(summary?.total_amount ?? 0) + historic.amount),
+            note: includesHistoric(undefined, historic.amount, formatNaira(historic.amount)),
             className: "text-sidebar-accent-foreground",
           },
         ].map((stat, index) => (
@@ -536,6 +546,7 @@ export function NewPaymentsPage() {
             <div className={`text-xl font-bold ${stat.className} ${isLoading ? "opacity-40" : ""}`}>
               {stat.value}
             </div>
+            {stat.note && <div className="text-[11px] text-muted-foreground">{stat.note}</div>}
           </div>
         ))}
       </div>

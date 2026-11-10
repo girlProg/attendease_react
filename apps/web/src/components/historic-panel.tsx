@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Banknote, ClipboardCheck, Percent, Wallet } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
@@ -17,7 +16,6 @@ import { HistoricMarks } from "@/components/historic-records"
 import { PaginationBar } from "@/components/pagination-bar"
 import { SearchBar } from "@/components/search-bar"
 import { TableSkeletonRows } from "@/components/skeleton"
-import { StatCard } from "@/components/stat-card"
 import { useAuth } from "@/contexts/auth-context"
 import type { FilterScope } from "@/hooks/use-attendance-filters"
 import { usePagination } from "@/hooks/use-pagination"
@@ -25,6 +23,7 @@ import { formatNaira, roundUpPercent } from "@/lib/formatters"
 import {
   historicAccount,
   historicAttendanceFigure,
+  historicScope,
   historicTerm,
 } from "@/lib/historic-format"
 import {
@@ -41,11 +40,6 @@ import {
 const COLUMN_COUNT = 6
 const heading = "text-xs font-semibold text-sidebar"
 const cell = "text-xs text-muted-foreground"
-
-// The records have no weeks, so a page's week filter doesn't apply to them.
-function historicScope({ cohort, lga, school, year, term }: FilterScope): HistoricParams {
-  return { cohort, lga, school, year, term }
-}
 
 function averageText(average: string | null | undefined): string {
   return `${roundUpPercent(Number(average ?? 0))}%`
@@ -232,69 +226,6 @@ function Row({
         {row.comment && <div className="mt-1 text-xs text-muted-foreground">{row.comment}</div>}
       </TableCell>
     </TableRow>
-  )
-}
-
-/** Figure cards for a page's filters, set apart from its own and marked Historic. */
-export function HistoricFigures({ scope, ready }: { scope: FilterScope; ready: boolean }) {
-  const { can } = useAuth()
-  const canSeePayments = can("view_payments")
-  const filters = historicScope(scope)
-  const attendance = useQuery({
-    queryKey: ["historic-summary", "attendance", filters],
-    queryFn: () => getHistoricSummary("attendance", filters),
-    enabled: ready,
-  })
-  const payments = useQuery({
-    queryKey: ["historic-summary", "payment", filters],
-    queryFn: () => getHistoricSummary("payment", filters),
-    enabled: ready && canSeePayments,
-  })
-  const attended = attendance.data?.records ? attendance.data : null
-  const paid = payments.data?.records ? payments.data : null
-  if (!attended && !paid) return null
-
-  return (
-    <section className="space-y-3">
-      <HistoricHeading title="Records before the MIS" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {attended && (
-          <>
-            <StatCard
-              label="Attendance Recorded"
-              value={attended.students.toLocaleString()}
-              sub={`${attended.records.toLocaleString()} term records`}
-              icon={ClipboardCheck}
-              color="bg-[var(--stat-accent-1)]"
-            />
-            <StatCard
-              label="Average Attendance"
-              value={averageText(attended.average)}
-              sub={`across ${attended.students.toLocaleString()} students`}
-              icon={Percent}
-              color="bg-[var(--stat-accent-2)]"
-            />
-          </>
-        )}
-        {paid && (
-          <>
-            <StatCard
-              label="Payments Made"
-              value={paid.records.toLocaleString()}
-              sub={`to ${paid.students.toLocaleString()} students`}
-              icon={Banknote}
-              color="bg-[var(--stat-accent-1)]"
-            />
-            <StatCard
-              label="Amount Paid"
-              value={formatNaira(Number(paid.amount ?? 0))}
-              icon={Wallet}
-              color="bg-[var(--stat-accent-2)]"
-            />
-          </>
-        )}
-      </div>
-    </section>
   )
 }
 

@@ -38,6 +38,8 @@ import { TableSkeletonRows } from "@/components/skeleton"
 import { StatCard } from "@/components/stat-card"
 import { PaginationBar } from "@/components/pagination-bar"
 import { useAttendanceFilters, type FilterKey } from "@/hooks/use-attendance-filters"
+import { useHistoricPayments } from "@/hooks/use-historic-payments"
+import { includesHistoric } from "@/lib/historic-format"
 import { usePagination } from "@/hooks/use-pagination"
 import { getTermAverages, getCohorts, paymentsExport } from "@/api/attendance"
 import {
@@ -156,6 +158,8 @@ export function PaymentsPage() {
   // Card figures come from the server over the whole filtered scope — not from
   // the loaded page — so they stay right across pagination and every filter.
   const summary = data?.summary
+  // Only ever added to the cards: the list and Disburse read the summary alone.
+  const historic = useHistoricPayments(scopeParams, scopeReady)
   const listScope = summary?.scope
   // Why the list is short or empty, in the server's own counts.
   const scopeNotes: string[] = []
@@ -210,7 +214,8 @@ export function PaymentsPage() {
     {
       key: "successful",
       label: "Successful Disbursements",
-      value: (summary?.successful ?? 0).toLocaleString(),
+      value: ((summary?.successful ?? 0) + historic.payments).toLocaleString(),
+      sub: includesHistoric(undefined, historic.payments),
       icon: CheckCircle2,
       color: "bg-[var(--stat-accent-2)]",
     },
@@ -223,7 +228,8 @@ export function PaymentsPage() {
     },
     {
       label: "Total Amount Disbursed",
-      value: formatNaira(Number(summary?.total_amount ?? 0)),
+      value: formatNaira(Number(summary?.total_amount ?? 0) + historic.amount),
+      sub: includesHistoric(undefined, historic.amount, formatNaira(historic.amount)),
       icon: Banknote,
       color: "bg-[var(--stat-accent-2)]",
     },
