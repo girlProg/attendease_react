@@ -170,11 +170,17 @@ export interface ComparedRecord extends Record<ComparedField, string> {
   photos: { title: string; path: string; saved: boolean; link: string }[]
   // On a matched record: what it shares with the one under review.
   same?: ComparedField[]
+  // On a student on the MIS: a student of the form's own cohort can be marked verified.
+  student_id?: number
+  verified?: boolean
+  can_mark_verified?: boolean
 }
 
 export interface EnrolmentComparison {
   this: ComparedRecord
   others: ComparedRecord[]
+  // What this submission has to carry over to a student marked verified.
+  carry_over: { key: string; label: string }[]
 }
 
 export type EnrolmentAction = "keep" | "remove" | "undo" | "use_school" | "add_school"
@@ -227,4 +233,12 @@ export const decideKoboEnrolment = (
 ) =>
   api
     .post<KoboEnrolment>(`/kobo-enrolments/${id}/decide/`, body)
+    .then((response) => response.data)
+
+export const markEnrolmentStudentVerified = (
+  id: number,
+  body: { student: number; carry: string[] }
+) =>
+  api
+    .post<KoboEnrolment>(`/kobo-enrolments/${id}/mark-verified/`, body)
     .then((response) => response.data)

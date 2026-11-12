@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
@@ -11,6 +11,7 @@ import { QueryError } from "@/components/query-error"
 import {
   decideKoboEnrolment,
   getEnrolmentComparison,
+  markEnrolmentStudentVerified,
   type ComparedField,
   type ComparedRecord,
   type EnrolmentAction,
@@ -36,7 +37,57 @@ function errorMessage(error: unknown): string {
   return detail ?? "That didn't work. Please try again."
 }
 
-function RecordColumn({ title, record }: { title: string; record: ComparedRecord }) {
+/** A student already in this cohort: mark them verified, carrying over what is ticked. */
+function MarkVerified({
+  record,
+  options,
+  pending,
+  onMark,
+}: {
+  record: ComparedRecord
+  options: { key: string; label: string }[]
+  pending: boolean
+  onMark: (carry: string[]) => void
+}) {
+  const [carry, setCarry] = useState<string[]>([])
+  const toggle = (key: string, ticked: boolean) =>
+    setCarry((current) => (ticked ? [...current, key] : current.filter((item) => item !== key)))
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-border/40 bg-white p-3 text-sm">
+      <p className="font-semibold">
+        {record.verified ? "Already verified" : "Not verified yet"}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        This submission comes out, and {record.reference} is marked verified. Tick what to carry
+        over from the submission; everything else on the record stays as it is.
+      </p>
+      {options.map((option) => (
+        <label key={option.key} className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={carry.includes(option.key)}
+            onChange={(event) => toggle(option.key, event.target.checked)}
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+      <Button disabled={pending} onClick={() => onMark(carry)}>
+        {record.verified ? "Use this record" : "Mark verified"}
+      </Button>
+    </div>
+  )
+}
+
+function RecordColumn({
+  title,
+  record,
+  children,
+}: {
+  title: string
+  record: ComparedRecord
+  children?: ReactNode
+}) {
   return (
     <section className="w-72 shrink-0 space-y-3">
       <div>
@@ -56,6 +107,7 @@ function RecordColumn({ title, record }: { title: string; record: ComparedRecord
           )
         })}
       </dl>
+      {children}
       {record.photos.map((photo) => (
         <PhotoCard
           key={photo.title}
@@ -93,6 +145,16 @@ export function EnrolmentReviewDialog({
       onClose()
     },
   })
+  const markVerified = useMutation({
+    mutationFn: (body: { student: number; carry: string[] }) =>
+      markEnrolmentStudentVerified(enrolment.id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kobo-enrolments"] })
+      queryClient.invalidateQueries({ queryKey: ["kobo-enrolment-forms"] })
+      queryClient.invalidateQueries({ queryKey: ["kobo-enrolment-compare", enrolment.id] })
+      onClose()
+    },
+  })
   const decided = enrolment.decision !== ""
   const schoolProblem = SCHOOL_PROBLEMS.some((problem) => enrolment.reason.includes(problem))
   const canKeep = enrolment.outcome !== "passed" && enrolment.step !== NO_STUDENT_NIN_STEP
@@ -116,9 +178,23 @@ export function EnrolmentReviewDialog({
                 key={other.reference}
                 title={other.on_the_mis ? "On the MIS" : "Another submission"}
                 record={other}
-              />
+              >
+                {other.can_mark_verified && other.student_id && (
+                  <MarkVerified
+                    record={other}
+                    options={comparison.data.carry_over}
+                    pending={markVerified.isPending}
+                    onMark={(carry) =>
+                      markVerified.mutate({ student: other.student_id as number, carry })
+                    }
+                  />
+                )}
+              </RecordColumn>
             ))}
           </div>
+        )}
+        {markVerified.isError && (
+          <p className="mt-2 text-sm text-destructive">{errorMessage(markVerified.error)}</p>
         )}
 
         {/* Stays in view while the photos above are scrolled through. */}
