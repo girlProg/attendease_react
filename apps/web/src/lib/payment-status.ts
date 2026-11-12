@@ -30,6 +30,9 @@ export function transferStatusBadge(status: string | null | undefined, bankStatu
       return { variant: "error", label: bankLabel || "FAILED" }
     case "failed_retryable":
       return { variant: "retry", label: bankLabel ? `${bankLabel} (RETRYABLE)` : "FAILED (RETRYABLE)" }
+    case "awaiting_bank":
+      // The bank's own word here is "Failed", which it couldn't confirm.
+      return { variant: "awaiting_bank", label: "AWAITING BANK CONFIRMATION" }
     default:
       return { variant: "muted", label: status ? status.toUpperCase() : "—" }
   }

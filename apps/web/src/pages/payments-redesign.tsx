@@ -71,7 +71,7 @@ const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", 
 type PaymentRecord = Awaited<ReturnType<typeof getTermAverages>>["results"][number]
 
 // Where a student's payment for the term is, as the tabs sort them.
-type RowStatus = "not_sent" | "queued" | "in_flight" | "unknown" | "failed" | "paid"
+type RowStatus = "not_sent" | "queued" | "in_flight" | "unknown" | "awaiting_bank" | "failed" | "paid"
 
 // Tab names; each row's own badge keeps the bank's status word.
 const TAB_LABEL: Record<RowStatus, string> = {
@@ -79,13 +79,14 @@ const TAB_LABEL: Record<RowStatus, string> = {
   queued: "Queued",
   in_flight: "In flight",
   unknown: "Unknown",
+  awaiting_bank: "Awaiting bank confirmation",
   failed: "Failed",
   paid: "Paid",
 }
 
 // Tabs in the order money moves; Failed and Paid always show, the rest only
 // when someone is in them.
-const TAB_ORDER: RowStatus[] = ["not_sent", "queued", "in_flight", "unknown", "failed", "paid"]
+const TAB_ORDER: RowStatus[] = ["not_sent", "queued", "in_flight", "unknown", "awaiting_bank", "failed", "paid"]
 const ALWAYS_SHOWN: RowStatus[] = ["failed", "paid"]
 
 const DISMISSED_KEY = "payments-dismissed-run"
@@ -360,6 +361,7 @@ export function NewPaymentsPage() {
     if (payment?.disbursed || status === "successful") return "paid"
     if (status === "failed" || status === "failed_retryable") return "failed"
     if (status === "unknown") return "unknown"
+    if (status === "awaiting_bank") return "awaiting_bank"
     if (status === "sending" || status === "submitted" || status === "processing") return "in_flight"
     // Not at the bank yet: queued while this school's payout is going out.
     return running && runIsHere ? "queued" : "not_sent"

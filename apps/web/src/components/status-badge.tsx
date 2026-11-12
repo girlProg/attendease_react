@@ -11,6 +11,8 @@ const variantClasses = {
   unknown: "border border-violet-200 bg-violet-50 text-violet-700",
   // Uploaded to the bank, awaiting its first status.
   submitted: "border border-indigo-200 bg-indigo-50 text-indigo-700",
+  // The bank couldn't confirm it; held, never sent again, until it does.
+  awaiting_bank: "border border-teal-200 bg-teal-50 text-teal-700",
   // No transaction at all — dashed outline, deliberately quieter.
   muted: "border border-dashed border-slate-300 bg-white text-slate-500",
 } as const

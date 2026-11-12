@@ -67,6 +67,7 @@ const TRANSFER_STATUSES = new Set([
   "failed",
   "failed_retryable",
   "unknown",
+  "awaiting_bank",
 ])
 
 function StatusCell({ event }: { event: PaymentAuditEvent }) {
