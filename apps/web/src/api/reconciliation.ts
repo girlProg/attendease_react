@@ -5,7 +5,7 @@ import type { PaginatedResponse } from "@/types"
 // Payments › Reconciliation: a Zenith statement matched against the transfers
 // we sent, narration by narration. The statement and its result are kept.
 
-export type FindingKind = "paid_twice" | "paid_not_recorded" | "recorded_not_debited"
+export type FindingKind = "paid_twice" | "paid_not_recorded" | "recorded_not_debited" | "yet_to_reconcile"
 
 export interface ReconciliationTotals {
   statement_lines: number
@@ -27,6 +27,10 @@ export interface ReconciliationTotals {
   // Transfers sent the day before or after that the bank posted on these
   // dates (not in reconciliations from before 2026-11-03).
   sent_on_neighbouring_days?: number
+  // Transfers sent on the statement's last day that it doesn't show yet: not
+  // findings, for the next statement (not in reconciliations from before
+  // 2026-11-12).
+  yet_to_reconcile?: number
 }
 
 export interface ReconciliationFinding {
@@ -66,6 +70,7 @@ export interface Reconciliation {
   created_at: string
   // Detail only.
   exceptions?: ReconciliationFinding[]
+  yet_to_reconcile?: ReconciliationFinding[]
 }
 
 export interface ReconciliationStatus {

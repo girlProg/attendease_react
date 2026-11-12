@@ -34,6 +34,7 @@ const FINDING_TONE: Record<FindingKind, string> = {
   paid_twice: "bg-red-50 text-red-700",
   paid_not_recorded: "bg-amber-50 text-amber-800",
   recorded_not_debited: "bg-sky-50 text-sky-800",
+  yet_to_reconcile: "bg-slate-100 text-slate-700",
 }
 
 function errorDetail(error: unknown): string {
@@ -147,13 +148,19 @@ export function ReconciliationPage() {
               <TableHead className="text-right text-xs font-semibold text-sidebar">Debits (net)</TableHead>
               <TableHead className="text-right text-xs font-semibold text-sidebar">Recorded paid</TableHead>
               <TableHead className="text-right text-xs font-semibold text-sidebar">Findings</TableHead>
+              <TableHead
+                className="text-right text-xs font-semibold text-sidebar"
+                title="Sent on the statement's last day and not on it yet: for the next statement"
+              >
+                Yet to reconcile
+              </TableHead>
               <TableHead className="text-xs font-semibold text-sidebar" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.isLoading && <TableSkeletonRows columns={7} rows={3} />}
+            {list.isLoading && <TableSkeletonRows columns={8} rows={3} />}
             {!list.isLoading && reconciliations.length === 0 && (
-              <TableEmptyState colSpan={7} message="No statements uploaded yet." />
+              <TableEmptyState colSpan={8} message="No statements uploaded yet." />
             )}
             {reconciliations.map((item) => (
               <TableRow
@@ -178,6 +185,9 @@ export function ReconciliationPage() {
                   className={`text-right text-sm font-semibold ${item.exception_count ? "text-red-700" : "text-emerald-700"}`}
                 >
                   {item.exception_count ? item.exception_count.toLocaleString() : "None"}
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  {item.totals.yet_to_reconcile ? item.totals.yet_to_reconcile.toLocaleString() : "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
@@ -215,6 +225,8 @@ export function ReconciliationPage() {
 function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliation }) {
   const totals = reconciliation.totals
   const findings = reconciliation.exceptions ?? []
+  const pending = reconciliation.yet_to_reconcile ?? []
+  const rows = [...findings, ...pending]
   const figures = [
     ["Transfer debits", totals.transfer_debits.toLocaleString(), formatNaira(Number(totals.transfer_debit_amount))],
     ["Reversals", totals.reversals.toLocaleString(), formatNaira(Number(totals.reversal_amount))],
@@ -238,7 +250,8 @@ function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliati
             ` ${totals.unreadable_lines} AGILE line(s) on the statement couldn't be read and were left out.`}
           {(totals.sent_on_neighbouring_days ?? 0) > 0 &&
             ` ${totals.sent_on_neighbouring_days} transfer(s) sent the day before or after were posted on these dates and are counted.`}
-          {" "}A transfer sent on the last day can show as not debited if the bank posted it the next day.
+          {(totals.yet_to_reconcile ?? 0) > 0 &&
+            ` ${totals.yet_to_reconcile} transfer(s) sent on the last day aren't on the statement yet; they are listed as yet to reconcile, for the next statement.`}
         </p>
       </div>
 
@@ -252,7 +265,7 @@ function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliati
         ))}
       </div>
 
-      {findings.length > 0 && (
+      {rows.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border/40">
           <Table>
             <TableHeader>
@@ -266,7 +279,7 @@ function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliati
               </TableRow>
             </TableHeader>
             <TableBody>
-              {findings.map((finding) => (
+              {rows.map((finding) => (
                 <TableRow key={`${finding.kind}-${finding.narration}`} className="border-border/40 align-top">
                   <TableCell>
                     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${FINDING_TONE[finding.kind]}`}>
