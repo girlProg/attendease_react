@@ -55,6 +55,7 @@ export interface KoboSubmission {
   lga: string
   school_name: string
   nin_given: boolean
+  notes: string
   status: KoboStatus
   reason: string
 }

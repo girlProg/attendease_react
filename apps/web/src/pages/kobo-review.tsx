@@ -98,7 +98,12 @@ function HeldRow({ submission }: { submission: KoboSubmission }) {
       <TableCell className="whitespace-nowrap">{submission.beneficiary_id || "None"}</TableCell>
       <TableCell>{submission.student_name}</TableCell>
       <TableCell>{submission.school_name}</TableCell>
-      <TableCell className="max-w-xs whitespace-normal">{submission.reason}</TableCell>
+      <TableCell className="max-w-xs whitespace-normal">
+        {submission.reason}
+        {submission.notes && (
+          <p className="mt-1 text-xs text-muted-foreground">Notes: {submission.notes}</p>
+        )}
+      </TableCell>
       <TableCell>
         <div className="flex min-w-56 flex-col gap-2">
           {schoolProblem && (
