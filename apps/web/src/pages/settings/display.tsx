@@ -3,10 +3,19 @@ import { AlertCircle, Info } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@workspace/ui/components/button"
-import { LabeledInput } from "@/components/form-fields"
+import { LabeledInput, LabeledSelect } from "@/components/form-fields"
 import { QueryError } from "@/components/query-error"
 import { useLogVisit } from "@/hooks/use-log-visit"
+import { getCohorts } from "@/api/attendance"
 import { getPageDesign, setPageDesign } from "@/api/page-design"
+import {
+  addRegisterCardTerm,
+  getRegisterCardTerms,
+  getRegisterCardViewers,
+  removeRegisterCardTerm,
+  setRegisterCardsFor,
+  type RegisterCardViewer,
+} from "@/api/register-cards"
 import { getScInsDisplay, setScInsDisplay, type ScInsDisplay } from "@/api/sc-ins-display"
 import type { ScInsDisplayMode } from "@/types"
 
@@ -36,6 +45,7 @@ export function DisplaySettingsPage() {
     <div className="space-y-5">
       <PageDesignSection />
       <EnrolledCardsSection />
+      <RegisterCardsSection />
       <ScInsDisplayForm display={display.data} />
     </div>
   )
@@ -115,6 +125,268 @@ function EnrolledCardsSection() {
           {errorText(save.error, "Could not save the setting.")}
         </p>
       )}
+    </section>
+  )
+}
+
+const TERMS = ["1", "2", "3"]
+
+const HOW: Record<RegisterCardViewer["how"], string> = {
+  superuser: "Superuser, always",
+  default: "By default",
+  ticked: "Ticked",
+  unticked: "Unticked",
+}
+
+/**
+ * The Attendance Overview's uploaded-register cards: the cohort, year and term
+ * they show on, and who sees them. A person's tick is their register_cards
+ * permission, the same one as on Manage Users; the list previews who gains and
+ * who loses the cards before anything is saved.
+ */
+function RegisterCardsSection() {
+  const queryClient = useQueryClient()
+  const terms = useQuery({ queryKey: ["register-card-terms"], queryFn: getRegisterCardTerms })
+  const viewers = useQuery({
+    queryKey: ["register-card-viewers"],
+    queryFn: getRegisterCardViewers,
+  })
+  const { data: cohorts = [] } = useQuery({ queryKey: ["cohort"], queryFn: getCohorts })
+  const [cohort, setCohort] = useState("")
+  const [year, setYear] = useState(String(new Date().getFullYear()))
+  const [term, setTerm] = useState("")
+  // People whose tick has been changed here and not saved yet: id → sees.
+  const [changes, setChanges] = useState<Record<number, boolean>>({})
+
+  const refreshTerms = () => {
+    queryClient.invalidateQueries({ queryKey: ["register-card-terms"] })
+    queryClient.invalidateQueries({ queryKey: ["attendance-overview"] })
+  }
+  const add = useMutation({
+    mutationFn: () =>
+      addRegisterCardTerm({ cohort: Number(cohort), year: Number(year), term: Number(term) }),
+    onSuccess: refreshTerms,
+  })
+  const remove = useMutation({ mutationFn: removeRegisterCardTerm, onSuccess: refreshTerms })
+  const save = useMutation({
+    mutationFn: () =>
+      Promise.all(
+        Object.entries(changes).map(([id, sees]) => setRegisterCardsFor(Number(id), sees)),
+      ),
+    onSuccess: () => {
+      setChanges({})
+      queryClient.invalidateQueries({ queryKey: ["register-card-viewers"] })
+    },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["register-card-viewers"] }),
+  })
+
+  const people = viewers.data ?? []
+  const sees = (person: RegisterCardViewer) => changes[person.id] ?? person.sees
+  const toggle = (person: RegisterCardViewer) => {
+    const next = !sees(person)
+    setChanges((current) => {
+      const updated = { ...current }
+      if (next === person.sees) delete updated[person.id]
+      else updated[person.id] = next
+      return updated
+    })
+  }
+  const gaining = people.filter((person) => changes[person.id] === true)
+  const losing = people.filter((person) => changes[person.id] === false)
+  const seeing = people.filter(sees)
+  const canAdd = Boolean(cohort && term && Number(year) > 2000) && !add.isPending
+  const cohortName = (id: string) => cohorts.find((option) => String(option.id) === id)?.name ?? id
+  const failure = add.error ?? remove.error ?? save.error
+  const names = (group: RegisterCardViewer[]) => group.map((person) => person.name).join(", ")
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-2xl">
+      <div>
+        <h2 className="text-base font-bold text-foreground">Uploaded-register cards</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Extra cards on the Attendance Overview with the figures from uploaded registers only, so
+          collected attendance can be told apart from migrated or seeded rows. They show when the
+          filters choose a cohort, year and term ticked here, to the people ticked below. Display
+          only: who qualifies and who is paid does not change.
+        </p>
+      </div>
+
+      {terms.isError ? (
+        <QueryError />
+      ) : (
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr>
+              <th className="py-1.5 font-medium">Cohort</th>
+              <th className="py-1.5 font-medium">Year</th>
+              <th className="py-1.5 font-medium">Term</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {(terms.data ?? []).length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-3 text-sm text-muted-foreground">
+                  No term is ticked: the cards don&apos;t show anywhere.
+                </td>
+              </tr>
+            )}
+            {(terms.data ?? []).map((ticked) => (
+              <tr key={ticked.id} className="border-t border-border/40">
+                <td className="py-2">{ticked.cohort_name}</td>
+                <td className="py-2">{ticked.year}</td>
+                <td className="py-2">{ticked.term}</td>
+                <td className="py-2 text-right text-xs font-semibold">
+                  <button
+                    type="button"
+                    className="text-red-600 hover:underline disabled:opacity-50"
+                    disabled={remove.isPending}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Stop showing the cards for cohort ${ticked.cohort_name} · ${ticked.year} · term ${ticked.term}? ${seeing.length} people see them there now.`,
+                        )
+                      ) {
+                        remove.mutate(ticked.id)
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4">
+        <LabeledSelect
+          label="Cohort"
+          value={cohort}
+          onValueChange={(value) => setCohort(value ?? "")}
+          items={cohorts.map((option) => String(option.id))}
+          placeholder="Cohort"
+          formatItem={cohortName}
+        />
+        <LabeledInput label="Year" type="number" value={year} onChange={setYear} />
+        <LabeledSelect
+          label="Term"
+          value={term}
+          onValueChange={(value) => setTerm(value ?? "")}
+          items={TERMS}
+          placeholder="Term"
+        />
+        <Button className="h-11 rounded-full px-6" disabled={!canAdd} onClick={() => add.mutate()}>
+          {add.isPending ? "Adding…" : "Add term"}
+        </Button>
+      </div>
+      {canAdd && (
+        <p className="text-xs text-muted-foreground">
+          Adding it shows the cards there to the {seeing.length} people ticked below.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">
+          Who sees them ({seeing.length} of {people.length} active accounts)
+        </h3>
+        {viewers.isError ? (
+          <QueryError />
+        ) : (
+          <div className="max-h-80 overflow-y-auto rounded-xl border border-border/40">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-white text-xs text-muted-foreground">
+                <tr>
+                  <th className="w-10 px-3 py-1.5" />
+                  <th className="py-1.5 font-medium">Name</th>
+                  <th className="py-1.5 font-medium">Role</th>
+                  <th className="px-3 py-1.5 font-medium">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {people.map((person) => {
+                  const changed = person.id in changes
+                  return (
+                    <tr
+                      key={person.id}
+                      className={`border-t border-border/40 ${changed ? "bg-amber-50" : ""}`}
+                    >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          aria-label={`${person.name} sees the cards`}
+                          checked={sees(person)}
+                          disabled={person.is_superuser || save.isPending}
+                          onChange={() => toggle(person)}
+                          className="size-4 accent-brand"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <span className="block font-medium">{person.name}</span>
+                        <span className="block text-xs text-muted-foreground">{person.email}</span>
+                      </td>
+                      <td className="py-2 capitalize">
+                        {person.role}
+                        {person.is_staff ? " · staff" : ""}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {changed ? "Changed, not saved" : HOW[person.how]}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {(gaining.length > 0 || losing.length > 0) && (
+        <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Before you save</p>
+          {gaining.length > 0 && (
+            <p>
+              Will start seeing the cards ({gaining.length}): {names(gaining)}
+            </p>
+          )}
+          {losing.length > 0 && (
+            <p>
+              Will stop seeing the cards ({losing.length}): {names(losing)}
+            </p>
+          )}
+          <div className="flex gap-3 pt-1">
+            <Button
+              className="h-10 rounded-full px-5"
+              disabled={save.isPending}
+              onClick={() => save.mutate()}
+            >
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 rounded-full px-5"
+              disabled={save.isPending}
+              onClick={() => setChanges({})}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {failure && (
+        <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="size-4 shrink-0" />
+          {errorText(failure, "Could not save the setting.")}
+        </p>
+      )}
+
+      <p className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        <Info className="mt-0.5 size-4 shrink-0" />
+        A person&apos;s tick here is the same as &quot;See uploaded-register cards&quot; on their Manage
+        Users page. Staff have it unless it&apos;s unticked; every change is in the activity log.
+      </p>
     </section>
   )
 }

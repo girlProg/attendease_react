@@ -297,7 +297,8 @@ export type CapabilityKey =
   | "logs"
   | "manage_users"
   | "me_stats"
-  | "term_settings";
+  | "term_settings"
+  | "register_cards";
 
 export interface UserCapability {
   key: CapabilityKey;

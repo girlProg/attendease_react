@@ -23,7 +23,6 @@ import { QueryError } from "@/components/query-error"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { TableSkeletonRows } from "@/components/skeleton"
 import { StatCard } from "@/components/stat-card"
-import { useAuth } from "@/contexts/auth-context"
 import { useScInsWord } from "@/hooks/use-sc-ins-word"
 import { getAttendanceOverview } from "@/api/attendance"
 import type { FilterScope } from "@/hooks/use-attendance-filters"
@@ -44,7 +43,6 @@ export function Overview({
   // The tab's filters exactly as the bar shows them (see useAttendanceFilters).
   const params = scope
 
-  const { isStaffuser } = useAuth()
   // Shown as a percentage instead (Settings > Display): no separate SC-INS note.
   const { showsLabel: showsScIns } = useScInsWord()
 
@@ -221,9 +219,10 @@ export function Overview({
         </section>
       )}
 
-      {/* Staff only: the same three figures over the attendance that arrived in
-          an uploaded register, so collected data can be told from keyed-in. */}
-      {isStaffuser && submitted && (
+      {/* The same three figures over the attendance that arrived in an uploaded
+          register, so collected data can be told from keyed-in. The server sends
+          them only to people ticked for them, on a term ticked in Settings › Display. */}
+      {submitted && (
         <section className="space-y-3">
           <div className="flex items-baseline gap-2">
             <h3 className="text-sm font-bold text-sidebar">
@@ -231,7 +230,7 @@ export function Overview({
             </h3>
             <p className="text-[11px] text-muted-foreground">
               From {submitted.submissions.toLocaleString()} uploaded register
-              {submitted.submissions === 1 ? "" : "s"} · staff only
+              {submitted.submissions === 1 ? "" : "s"}
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
