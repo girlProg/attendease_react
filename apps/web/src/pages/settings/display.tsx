@@ -16,6 +16,7 @@ import {
   setRegisterCardsFor,
   type RegisterCardViewer,
 } from "@/api/register-cards"
+import { getUploadedOnly, setUploadedOnly, type UploadedOnlySettings } from "@/api/uploaded-only"
 import { getScInsDisplay, setScInsDisplay, type ScInsDisplay } from "@/api/sc-ins-display"
 import type { ScInsDisplayMode } from "@/types"
 
@@ -45,6 +46,7 @@ export function DisplaySettingsPage() {
     <div className="space-y-5">
       <PageDesignSection />
       <EnrolledCardsSection />
+      <UploadedOnlySection />
       <RegisterCardsSection />
       <ScInsDisplayForm display={display.data} />
     </div>
@@ -125,6 +127,192 @@ function EnrolledCardsSection() {
           {errorText(save.error, "Could not save the setting.")}
         </p>
       )}
+    </section>
+  )
+}
+
+type Person = UploadedOnlySettings["people"][number]
+
+/**
+ * Uploaded attendance only: the chosen people see the chosen cohorts' attendance
+ * from uploaded registers only, as if the seeded rows didn't exist. Changes are
+ * held here, with who gains and loses it listed, until Save.
+ */
+function UploadedOnlySection() {
+  const queryClient = useQueryClient()
+  const settings = useQuery({ queryKey: ["uploaded-only"], queryFn: getUploadedOnly })
+  // Unsaved changes: id → chosen.
+  const [cohortChanges, setCohortChanges] = useState<Record<number, boolean>>({})
+  const [peopleChanges, setPeopleChanges] = useState<Record<number, boolean>>({})
+  const save = useMutation({
+    mutationFn: () => setUploadedOnly({ cohorts: cohortChanges, people: peopleChanges }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(["uploaded-only"], result)
+      setCohortChanges({})
+      setPeopleChanges({})
+    },
+  })
+
+  if (settings.isError) return <QueryError />
+  if (!settings.data) return null
+  const { cohorts, people } = settings.data
+
+  // Toggle against the saved value, dropping a change that goes back to it.
+  const flip = (
+    setter: (update: (current: Record<number, boolean>) => Record<number, boolean>) => void,
+    id: number,
+    saved: boolean,
+    now: boolean,
+  ) =>
+    setter((current) => {
+      const updated = { ...current }
+      if (!now === saved) delete updated[id]
+      else updated[id] = !now
+      return updated
+    })
+  const hidden = (cohort: UploadedOnlySettings["cohorts"][number]) =>
+    cohortChanges[cohort.id] ?? cohort.seeded_hidden
+  const chosen = (person: Person) => peopleChanges[person.id] ?? person.uploaded_only
+  const gaining = people.filter((person) => peopleChanges[person.id] === true)
+  const losing = people.filter((person) => peopleChanges[person.id] === false)
+  const cohortsChanged = cohorts.filter((cohort) => cohort.id in cohortChanges)
+  const hiddenNames = cohorts.filter(hidden).map((cohort) => cohort.name)
+  const chosenCount = people.filter(chosen).length
+  const dirty = cohortsChanged.length > 0 || gaining.length > 0 || losing.length > 0
+  const names = (group: Person[]) => group.map((person) => person.name).join(", ")
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-2xl">
+      <div>
+        <h2 className="text-base font-bold text-foreground">Uploaded attendance only</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          The people ticked below see only attendance that came from an uploaded register for the
+          cohorts ticked here, as if the seeded rows didn&apos;t exist: on Real-Time, Statistics,
+          the Overview, Home and every download. So a week nobody has uploaded shows as empty.
+          Attendance anyone uploaded or entered always shows. Everyone else sees everything as now,
+          nothing is deleted, and who is paid does not change.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">Cohorts whose seeded rows are hidden</h3>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {cohorts.map((cohort) => (
+            <label key={cohort.id} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={hidden(cohort)}
+                disabled={save.isPending}
+                onChange={() =>
+                  flip(setCohortChanges, cohort.id, cohort.seeded_hidden, hidden(cohort))
+                }
+                className="size-4 accent-brand"
+              />
+              {cohort.name}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">
+          Who sees uploaded attendance only ({chosenCount} of {people.length} active accounts)
+        </h3>
+        <div className="max-h-80 overflow-y-auto rounded-xl border border-border/40">
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-white text-xs text-muted-foreground">
+              <tr>
+                <th className="w-10 px-3 py-1.5" />
+                <th className="py-1.5 font-medium">Name</th>
+                <th className="px-3 py-1.5 font-medium">Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((person) => (
+                <tr
+                  key={person.id}
+                  className={`border-t border-border/40 ${person.id in peopleChanges ? "bg-amber-50" : ""}`}
+                >
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={`${person.name} sees uploaded attendance only`}
+                      checked={chosen(person)}
+                      disabled={save.isPending}
+                      onChange={() =>
+                        flip(setPeopleChanges, person.id, person.uploaded_only, chosen(person))
+                      }
+                      className="size-4 accent-brand"
+                    />
+                  </td>
+                  <td className="py-2">
+                    <span className="block font-medium">{person.name}</span>
+                    <span className="block text-xs text-muted-foreground">{person.email}</span>
+                  </td>
+                  <td className="px-3 py-2 capitalize">
+                    {person.role}
+                    {person.is_superuser ? " · superuser" : person.is_staff ? " · staff" : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {dirty && (
+        <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Before you save</p>
+          {gaining.length > 0 && (
+            <p>
+              Will see uploaded attendance only ({gaining.length}): {names(gaining)}
+            </p>
+          )}
+          {losing.length > 0 && (
+            <p>
+              Will see seeded attendance again ({losing.length}): {names(losing)}
+            </p>
+          )}
+          {cohortsChanged.length > 0 && (
+            <p>
+              Seeded rows hidden for:{" "}
+              {hiddenNames.length > 0 ? hiddenNames.join(", ") : "no cohort"}
+            </p>
+          )}
+          <div className="flex gap-3 pt-1">
+            <Button
+              className="h-10 rounded-full px-5"
+              disabled={save.isPending}
+              onClick={() => save.mutate()}
+            >
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 rounded-full px-5"
+              disabled={save.isPending}
+              onClick={() => {
+                setCohortChanges({})
+                setPeopleChanges({})
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {save.isError && (
+        <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="size-4 shrink-0" />
+          {errorText(save.error, "Could not save the setting.")}
+        </p>
+      )}
+
+      <p className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        <Info className="mt-0.5 size-4 shrink-0" />
+        {`Now: ${hiddenNames.length > 0 ? hiddenNames.join(", ") : "no cohort"}; ${chosenCount} ${chosenCount === 1 ? "person sees" : "people see"} uploaded attendance only. Every change is in the activity log.`}
+      </p>
     </section>
   )
 }
