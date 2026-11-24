@@ -48,7 +48,7 @@ import {
   getPayableTerms,
   pollPendingDisbursements,
 } from "@/api/payments"
-import { anyRunInProgress } from "@/lib/payout-run"
+import { anyRunInProgress, rereadAfterRefresh } from "@/lib/payout-run"
 import { useColumnDownload } from "@/hooks/use-column-download"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
@@ -117,13 +117,15 @@ export function PaymentsPage() {
     // Live-refresh while any disbursement is still in-flight so the status
     // badges advance on their own (SUBMITTED -> AWAITING APPROVAL -> SUCCESS)
     // without a manual reload. Stops polling once everything is terminal.
+    // Not for Unknown: the bank is only asked about those when someone
+    // presses Refresh.
     refetchInterval: (query) => {
       const rows = query.state.data?.results ?? []
       const inFlight = rows.some((record) =>
         (record.payments ?? []).some(
           (payment) =>
             !payment.disbursed &&
-            ["pending", "sending", "submitted", "processing", "unknown"].includes(
+            ["pending", "sending", "submitted", "processing"].includes(
               payment.disbursement_status ?? "",
             ),
         ),
@@ -143,10 +145,7 @@ export function PaymentsPage() {
   const queryClient = useQueryClient()
   const refreshStatuses = useMutation({
     mutationFn: pollPendingDisbursements,
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["term-averages"] })
-      queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
-    },
+    onSettled: () => rereadAfterRefresh(queryClient),
   })
 
   const records = data?.results ?? []

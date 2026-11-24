@@ -1,3 +1,5 @@
+import type { QueryClient } from "@tanstack/react-query"
+
 import type { CurrentDisbursement, DisbursementRun } from "@/api/payments"
 import { chooseFilters } from "@/hooks/use-attendance-filters"
 
@@ -28,6 +30,20 @@ export function runsInProgress(current: CurrentDisbursement | undefined): Disbur
 
 export function anyRunInProgress(current: CurrentDisbursement | undefined): boolean {
   return runsInProgress(current).length > 0
+}
+
+/**
+ * After Refresh: the bank is asked in the background, so read the statuses now
+ * and again as the answers land. Unknown rows aren't followed on their own
+ * (nothing asks the bank about them until someone presses Refresh).
+ */
+export function rereadAfterRefresh(queryClient: QueryClient) {
+  const reread = () => {
+    queryClient.invalidateQueries({ queryKey: ["term-averages"] })
+    queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
+  }
+  reread()
+  for (const seconds of [5, 15, 30]) window.setTimeout(reread, seconds * 1000)
 }
 
 /** "00:58" today, "31 Oct 17:58" before. */

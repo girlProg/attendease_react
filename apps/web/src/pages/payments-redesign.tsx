@@ -64,7 +64,13 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { formatAcademicYear, formatNaira, ordinal } from "@/lib/formatters"
 import { paymentStatusBadge } from "@/lib/payment-status"
-import { anyRunInProgress, runsInProgress, selectRun, shortWhen } from "@/lib/payout-run"
+import {
+  anyRunInProgress,
+  rereadAfterRefresh,
+  runsInProgress,
+  selectRun,
+  shortWhen,
+} from "@/lib/payout-run"
 import type { Payee } from "@/types"
 
 const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
@@ -339,13 +345,15 @@ export function NewPaymentsPage() {
     enabled: scopeReady,
     placeholderData: keepPreviousData,
     // Follow the statuses while money is moving, so rows change on their own.
+    // Not for Unknown: the bank is only asked about those when someone
+    // presses Refresh status.
     refetchInterval: (query) => {
       const rows = query.state.data?.results ?? []
       const inFlight = rows.some((record) =>
         (record.payments ?? []).some(
           (payment) =>
             !payment.disbursed &&
-            ["pending", "sending", "submitted", "processing", "unknown"].includes(
+            ["pending", "sending", "submitted", "processing"].includes(
               payment.disbursement_status ?? "",
             ),
         ),
@@ -357,10 +365,7 @@ export function NewPaymentsPage() {
 
   const refreshStatuses = useMutation({
     mutationFn: pollPendingDisbursements,
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["term-averages"] })
-      queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
-    },
+    onSettled: () => rereadAfterRefresh(queryClient),
   })
 
   const records = data?.results ?? []
