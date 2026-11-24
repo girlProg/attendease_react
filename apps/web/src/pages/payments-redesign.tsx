@@ -46,6 +46,7 @@ import {
   getSchoolPayouts,
   pollPendingDisbursements,
   setDisbursementSettings,
+  type DisbursementRun,
   type DisbursementSettings,
 } from "@/api/payments"
 import { useColumnDownload } from "@/hooks/use-column-download"
@@ -63,7 +64,7 @@ import { StudentPhoto } from "@/components/student-photo"
 import { TableEmptyState } from "@/components/table-empty-state"
 import { formatAcademicYear, formatNaira, ordinal } from "@/lib/formatters"
 import { paymentStatusBadge } from "@/lib/payment-status"
-import { runInProgress, selectRun, shortWhen } from "@/lib/payout-run"
+import { anyRunInProgress, runsInProgress, selectRun, shortWhen } from "@/lib/payout-run"
 import type { Payee } from "@/types"
 
 const PAYMENT_FILTERS: readonly FilterKey[] = ["cohort", "term", "year", "lga", "school"]
@@ -264,23 +265,42 @@ export function NewPaymentsPage() {
   })
   const disbursementsOn = settings.data?.enabled ?? true
 
-  // The last school disbursed: followed while it moves money.
+  // The schools in progress (several can be: Settings › Payments), followed
+  // while they move money, and this school's own last run.
   const current = useQuery({
-    queryKey: ["disbursement-current"],
-    queryFn: getCurrentDisbursement,
-    refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
+    queryKey: ["disbursement-current", scopeParams.school ?? null],
+    queryFn: () => getCurrentDisbursement(scopeParams.school),
+    refetchInterval: (query) => (anyRunInProgress(query.state.data) ? 5000 : 60000),
     refetchIntervalInBackground: true,
+    placeholderData: keepPreviousData,
   })
-  const run = current.data?.run ?? null
-  const running = runInProgress(run)
-  if (run && running && !watchedRuns.includes(run.id)) setWatchedRuns((ids) => [...ids, run.id])
-  const runIsHere = Boolean(
-    run &&
-      scopeParams.school &&
-      run.school === scopeParams.school &&
-      String(run.year) === scopeParams.year &&
-      String(run.term) === scopeParams.term,
-  )
+  const inProgress = runsInProgress(current.data)
+  const running = inProgress.length > 0
+  const unwatched = inProgress.filter((moving) => !watchedRuns.includes(moving.id))
+  if (unwatched.length > 0) {
+    setWatchedRuns((ids) => [...ids, ...unwatched.map((moving) => moving.id)])
+  }
+  const isHere = (candidate: DisbursementRun | null | undefined): candidate is DisbursementRun =>
+    Boolean(
+      candidate &&
+        scopeParams.school &&
+        candidate.school === scopeParams.school &&
+        String(candidate.year) === scopeParams.year &&
+        String(candidate.term) === scopeParams.term,
+    )
+  const lastRun = current.data?.run ?? null
+  // This school's payout, while it is in progress.
+  const runningHere = inProgress.find(isHere) ?? null
+  const runIsHere = runningHere !== null
+  // Its last run, in progress or not (a server from before `school_run` sends
+  // only the last school disbursed).
+  const hereRun =
+    runningHere ?? [current.data?.school_run, lastRun].find(isHere) ?? null
+  // The tracker follows this school's payout; with no place free for another
+  // school, the one that has waited longest. Otherwise Disburse stays in reach.
+  const placesFull = inProgress.length >= (current.data?.schools_at_a_time ?? 1)
+  const tracked = runningHere ?? (placesFull ? (inProgress[0] ?? null) : null)
+  const alsoRunning = inProgress.filter((moving) => moving.id !== tracked?.id)
 
   // Each school of the LGA with where its payout is, for the school picker.
   const payoutScope =
@@ -403,14 +423,14 @@ export function NewPaymentsPage() {
           : `Disburse to ${notPaid.toLocaleString()} student${notPaid === 1 ? "" : "s"}`
   const disburseOff = !disbursementsOn || (termSelected && Boolean(scopeParams.school) && notPaid === 0 && students > 0)
 
-  const lastRunText = run
-    ? runIsHere
-      ? `Last run here: ${shortWhen(run.finished_at ?? run.created_at)}`
-      : `Last run: ${run.school_name}, ${shortWhen(run.finished_at ?? run.created_at)}`
-    : null
+  const lastRunText = hereRun
+    ? `Last run here: ${shortWhen(hereRun.finished_at ?? hereRun.created_at)}`
+    : lastRun
+      ? `Last run: ${lastRun.school_name}, ${shortWhen(lastRun.finished_at ?? lastRun.created_at)}`
+      : null
 
   const showOutcome = Boolean(
-    run && !running && runIsHere && watchedRuns.includes(run.id) && dismissedRun !== run.id,
+    hereRun && !runIsHere && watchedRuns.includes(hereRun.id) && dismissedRun !== hereRun.id,
   )
 
   const exportScope = {
@@ -553,22 +573,50 @@ export function NewPaymentsPage() {
         ))}
       </div>
 
+      {/* The other schools in progress: pressing one shows it on the page. */}
+      {alsoRunning.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>
+            {tracked ? "Also being paid:" : "Being paid:"}
+          </span>
+          {alsoRunning.map((moving) => {
+            const total = Math.max(moving.payment_count - moving.skipped_count, 0)
+            const paid = moving.uploads.reduce((sum, upload) => sum + upload.counts.successful, 0)
+            return (
+              <button
+                key={moving.id}
+                type="button"
+                title={`Show ${moving.school_name}`}
+                onClick={() => selectRun(moving)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-sidebar/5 px-3 py-1 font-medium text-sidebar hover:bg-sidebar/10"
+              >
+                <span className="size-1.5 animate-pulse rounded-full bg-sidebar" />
+                {moving.school_name}
+                <span className="font-normal text-muted-foreground">
+                  {paid.toLocaleString()} of {total.toLocaleString()} paid
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Action bar, the live tracker while money moves, or the outcome once */}
-      {run && running ? (
+      {tracked ? (
         <PayoutTracker
-          run={run}
+          run={tracked}
           otherSchool={!runIsHere}
-          onSelect={() => selectRun(run)}
+          onSelect={() => selectRun(tracked)}
           onRefresh={can("disburse") ? () => refreshStatuses.mutate() : undefined}
           refreshing={refreshStatuses.isPending}
         />
-      ) : run && showOutcome ? (
+      ) : hereRun && showOutcome ? (
         <PayoutOutcome
-          run={run}
+          run={hereRun}
           onReviewFailed={() => setTab("failed")}
           onDismiss={() => {
-            writeDismissed(run.id)
-            setDismissedRun(run.id)
+            writeDismissed(hereRun.id)
+            setDismissedRun(hereRun.id)
           }}
         />
       ) : (

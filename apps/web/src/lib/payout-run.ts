@@ -1,4 +1,4 @@
-import type { DisbursementRun } from "@/api/payments"
+import type { CurrentDisbursement, DisbursementRun } from "@/api/payments"
 import { chooseFilters } from "@/hooks/use-attendance-filters"
 
 /** Set the filters to this run's school, term and year. */
@@ -17,6 +17,17 @@ export function runInProgress(run: DisbursementRun | null | undefined): boolean 
   return Boolean(
     run && (run.status === "queued" || run.status === "sending" || run.waiting_at_bank > 0),
   )
+}
+
+/** Every school in progress, oldest first (several can be: Settings › Payments). */
+export function runsInProgress(current: CurrentDisbursement | undefined): DisbursementRun[] {
+  if (!current) return []
+  // A server from before `runs` sends only the last school.
+  return current.runs ?? (runInProgress(current.run) && current.run ? [current.run] : [])
+}
+
+export function anyRunInProgress(current: CurrentDisbursement | undefined): boolean {
+  return runsInProgress(current).length > 0
 }
 
 /** "00:58" today, "31 Oct 17:58" before. */

@@ -62,6 +62,11 @@ export function PaymentSettingsPage() {
     <div className="space-y-5">
       <PayableTermsSection canEdit={isSuperuser} />
       <UploadLimitForm key={settings.data.updated_at ?? "new"} settings={settings.data} />
+      <SchoolsAtATimeForm
+        key={`schools-${settings.data.updated_at ?? "new"}`}
+        settings={settings.data}
+        canEdit={isSuperuser}
+      />
       {isSuperuser && isStaffuser && <NotificationsSection />}
     </div>
   )
@@ -384,6 +389,92 @@ function NotificationsForm({ saved }: { saved: PaymentNotifications }) {
           {save.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
+    </section>
+  )
+}
+
+const MOST_SCHOOLS_AT_A_TIME = 10
+
+/** How many schools can be in progress at once. Superusers change it. */
+function SchoolsAtATimeForm({
+  settings,
+  canEdit,
+}: {
+  settings: DisbursementSettings
+  canEdit: boolean
+}) {
+  const queryClient = useQueryClient()
+  const saved = settings.max_schools_at_a_time
+  const [value, setValue] = useState(String(saved))
+
+  const parsed = Number(value.trim())
+  const valid =
+    value.trim() !== "" &&
+    Number.isInteger(parsed) &&
+    parsed >= 1 &&
+    parsed <= MOST_SCHOOLS_AT_A_TIME
+  const changed = valid && parsed !== saved
+
+  const save = useMutation({
+    mutationFn: () => setDisbursementSettings({ max_schools_at_a_time: parsed }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(["disbursement-settings"], result)
+      queryClient.invalidateQueries({ queryKey: ["disbursement-current"] })
+      queryClient.invalidateQueries({ queryKey: ["payment-audit"] })
+    },
+  })
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-border/40 bg-white p-5 md:max-w-2xl">
+      <div>
+        <h2 className="text-base font-bold text-foreground">Schools paid at a time</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          How many schools can be in progress at once. A school is in progress while its uploads
+          are being sent or any of its transfers is still waiting for the bank&apos;s answer.
+          Uploads still go to the bank one after another, whatever the number. Lowering it does not
+          stop schools already in progress.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-40">
+          <LabeledInput
+            label={`Schools (1 to ${MOST_SCHOOLS_AT_A_TIME})`}
+            type="number"
+            value={value}
+            onChange={setValue}
+            disabled={!canEdit}
+          />
+        </div>
+        {canEdit && (
+          <Button
+            className="h-11 rounded-full px-6"
+            disabled={!changed || save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? "Saving…" : "Save"}
+          </Button>
+        )}
+      </div>
+
+      {!valid && (
+        <p className="text-sm text-red-600">
+          Enter a whole number from 1 to {MOST_SCHOOLS_AT_A_TIME}.
+        </p>
+      )}
+      {save.isError && (
+        <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="size-4 shrink-0" />
+          {errorText(save.error, "Could not save the number.")}
+        </p>
+      )}
+
+      <p className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        <Info className="mt-0.5 size-4 shrink-0" />
+        {saved === 1
+          ? "Now: 1. The next school waits until the last one has finished at the bank."
+          : `Now: ${saved}. Disburse is refused while ${saved} schools are in progress.`}
+      </p>
     </section>
   )
 }

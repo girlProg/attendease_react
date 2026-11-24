@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 
-import { getCurrentDisbursement } from "@/api/payments"
+import { getCurrentDisbursement, type DisbursementRun } from "@/api/payments"
 import { useAuth } from "@/contexts/auth-context"
 import { formatAcademicYear } from "@/lib/formatters"
-import { runInProgress, selectRun } from "@/lib/payout-run"
+import { anyRunInProgress, runsInProgress, selectRun } from "@/lib/payout-run"
+
+function sum(runs: DisbursementRun[], count: (run: DisbursementRun) => number) {
+  return runs.reduce((total, run) => total + count(run), 0)
+}
 
 /**
- * In the header of every page, for whoever can see Payments, while a school is
- * being paid: how far it has got. Pressing it opens Payments on that school, term and year.
+ * In the header of every page, for whoever can see Payments, while schools are
+ * being paid: how far they have got. One school: pressing it opens Payments on
+ * that school, term and year. Several (Settings › Payments allows it): their
+ * figures together, and pressing it opens Payments, where each is listed.
  */
 export function PayoutBanner() {
   const navigate = useNavigate()
@@ -16,28 +22,36 @@ export function PayoutBanner() {
   const canSee = can("view_payments")
   const current = useQuery({
     queryKey: ["disbursement-current"],
-    queryFn: getCurrentDisbursement,
+    queryFn: () => getCurrentDisbursement(),
     enabled: canSee,
-    refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
+    refetchInterval: (query) => (anyRunInProgress(query.state.data) ? 5000 : 60000),
   })
-  const run = current.data?.run
+  const runs = runsInProgress(current.data)
 
-  if (!canSee || !run || !runInProgress(run)) return null
+  if (!canSee || runs.length === 0) return null
 
-  const total = Math.max(run.payment_count - run.skipped_count, 0)
-  const paid = run.uploads.reduce((sum, upload) => sum + upload.counts.successful, 0)
-  const failed = run.uploads.reduce((sum, upload) => sum + upload.counts.failed, 0)
+  const only = runs.length === 1 ? runs[0] : null
+  const total = sum(runs, (run) => Math.max(run.payment_count - run.skipped_count, 0))
+  const paid = sum(runs, (run) =>
+    run.uploads.reduce((count, upload) => count + upload.counts.successful, 0),
+  )
+  const failed = sum(runs, (run) =>
+    run.uploads.reduce((count, upload) => count + upload.counts.failed, 0),
+  )
   const share = (value: number) => `${total ? Math.min((value / total) * 100, 100) : 0}%`
-  const when = [run.term && `Term ${run.term}`, run.year && formatAcademicYear(String(run.year))]
-    .filter(Boolean)
-    .join(", ")
+  const when = only
+    ? [only.term && `Term ${only.term}`, only.year && formatAcademicYear(String(only.year))]
+        .filter(Boolean)
+        .join(", ")
+    : ""
+  const names = runs.map((run) => run.school_name).join(", ")
 
   return (
     <button
       type="button"
-      title={`Open ${run.school_name} on Payments`}
+      title={only ? `Open ${only.school_name} on Payments` : `Open Payments: ${names}`}
       onClick={() => {
-        selectRun(run)
+        if (only) selectRun(only)
         navigate("/payments")
       }}
       className="order-last w-full min-w-0 rounded-xl bg-sidebar/5 px-3.5 py-2 text-left transition hover:bg-sidebar/10 md:order-none md:mx-6 md:w-auto md:max-w-xl md:flex-1"
@@ -49,10 +63,12 @@ export function PayoutBanner() {
         </span>
         {/* Short of room the name has its own line; the rest wraps under it. */}
         <span className="min-w-0 max-w-[calc(100%-1rem)] flex-1 basis-[calc(100%-1rem)] truncate text-[13px] font-bold text-sidebar xl:max-w-none xl:flex-initial xl:basis-auto">
-
-          Paying {run.school_name}
+          {only ? `Paying ${only.school_name}` : `Paying ${runs.length} schools`}
         </span>
         {when && <span className="shrink-0 text-xs text-muted-foreground">{when}</span>}
+        {!only && (
+          <span className="min-w-0 shrink truncate text-xs text-muted-foreground">{names}</span>
+        )}
         <span className="ml-auto shrink-0 text-xs font-medium text-foreground">
           {paid.toLocaleString()} of {total.toLocaleString()} paid
           {failed > 0 && <span className="text-orange-700"> · {failed.toLocaleString()} failed</span>}

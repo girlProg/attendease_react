@@ -29,6 +29,7 @@ import {
   type DisbursementRun,
 } from "@/api/payments"
 import { formatNaira } from "@/lib/formatters"
+import { runsInProgress } from "@/lib/payout-run"
 import type { Payee } from "@/types"
 
 function errorDetail(error: unknown): string {
@@ -223,15 +224,17 @@ export function DisburseDialog({
   const ready =
     canDisburse && scopeReady && termSelected && amountValid && Boolean(cohort && year && term && school)
 
-  // The last school disbursed: its progress, and whether the next can start.
-  // Followed every few seconds while the dialog is open.
+  // The schools in progress, and whether this one can start (as many can be
+  // paid at a time as Settings › Payments allows). Followed every few seconds
+  // while the dialog is open.
   const current = useQuery({
-    queryKey: ["disbursement-current"],
-    queryFn: getCurrentDisbursement,
+    queryKey: ["disbursement-current", school ?? null],
+    queryFn: () => getCurrentDisbursement(school),
     enabled: open && canDisburse,
     refetchInterval: open && canDisburse ? 3000 : false,
   })
   const refusal = current.data?.refusal ?? null
+  const inProgress = runsInProgress(current.data)
 
   const scope = {
     cohort: cohort as number,
@@ -275,10 +278,11 @@ export function DisburseDialog({
   })
 
   // The run this press started, as it progresses.
-  const startedRun =
-    disburse.data && current.data?.run?.id === disburse.data.id
-      ? current.data.run
-      : disburse.data
+  const startedRun = disburse.data
+    ? ([...inProgress, current.data?.school_run, current.data?.run].find(
+        (candidate) => candidate?.id === disburse.data.id,
+      ) ?? disburse.data)
+    : undefined
 
   function handleOpenChange(next: boolean) {
     setOpen(next)
@@ -312,10 +316,12 @@ export function DisburseDialog({
       <DialogPopup className="max-h-[85vh] overflow-y-auto">
         <DialogTitle>Disburse Payment</DialogTitle>
         <DialogDescription>
-          Pays one school at a time: creates a pending payment for every
-          qualifying student in the selected school, then sends all its pending
-          payments for {termLabel ?? "the term"} to the bank. The next school
-          can be paid once this one is finished at the bank.
+          Pays one school: creates a pending payment for every qualifying
+          student in the selected school, then sends all its pending payments
+          for {termLabel ?? "the term"} to the bank.{" "}
+          {(current.data?.schools_at_a_time ?? 1) > 1
+            ? `Up to ${current.data?.schools_at_a_time} schools can be in progress at a time.`
+            : "The next school can be paid once this one is finished at the bank."}
         </DialogDescription>
 
         <div className="mt-6 space-y-4">
@@ -330,7 +336,7 @@ export function DisburseDialog({
           {!school && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
               <AlertCircle className="size-4 shrink-0" />
-              Choose a school on the page first — Disburse pays one school at a time.
+              Choose a school on the page first — each Disburse pays one school.
             </div>
           )}
 
@@ -340,7 +346,9 @@ export function DisburseDialog({
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 {refusal}
               </div>
-              {current.data?.run && <RunProgress run={current.data.run} />}
+              {inProgress.map((moving) => (
+                <RunProgress key={moving.id} run={moving} />
+              ))}
             </div>
           )}
 

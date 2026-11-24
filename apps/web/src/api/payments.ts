@@ -66,9 +66,16 @@ export interface DisbursementRun {
 }
 
 export interface CurrentDisbursement {
+  // The last school disbursed, in progress or not.
   run: DisbursementRun | null
+  // Every school in progress (being sent, or waiting for the bank), oldest first.
+  runs: DisbursementRun[]
+  // How many schools may be in progress at once (Settings › Payments).
+  schools_at_a_time: number
   // Why the next Disburse can't start yet; null when it can.
   refusal: string | null
+  // Only when a school was asked about: the last time it was disbursed.
+  school_run?: DisbursementRun | null
 }
 
 export interface CreateDisbursementBatchParams {
@@ -85,17 +92,23 @@ export interface CreateDisbursementBatchParams {
 /**
  * Disburse one school: saves the run and returns at once; the uploads are sent
  * in the background (follow them with `getCurrentDisbursement`). Refused (409)
- * while the last school disbursed is still being sent or worked on at the bank.
+ * while as many schools as Settings › Payments allows are still being sent or
+ * worked on at the bank, or while this school is.
  */
 export const createDisbursementBatch = (params: CreateDisbursementBatchParams) =>
   api
     .post<DisbursementRun>("/disbursement-batch/", params)
     .then((response) => response.data)
 
-/** The last school disbursed, its progress, and whether the next can start. */
-export const getCurrentDisbursement = () =>
+/**
+ * The last school disbursed, every school in progress, and whether the next
+ * can start (`school`: whether that one can).
+ */
+export const getCurrentDisbursement = (school?: number) =>
   api
-    .get<CurrentDisbursement>("/disbursement-batch/current/")
+    .get<CurrentDisbursement>("/disbursement-batch/current/", {
+      params: school ? { school } : undefined,
+    })
     .then((response) => response.data)
 
 export interface DisbursementSettings {
@@ -104,6 +117,8 @@ export interface DisbursementSettings {
   poll_logging: boolean
   // A bigger disbursement goes as several uploads of equal size; null = no limit.
   max_transfers_per_upload: number | null
+  // How many schools can be in progress at once, 1 to 10.
+  max_schools_at_a_time: number
   updated_at: string | null
   updated_by: string | null
 }
@@ -152,10 +167,13 @@ export const getDisbursementSettings = () =>
     .get<DisbursementSettings>("/disbursement-settings/")
     .then((response) => response.data)
 
-/** Flip either switch (superusers only); send just the one that changes. */
+/** Change a setting (superusers only); send just the one that changes. */
 export const setDisbursementSettings = (
   changes: Partial<
-    Pick<DisbursementSettings, "enabled" | "poll_logging" | "max_transfers_per_upload">
+    Pick<
+      DisbursementSettings,
+      "enabled" | "poll_logging" | "max_transfers_per_upload" | "max_schools_at_a_time"
+    >
   >,
 ) =>
   api

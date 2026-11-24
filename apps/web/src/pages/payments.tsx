@@ -48,7 +48,7 @@ import {
   getPayableTerms,
   pollPendingDisbursements,
 } from "@/api/payments"
-import { runInProgress } from "@/lib/payout-run"
+import { anyRunInProgress } from "@/lib/payout-run"
 import { useColumnDownload } from "@/hooks/use-column-download"
 import { DisburseDialog } from "@/components/disburse-dialog"
 import { DownloadPdfButton } from "@/components/download-pdf-button"
@@ -91,16 +91,16 @@ export function PaymentsPage() {
   const cohortPayee: Payee =
     cohorts?.find((cohort) => cohort.id === scopeParams.cohort)?.payee ?? "caregiver"
 
-  // The school being disbursed (the strip above reads the same query). Its
+  // The schools being disbursed (the strip above reads the same query). Their
   // rows reach the bank a few seconds after Disburse, so follow them from the
   // press, not only once a row shows a bank status.
   const current = useQuery({
     queryKey: ["disbursement-current"],
-    queryFn: getCurrentDisbursement,
-    refetchInterval: (query) => (runInProgress(query.state.data?.run) ? 5000 : 60000),
+    queryFn: () => getCurrentDisbursement(),
+    refetchInterval: (query) => (anyRunInProgress(query.state.data) ? 5000 : 60000),
     refetchIntervalInBackground: true,
   })
-  const running = runInProgress(current.data?.run)
+  const running = anyRunInProgress(current.data)
 
   const { data, isError, isLoading } = useQuery({
     queryKey: ["term-averages", scopeParams, appliedSearch, page, pageSize],

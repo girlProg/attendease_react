@@ -4,41 +4,40 @@ import { useQuery } from "@tanstack/react-query"
 import { RunProgress } from "@/components/disburse-dialog"
 import { getCurrentDisbursement } from "@/api/payments"
 import { formatDateTime } from "@/lib/formatters"
-import { selectRun } from "@/lib/payout-run"
+import { anyRunInProgress, runsInProgress, selectRun } from "@/lib/payout-run"
 
 /**
- * Payments page, admins: the last school disbursed (its progress while it is
- * being sent or waiting at the bank, since the next school waits for it). How
- * far the bank statements reach is on the Reconciliation page.
+ * Payments page, admins: every school in progress (being sent or waiting at
+ * the bank, since each holds a place the next school needs), or the last
+ * school disbursed once none is. How far the bank statements reach is on the
+ * Reconciliation page.
  */
 export function DisbursementStatusStrip() {
   const current = useQuery({
     queryKey: ["disbursement-current"],
-    queryFn: getCurrentDisbursement,
-    // Follow a school while it is in progress; otherwise check now and then.
-    refetchInterval: (query) => {
-      const run = query.state.data?.run
-      return run && (run.status === "queued" || run.status === "sending" || run.waiting_at_bank)
-        ? 5000
-        : 60000
-    },
+    queryFn: () => getCurrentDisbursement(),
+    // Follow schools while any is in progress; otherwise check now and then.
+    refetchInterval: (query) => (anyRunInProgress(query.state.data) ? 5000 : 60000),
   })
   const run = current.data?.run
-  const inProgress = Boolean(
-    run && (run.status === "queued" || run.status === "sending" || run.waiting_at_bank),
-  )
+  const inProgress = runsInProgress(current.data)
 
   if (!run) return null
 
-  return inProgress ? (
-    <button
-      type="button"
-      title={`Show ${run.school_name}`}
-      onClick={() => selectRun(run)}
-      className="block w-full text-left"
-    >
-      <RunProgress run={run} />
-    </button>
+  return inProgress.length > 0 ? (
+    <div className="space-y-2">
+      {inProgress.map((running) => (
+        <button
+          key={running.id}
+          type="button"
+          title={`Show ${running.school_name}`}
+          onClick={() => selectRun(running)}
+          className="block w-full text-left"
+        >
+          <RunProgress run={running} />
+        </button>
+      ))}
+    </div>
   ) : (
     <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
       <Send className="size-3.5" />
